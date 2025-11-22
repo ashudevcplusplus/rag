@@ -1,0 +1,190 @@
+{
+  "info": {
+    "name": "MVP API - RAG System",
+    "description": "Complete API collection for MVP RAG System with document indexing and search",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "mvp-rag-api"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Health check endpoint - no authentication required"
+      },
+      "response": []
+    },
+    {
+      "name": "Upload File",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": [],
+              "description": "Upload a file (PDF, TXT, JSON, etc.)"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/companies/{{company_id}}/uploads",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "companies", "{{company_id}}", "uploads"]
+        },
+        "description": "Upload a file for indexing. Returns jobId to track indexing progress."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Job Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/v1/jobs/{{job_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "jobs", "{{job_id}}"]
+        },
+        "description": "Get the status and progress of an indexing job"
+      },
+      "response": []
+    },
+    {
+      "name": "Search Documents",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"{{search_query}}\",\n  \"limit\": 10,\n  \"filter\": {\n    \"fileId\": \"{{file_id}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/companies/{{company_id}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "companies", "{{company_id}}", "search"]
+        },
+        "description": "Search company documents using semantic search. Filter is optional."
+      },
+      "response": []
+    },
+    {
+      "name": "Search Documents (Simple)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"{{search_query}}\",\n  \"limit\": 10\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/companies/{{company_id}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "companies", "{{company_id}}", "search"]
+        },
+        "description": "Simple search without filters"
+      },
+      "response": []
+    },
+    {
+      "name": "Queue Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/admin/queues",
+          "host": ["{{base_url}}"],
+          "path": ["admin", "queues"]
+        },
+        "description": "Access Bull Board queue dashboard (open in browser)"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "dev-key-123",
+      "type": "string"
+    },
+    {
+      "key": "company_id",
+      "value": "test-company",
+      "type": "string"
+    },
+    {
+      "key": "job_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "file_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "search_query",
+      "value": "company policies",
+      "type": "string"
+    }
+  ]
+}
+

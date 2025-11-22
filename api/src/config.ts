@@ -1,0 +1,7 @@
+export const CONFIG = {
+  QDRANT_URL: process.env.QDRANT_URL || 'http://localhost:6333',
+  EMBED_URL: process.env.EMBED_URL || 'http://localhost:5001/embed',
+  REDIS_HOST: process.env.REDIS_HOST || 'localhost',
+  REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379', 10),
+  PORT: parseInt(process.env.PORT || '8000', 10),
+};

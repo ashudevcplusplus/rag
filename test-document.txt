@@ -1,0 +1,21 @@
+RAG System Test Document
+
+This is a test document for the RAG (Retrieval-Augmented Generation) system.
+The system uses vector embeddings to enable semantic search across documents.
+
+Key Features:
+- Document indexing with intelligent chunking
+- Semantic search using vector similarity
+- Redis caching for improved performance
+- Async processing with BullMQ queues
+- Real-time job status tracking
+
+Testing the upload, indexing, and search functionality to ensure the complete workflow operates correctly.
+This document contains specific keywords that should be searchable, such as:
+- vector embeddings
+- semantic search
+- document indexing
+- Redis caching
+- async processing
+
+The system should be able to find this content when searching for any of these terms or related concepts.

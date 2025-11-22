@@ -1,0 +1,5 @@
+# Development dependencies for type checking
+# Install with: pip install -r requirements-dev.txt
+mypy>=1.5.0
+types-requests>=2.31.0
+
