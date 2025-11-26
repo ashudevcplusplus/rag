@@ -26,6 +26,18 @@ services:
     ports:
       - "6379:6379"
 
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=rag_db
+    volumes:
+      - mongodb_storage:/data/db
+
   api:
     build: ./api
     restart: unless-stopped
@@ -35,14 +47,17 @@ services:
       - qdrant
       - embed
       - redis
+      - mongodb
     environment:
       - QDRANT_URL=http://qdrant:6333
       - EMBED_URL=http://embed:5001/embed
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/rag_db?authSource=admin
     volumes:
       - ./data:/app/data
 
 volumes:
   qdrant_storage:
+  mongodb_storage:
 

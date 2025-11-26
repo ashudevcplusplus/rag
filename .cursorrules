@@ -1,0 +1,78 @@
+# Contribution Guide
+
+## Getting Started
+1.  **Fork the Repository**: Start by forking the repository to your own GitHub account.
+2.  **Clone the Repository**: Clone your fork to your local machine.
+    ```bash
+    git clone <your-fork-url>
+    cd rag-main
+    ```
+3.  **Install Dependencies**: Ensure you have Node.js and Docker installed.
+    ```bash
+    cd api
+    npm install
+    ```
+
+## Development Workflow
+1.  **Create a Branch**: Create a new branch for your feature or bugfix.
+    ```bash
+    git checkout -b feature/amazing-feature
+    ```
+2.  **Run Services**: Start the necessary services using Docker.
+    ```bash
+    docker-compose up -d
+    ```
+3.  **Development Mode**: Run the API in development mode.
+    ```bash
+    cd api
+    npm run dev
+    ```
+
+## Repository Structure
+Adhere to the following structure for the API (`api/src/`):
+*   **`controllers/`**: Request handlers. Do not include business logic here.
+*   **`models/`**: Mongoose schema definitions and models.
+*   **`repositories/`**: Data access layer. All database interactions must go through repositories.
+*   **`routes/`**: API route definitions.
+*   **`schemas/`**: TypeScript interfaces and Zod validation schemas.
+*   **`services/`**: Business logic and external service integrations.
+*   **`middleware/`**: Express middleware (auth, logging, error handling).
+
+## Architecture & Patterns
+*   **Repository Pattern**: STRICTLY enforce the repository pattern for all data access. Controllers should call Services or Repositories; they should never access the database directly.
+*   **Minimal Changes**: Avoid creating unnecessary files. Do not create new scripts, documentation files (READMEs), or make insignificant changes unless explicitly required.
+*   **File Integrity**: Keep the codebase minimal. Do not clutter the root or source directories with temporary or irrelevant files.
+
+## Code Standards
+*   **TypeScript**:
+    *   **Strict Typing**: Code must be fully typed. Avoid `any` wherever possible.
+    *   **Interfaces**: Define explicit interfaces for all data structures in `schemas/`.
+*   **Unit Tests**:
+    *   **Requirement**: All new logic (services, repositories, utilities) must include unit tests.
+    *   **Location**: Place tests in `api/test/unit/`.
+    *   **Command**:
+        ```bash
+        npm test
+        ```
+*   **Linting**: Ensure your code passes ESLint checks.
+    ```bash
+    npm run lint
+    ```
+*   **Formatting**: Format your code using Prettier.
+    ```bash
+    npm run format
+    ```
+
+## Pull Request Process
+1.  **Commit Changes**: Commit your changes with clear, descriptive messages.
+    ```bash
+    git commit -m "Add amazing feature"
+    ```
+2.  **Push to Fork**: Push your branch to your fork.
+    ```bash
+    git push origin feature/amazing-feature
+    ```
+3.  **Open Pull Request**: Go to the original repository and open a Pull Request. Provide a detailed description of your changes.
+
+## Reporting Issues
+If you find a bug or have a feature request, please open an issue on the GitHub repository.

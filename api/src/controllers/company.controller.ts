@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { indexingQueue } from '../queue/queue.client';
 import { VectorService } from '../services/vector.service';
 import { CacheService } from '../services/cache.service';
+import { fileService } from '../services/file.service';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import {
@@ -23,44 +23,21 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
     }
 
     // Validate file
-    const { file } = fileUploadSchema.parse({ file: req.file });
+    fileUploadSchema.parse({ file: req.file });
 
-    const fileId = uuidv4();
+    // TODO: Get projectId from request (for now using a default project approach)
+    // In a full implementation, you'd require projectId as a parameter
+    const projectId = req.body.projectId || companyId; // Temporary: use companyId as projectId
+    const uploadedBy = req.body.uploadedBy || companyId; // Temporary: would come from authenticated user
 
-    logger.info('File upload requested', {
-      companyId,
-      fileId,
-      filename: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
-    });
-
-    // Add to Queue
-    const job = await indexingQueue.add(
-      'index-file',
-      {
-        companyId,
-        fileId,
-        filePath: req.file.path,
-        mimetype: req.file.mimetype,
-      },
-      {
-        attempts: 3, // Retry failed jobs 3 times
-        backoff: { type: 'exponential', delay: 5000 },
-      }
-    );
-
-    logger.info('File queued for indexing', {
-      companyId,
-      fileId,
-      jobId: job.id,
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await fileService.uploadFile(companyId, req.file as any, projectId, uploadedBy);
 
     res.status(202).json({
       message: 'File queued for indexing',
-      jobId: job.id,
-      fileId,
-      statusUrl: `/v1/jobs/${job.id}`,
+      jobId: result.jobId,
+      fileId: result.fileId,
+      statusUrl: `/v1/jobs/${result.jobId}`,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -69,6 +46,15 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
         error: 'Validation failed',
         details: error.issues,
       });
+      return;
+    }
+
+    if (error instanceof ValidationError) {
+      if (error.message === 'Storage limit reached') {
+        res.status(403).json({ error: error.message });
+        return;
+      }
+      res.status(400).json({ error: error.message });
       return;
     }
 
