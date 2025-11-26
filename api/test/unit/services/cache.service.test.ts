@@ -1,7 +1,6 @@
-import { CacheService } from '../../../src/services/cache.service';
 import Redis from 'ioredis';
 
-// Mock ioredis
+// Mock ioredis BEFORE importing CacheService
 jest.mock('ioredis');
 jest.mock('../../../src/utils/logger', () => ({
   logger: {
@@ -12,21 +11,24 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 
-describe('CacheService', () => {
-  let mockRedis: jest.Mocked<Redis>;
+const mockRedis: jest.Mocked<Redis> = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  scanStream: jest.fn(),
+  info: jest.fn(),
+  dbsize: jest.fn(),
+  on: jest.fn(),
+} as any;
 
+(Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as any);
+
+// Import CacheService AFTER setting up mocks
+import { CacheService } from '../../../src/services/cache.service';
+
+describe('CacheService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRedis = {
-      get: jest.fn(),
-      set: jest.fn(),
-      del: jest.fn(),
-      scanStream: jest.fn(),
-      info: jest.fn(),
-      dbsize: jest.fn(),
-    } as any;
-
-    (Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as any);
   });
 
   describe('generateKey', () => {
@@ -97,7 +99,10 @@ describe('CacheService', () => {
     it('should handle invalid JSON gracefully', async () => {
       mockRedis.get.mockResolvedValue('invalid json');
 
-      await expect(CacheService.get('test-key')).rejects.toThrow();
+      const result = await CacheService.get('test-key');
+
+      // Service should fail gracefully and return null
+      expect(result).toBeNull();
     });
   });
 

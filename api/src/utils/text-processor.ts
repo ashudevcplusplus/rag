@@ -69,8 +69,19 @@ export function recursiveChunkText(
   // Recursive split function
   const split = (text: string, separatorIndex: number): void => {
     if (separatorIndex >= separators.length) {
-      // No more separators, force add what we have
-      if (text.length > 0) {
+      // No more separators, force split by character if needed
+      if (text.length > chunkSize) {
+        // Force split the text into chunkSize pieces
+        for (let i = 0; i < text.length; i += chunkSize - chunkOverlap) {
+          const piece = text.substring(i, Math.min(i + chunkSize, text.length));
+          if (piece.length > 0) {
+            if (currentLength + piece.length > chunkSize) mergeCurrent();
+            currentChunk.push(piece);
+            currentLength += piece.length;
+            if (currentLength >= chunkSize) mergeCurrent();
+          }
+        }
+      } else if (text.length > 0) {
         if (currentLength + text.length > chunkSize) mergeCurrent();
         currentChunk.push(text);
         currentLength += text.length;

@@ -1,8 +1,7 @@
-import { VectorService } from '../../../src/services/vector.service';
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { ExternalServiceError } from '../../../src/types/error.types';
 
-// Mock dependencies
+// Mock dependencies BEFORE importing VectorService
 jest.mock('@qdrant/js-client-rest');
 jest.mock('../../../src/config', () => ({
   CONFIG: {
@@ -22,20 +21,22 @@ jest.mock('../../../src/utils/logger', () => ({
 // Mock fetch globally
 global.fetch = jest.fn();
 
-describe('VectorService', () => {
-  let mockQdrant: jest.Mocked<QdrantClient>;
+const mockQdrant: jest.Mocked<QdrantClient> = {
+  getCollection: jest.fn(),
+  createCollection: jest.fn(),
+  createPayloadIndex: jest.fn(),
+  upsert: jest.fn(),
+  search: jest.fn(),
+} as any;
 
+(QdrantClient as jest.MockedClass<typeof QdrantClient>).mockImplementation(() => mockQdrant);
+
+// Import VectorService AFTER setting up mocks
+import { VectorService } from '../../../src/services/vector.service';
+
+describe('VectorService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockQdrant = {
-      getCollection: jest.fn(),
-      createCollection: jest.fn(),
-      createPayloadIndex: jest.fn(),
-      upsert: jest.fn(),
-      search: jest.fn(),
-    } as any;
-
-    (QdrantClient as jest.MockedClass<typeof QdrantClient>).mockImplementation(() => mockQdrant);
   });
 
   describe('getEmbeddings', () => {

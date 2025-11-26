@@ -1,19 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  companyRateLimiter,
-  ipRateLimiter,
-  RATE_LIMIT_CONFIG,
-} from '../../../src/middleware/company-rate-limiter.middleware';
-import Redis from 'ioredis';
 
-// Mock dependencies
-jest.mock('ioredis');
+// Create mock Redis instance
+const mockRedis = {
+  incr: jest.fn(),
+  expire: jest.fn(),
+  ttl: jest.fn(),
+  on: jest.fn().mockReturnThis(),
+};
+
+// Mock ioredis constructor
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => mockRedis);
+});
+
+// Mock config
 jest.mock('../../../src/config', () => ({
   CONFIG: {
     REDIS_HOST: 'localhost',
     REDIS_PORT: 6379,
   },
 }));
+
+// Mock logger
 jest.mock('../../../src/utils/logger', () => ({
   logger: {
     debug: jest.fn(),
@@ -23,21 +31,20 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 
+// Import the middleware AFTER setting up mocks
+import {
+  companyRateLimiter,
+  ipRateLimiter,
+  RATE_LIMIT_CONFIG,
+} from '../../../src/middleware/company-rate-limiter.middleware';
+
 describe('Company Rate Limiter Middleware', () => {
-  let mockRedis: jest.Mocked<Redis>;
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRedis = {
-      incr: jest.fn(),
-      expire: jest.fn(),
-      ttl: jest.fn(),
-    } as any;
-
-    (Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as any);
 
     mockRequest = {
       params: {},

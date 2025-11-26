@@ -14,18 +14,21 @@ export class AppError extends Error {
 export class ValidationError extends AppError {
   constructor(message: string) {
     super(400, message);
+    Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(resource: string) {
     super(404, `${resource} not found`);
+    Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 }
 
 export class ExternalServiceError extends AppError {
   constructor(service: string, message: string) {
     super(502, `${service} error: ${message}`);
+    Object.setPrototypeOf(this, ExternalServiceError.prototype);
   }
 }
 

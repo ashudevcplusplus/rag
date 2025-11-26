@@ -9,6 +9,9 @@ jest.mock('fs', () => ({
   createWriteStream: jest.fn(() => ({
     write: jest.fn(),
     end: jest.fn(),
+    on: jest.fn().mockReturnThis(),
+    once: jest.fn().mockReturnThis(),
+    emit: jest.fn(),
   })),
 }));
 

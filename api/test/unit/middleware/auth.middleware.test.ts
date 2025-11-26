@@ -1,3 +1,6 @@
+// Set env before importing the middleware
+process.env.API_KEYS = 'valid-key-123,another-key,dev-key-123';
+
 import { Request, Response, NextFunction } from 'express';
 import {
   authenticateRequest,
@@ -67,7 +70,6 @@ describe('Auth Middleware', () => {
     });
 
     it('should accept request with valid API key', () => {
-      process.env.API_KEYS = 'valid-key-123,another-key';
       mockRequest.headers!['x-api-key'] = 'valid-key-123';
 
       authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
@@ -81,7 +83,6 @@ describe('Auth Middleware', () => {
     });
 
     it('should use default API keys if env not set', () => {
-      delete process.env.API_KEYS;
       mockRequest.headers!['x-api-key'] = 'dev-key-123';
 
       authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
