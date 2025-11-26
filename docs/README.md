@@ -1,23 +1,35 @@
 # Documentation
 
-This directory contains project documentation, reports, and historical records.
+All comprehensive documentation has been consolidated into the main [README.md](../README.md) in the root directory.
 
-## Structure
+## Quick Links
 
-- **APPLICATION_EXPLANATION.txt** - High-level explanation of the application
-- **APPLICATION_REVIEW.md** - Code review and architecture assessment
-- **BEFORE_AFTER.txt** - Comparison of changes
-- **EVOLUTION_COMPLETE.txt** - Evolution history
-- **IMPROVEMENTS_REPORT.txt** - Detailed improvements report
-- **IMPROVEMENTS_SUMMARY.txt** - Summary of improvements
-- **PHASE_A_COMPLETE.txt** - Phase A completion documentation
-- **PRODUCTION_GRADE_REPORT.txt** - Production readiness report
+- **Main Documentation**: [../README.md](../README.md) - Complete system overview
+- **API Testing**: [../api/test/docs/](../api/test/docs/) - Testing guides and strategies
+- **Postman Collection**: [../MVP_API.postman_collection.json](../MVP_API.postman_collection.json) - API examples
+- **Docker Setup**: [../POSTMAN_SETUP.md](../POSTMAN_SETUP.md) - Environment setup
 
-## Test Documentation
+## What's in the Main README
 
-For test-related documentation, see `api/test/docs/`:
-- **E2E_TESTING_GUIDE.md** - End-to-end testing guide
-- **README_UNIFIED_TESTS.md** - Unified test suite documentation
-- **PHASE_A_README.md** - Phase A testing documentation
-- **TICKET_LARGE_DATA_TESTING.md** - Large data testing ticket
+The consolidated README covers:
+- ✅ Architecture overview & component details
+- ✅ Quick start guide
+- ✅ API reference & authentication
+- ✅ Performance metrics & benchmarks
+- ✅ Configuration options
+- ✅ Testing strategies (unit & E2E)
+- ✅ Production deployment guidelines
+- ✅ Monitoring & observability
+- ✅ Troubleshooting guide
+- ✅ Project structure
 
+## Historical Context
+
+This system evolved from a basic MVP to a production-ready application with:
+- Async processing with BullMQ
+- Intelligent text chunking (recursive splitter)
+- Redis caching (12x search speedup)
+- Real-time queue monitoring
+- Comprehensive error handling & retry logic
+
+For detailed implementation notes, refer to the main README's "Key Implementation Details" section.

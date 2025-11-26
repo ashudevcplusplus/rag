@@ -22,6 +22,13 @@ build/
 # TypeScript / JavaScript build artifacts
 *.js.map
 *.tsbuildinfo
+# Compiled JS files (keep jest.config.js, eslint.config.cjs)
+api/test/**/*.js
+api/src/**/*.js
+!api/*.config.js
+!api/*.config.cjs
+!api/jest.config.js
+!api/eslint.config.cjs
 
 # Environment variables
 .env
@@ -45,10 +52,15 @@ logs/
 
 # Uploads and user data
 data/uploads/*
+api/data/uploads/*
+!data/uploads/.gitkeep
+!api/data/uploads/.gitkeep
 
 # Test results (but keep test data files)
 api/test/test-results.txt
 test-results.txt
+test-flow-summary.txt
+test-document.txt
 api/reports/
 **/reports/
 *.test-report*.json
@@ -84,4 +96,16 @@ Thumbs.db
 .cache/
 .temp/
 tmp/
+
+# Personal scripts
+switch-github-account.sh
+.github-accounts-config
+
+# Redundant docs (keep main README files)
+docs/APPLICATION_*.txt
+docs/IMPROVEMENTS_*.txt
+docs/PRODUCTION_*.txt
+docs/EVOLUTION_*.txt
+docs/BEFORE_*.txt
+docs/PHASE_*.txt
 
