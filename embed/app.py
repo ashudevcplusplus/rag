@@ -1,8 +1,8 @@
 from typing import List
-from fastapi import FastAPI
-from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
-import uvicorn
+from fastapi import FastAPI  # type: ignore
+from pydantic import BaseModel  # type: ignore
+from sentence_transformers import SentenceTransformer  # type: ignore
+import uvicorn  # type: ignore
 
 app: FastAPI = FastAPI()
 

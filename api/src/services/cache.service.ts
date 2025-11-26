@@ -88,9 +88,9 @@ export class CacheService {
           // Remove the prefix since ioredis adds it automatically
           const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
           void redis.del(...keysWithoutPrefix).then(() => {
-          logger.info('Cache invalidated for company', {
-            companyId,
-            keysDeleted: keys.length,
+            logger.info('Cache invalidated for company', {
+              companyId,
+              keysDeleted: keys.length,
             });
           });
         }

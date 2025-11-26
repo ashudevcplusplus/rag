@@ -107,13 +107,15 @@ module.exports = [
     rules: {
       // Allow console in test files
       'no-console': 'off',
-      // Allow any in test files for mocking
-      '@typescript-eslint/no-explicit-any': 'off',
       ...commonRules,
+      // Allow any in test files for mocking (override commonRules)
+      '@typescript-eslint/no-explicit-any': 'off',
+      // Allow unused vars in test files
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
   prettierConfig,
   {
-    ignores: ['dist/**', 'node_modules/**', '*.js', 'coverage/**'],
+    ignores: ['dist/**', 'node_modules/**', '**/*.js', 'coverage/**'],
   },
 ];

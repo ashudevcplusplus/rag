@@ -705,7 +705,7 @@ async function runLevel5(): Promise<TestSuiteResult> {
 // ============================================================================
 // MAIN TEST RUNNER
 // ============================================================================
-async function runUnifiedTests() {
+async function runUnifiedTests(): Promise<void> {
   const args = process.argv.slice(2);
   const difficultyArg =
     args.find((a) => a.startsWith('--difficulty=')) || args.find((a) => a.startsWith('-d='));

@@ -104,8 +104,11 @@ describe('VectorService', () => {
       const error = new Error('Not found') as any;
       error.status = 404;
       mockQdrant.getCollection.mockRejectedValue(error);
-      mockQdrant.createCollection.mockResolvedValue(undefined);
-      mockQdrant.createPayloadIndex.mockResolvedValue(undefined);
+      mockQdrant.createCollection.mockResolvedValue(true);
+      mockQdrant.createPayloadIndex.mockResolvedValue({
+        operation_id: 0,
+        status: 'completed' as const,
+      });
 
       await VectorService.ensureCollection('test-collection');
 
@@ -122,8 +125,11 @@ describe('VectorService', () => {
       const error = new Error('Not found') as any;
       error.status = 404;
       mockQdrant.getCollection.mockRejectedValue(error);
-      mockQdrant.createCollection.mockResolvedValue(undefined);
-      mockQdrant.createPayloadIndex.mockResolvedValue(undefined);
+      mockQdrant.createCollection.mockResolvedValue(true);
+      mockQdrant.createPayloadIndex.mockResolvedValue({
+        operation_id: 0,
+        status: 'completed' as const,
+      });
 
       await VectorService.ensureCollection('test-collection');
 
@@ -141,7 +147,7 @@ describe('VectorService', () => {
       const error = new Error('Not found') as any;
       error.status = 404;
       mockQdrant.getCollection.mockRejectedValue(error);
-      mockQdrant.createCollection.mockResolvedValue(undefined);
+      mockQdrant.createCollection.mockResolvedValue(true);
       mockQdrant.createPayloadIndex.mockRejectedValue(new Error('Index error'));
 
       await expect(VectorService.ensureCollection('test-collection')).resolves.not.toThrow();
@@ -182,7 +188,10 @@ describe('VectorService', () => {
           },
         },
       ];
-      mockQdrant.upsert.mockResolvedValue(undefined);
+      mockQdrant.upsert.mockResolvedValue({
+        operation_id: 0,
+        status: 'completed' as const,
+      });
 
       await VectorService.upsertBatch('test-collection', points);
 

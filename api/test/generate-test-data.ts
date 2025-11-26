@@ -39,7 +39,7 @@ function seededRandom(seed: string) {
   };
 }
 
-function generateFile(filename: string, targetBytes: number, seed = 'default') {
+function generateFile(filename: string, targetBytes: number, seed = 'default'): Promise<void> {
   const filePath = path.join(OUT_DIR, filename);
   if (fs.existsSync(filePath)) {
     const stats = fs.statSync(filePath);
@@ -48,7 +48,7 @@ function generateFile(filename: string, targetBytes: number, seed = 'default') {
       console.log(
         `⏩ Skipping ${filename} (already exists, ${(stats.size / 1024 / 1024).toFixed(2)} MB)`
       );
-      return;
+      return Promise.resolve();
     }
   }
 
@@ -75,7 +75,7 @@ function generateFile(filename: string, targetBytes: number, seed = 'default') {
   return new Promise<void>((resolve) => stream.on('finish', resolve));
 }
 
-async function main() {
+async function main(): Promise<void> {
   const mode = process.argv.includes('--large')
     ? 'large'
     : process.argv.includes('--full')
@@ -122,4 +122,4 @@ async function main() {
   console.log(`💾 Total size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
 }
 
-if (require.main === module) main();
+if (require.main === module) void main();

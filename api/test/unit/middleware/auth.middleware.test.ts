@@ -36,7 +36,7 @@ describe('Auth Middleware', () => {
 
   describe('authenticateRequest', () => {
     it('should allow health check without API key', () => {
-      mockRequest.path = '/health';
+      (mockRequest as any).path = '/health';
       delete mockRequest.headers!['x-api-key'];
 
       authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);

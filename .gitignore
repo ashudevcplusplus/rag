@@ -49,6 +49,10 @@ data/uploads/*
 # Test results (but keep test data files)
 api/test/test-results.txt
 test-results.txt
+api/reports/
+**/reports/
+*.test-report*.json
+test-report*.json
 
 # Test coverage
 coverage/
