@@ -1,5 +1,6 @@
 // Global mocks for external services that shouldn't connect in test environment
-// This prevents Redis, MongoDB, and other external connections during unit/integration tests
+// This prevents Redis connections during tests
+// Note: Integration tests need real MongoDB but don't need Redis, so Redis mocks are safe
 
 // Mock BullMQ Queue to prevent Redis connections
 // This must be done before any module imports queue.client.ts
