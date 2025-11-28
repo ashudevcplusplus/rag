@@ -38,6 +38,16 @@ const worker = new Worker<IndexingJobData, JobResult>(
       }
       const projectId = fileMetadata.projectId;
 
+      // Fetch project to get chunking settings
+      const project = await projectRepository.findById(projectId);
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      // Get chunking settings from project, with defaults
+      const chunkSize = project.settings?.chunkSize ?? 1000;
+      const chunkOverlap = project.settings?.chunkOverlap ?? 200;
+
       // Update file status to PROCESSING
       await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.PROCESSING);
 
@@ -48,8 +58,9 @@ const worker = new Worker<IndexingJobData, JobResult>(
       logger.debug('Extracting text', { jobId: job.id, filePath });
       const rawText = await extractText(filePath, mimetype);
 
-      // 2. Chunk
-      const chunks = chunkText(rawText);
+      // 2. Chunk with project settings
+      logger.debug('Chunking text', { jobId: job.id, chunkSize, chunkOverlap });
+      const chunks = chunkText(rawText, chunkSize, chunkOverlap);
       await job.updateProgress(30); // 30% - Text ready
 
       logger.info('Text extracted and chunked', {
