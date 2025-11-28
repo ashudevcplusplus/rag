@@ -1,10 +1,16 @@
 import { fileMetadataRepository } from '../../../src/repositories/file-metadata.repository';
 import { FileMetadataModel } from '../../../src/models/file-metadata.model';
+import { projectRepository } from '../../../src/repositories/project.repository';
 import { ProcessingStatus, UploadStatus } from '../../../src/schemas/file-metadata.schema';
 import { Types } from 'mongoose';
 
 // Mock Mongoose model and Types
 jest.mock('../../../src/models/file-metadata.model');
+jest.mock('../../../src/repositories/project.repository', () => ({
+  projectRepository: {
+    updateStats: jest.fn(),
+  },
+}));
 jest.mock('mongoose', () => ({
   ...jest.requireActual('mongoose'),
   Types: {
@@ -161,6 +167,14 @@ describe('FileMetadataRepository', () => {
 
   describe('delete', () => {
     it('should soft delete file', async () => {
+      (FileMetadataModel.findById as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: 'file-123',
+          projectId: 'project-123',
+          size: 1024,
+        }),
+      });
+
       (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue({
         _id: 'file-123',
       });

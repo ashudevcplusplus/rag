@@ -7,7 +7,8 @@ import { waitForIndexing } from '../lib/index-wait';
 
 describe('Level 1: Basic E2E Tests', () => {
   const companyId = COMPANY_ID;
-  const smallContent = 'This is a test document about refund policy. Refunds are processed within 14 business days.';
+  const smallContent =
+    'This is a test document about refund policy. Refunds are processed within 14 business days.';
   const smallFilePath = path.join(__dirname, '../data', 'temp-small-e2e.txt');
 
   beforeAll(() => {
@@ -55,4 +56,3 @@ describe('Level 1: Basic E2E Tests', () => {
     expect(health.status).toBe(200);
   });
 });
-

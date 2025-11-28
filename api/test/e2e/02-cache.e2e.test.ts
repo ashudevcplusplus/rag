@@ -33,7 +33,7 @@ describe('Level 2: Cache & Chunking Tests', () => {
     await new Promise((r) => setTimeout(r, 2000));
 
     const query = 'What is the refund policy?';
-    
+
     // First search
     const start1 = Date.now();
     const search1 = await axios.post(
@@ -58,10 +58,10 @@ describe('Level 2: Cache & Chunking Tests', () => {
     // Note: Depending on environment, cache headers might not be set or might be MISS if Redis is down/cleared
     // But we expect it to work in E2E
     if (cacheStatus1 === 'MISS') {
-        expect(cacheStatus2).toBe('HIT');
-        expect(time2).toBeLessThan(time1);
+      expect(cacheStatus2).toBe('HIT');
+      expect(time2).toBeLessThan(time1);
     } else {
-        console.log('Cache already warm or not enabled via headers');
+      console.log('Cache already warm or not enabled via headers');
     }
   });
 
@@ -90,16 +90,10 @@ describe('Level 2: Cache & Chunking Tests', () => {
   });
 
   test('2.3: Bull Board Dashboard', async () => {
-    try {
-        const response = await axios.get(`${API_URL}/admin/queues`, {
-        validateStatus: () => true,
-        });
-        // 200 if open, 401 if protected. Both mean the route exists.
-        expect([200, 401]).toContain(response.status);
-    } catch (e) {
-        // Failed to connect
-        throw e;
-    }
+    const response = await axios.get(`${API_URL}/admin/queues`, {
+      validateStatus: () => true,
+    });
+    // 200 if open, 401 if protected. Both mean the route exists.
+    expect([200, 401]).toContain(response.status);
   });
 });
-

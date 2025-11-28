@@ -1,4 +1,4 @@
-import { EmbeddingModel, IEmbeddingDocument } from '../models/embedding.model';
+import { EmbeddingModel } from '../models/embedding.model';
 import { CreateEmbeddingDTO, IEmbedding } from '../schemas/embedding.schema';
 import { toStringId, toStringIds } from './helpers';
 
@@ -25,9 +25,7 @@ export class EmbeddingRepository {
    * Find by Project ID
    */
   async findByProjectId(projectId: string): Promise<IEmbedding[]> {
-    const embeddings = await EmbeddingModel.find({ projectId })
-      .sort({ createdAt: -1 })
-      .lean();
+    const embeddings = await EmbeddingModel.find({ projectId }).sort({ createdAt: -1 }).lean();
     return toStringIds(embeddings) as unknown as IEmbedding[];
   }
 
@@ -35,13 +33,15 @@ export class EmbeddingRepository {
    * Find specific chunks by fileId and chunkIndex
    * Returns an array of objects with content for the requested chunks
    */
-  async findChunks(chunks: { fileId: string; chunkIndex: number }[]): Promise<{ fileId: string; chunkIndex: number; content: string }[]> {
+  async findChunks(
+    chunks: { fileId: string; chunkIndex: number }[]
+  ): Promise<{ fileId: string; chunkIndex: number; content: string }[]> {
     if (chunks.length === 0) return [];
 
-    const fileIds = [...new Set(chunks.map(c => c.fileId))];
+    const fileIds = [...new Set(chunks.map((c) => c.fileId))];
     const embeddings = await EmbeddingModel.find({ fileId: { $in: fileIds } }).lean();
-    
-    const embeddingsMap = new Map(embeddings.map(e => [e.fileId.toString(), e]));
+
+    const embeddingsMap = new Map(embeddings.map((e) => [e.fileId.toString(), e]));
 
     const results: { fileId: string; chunkIndex: number; content: string }[] = [];
 

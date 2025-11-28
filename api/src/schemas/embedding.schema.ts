@@ -5,12 +5,12 @@ export interface IEmbedding {
   _id: string;
   fileId: string;
   projectId: string;
-  
+
   // Chunks Info
   chunkCount: number;
   contents: string[];
   vectors: number[][];
-  
+
   // Metadata
   metadata?: {
     [key: string]: unknown;
@@ -31,4 +31,3 @@ export const createEmbeddingSchema = z.object({
 });
 
 export type CreateEmbeddingDTO = z.infer<typeof createEmbeddingSchema>;
-

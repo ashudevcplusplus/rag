@@ -2,6 +2,7 @@ import { FileService } from '../../../src/services/file.service';
 import fs from 'fs';
 import { fileMetadataRepository } from '../../../src/repositories/file-metadata.repository';
 import { companyRepository } from '../../../src/repositories/company.repository';
+import { projectRepository } from '../../../src/repositories/project.repository';
 import { indexingQueue } from '../../../src/queue/queue.client';
 import { ValidationError } from '../../../src/types/error.types';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 jest.mock('fs');
 jest.mock('../../../src/repositories/file-metadata.repository');
 jest.mock('../../../src/repositories/company.repository');
+jest.mock('../../../src/repositories/project.repository');
 jest.mock('../../../src/queue/queue.client');
 jest.mock('../../../src/utils/logger');
 
@@ -26,7 +28,7 @@ describe('FileService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     fileService = new FileService();
-    
+
     // Default successful mocks
     (fs.readFileSync as jest.Mock).mockReturnValue(Buffer.from('test content'));
     (fs.unlinkSync as jest.Mock).mockImplementation(() => {});
@@ -34,9 +36,10 @@ describe('FileService', () => {
     (fileMetadataRepository.findByHash as jest.Mock).mockResolvedValue(null);
     (fileMetadataRepository.create as jest.Mock).mockResolvedValue({
       _id: 'new-file-id',
-      ...mockFile
+      ...mockFile,
     });
     (fileMetadataRepository.update as jest.Mock).mockResolvedValue({});
+    (projectRepository.updateStats as jest.Mock).mockResolvedValue({});
     (indexingQueue.add as jest.Mock).mockResolvedValue({ id: 'job-123' });
   });
 
@@ -51,7 +54,7 @@ describe('FileService', () => {
 
       expect(result).toEqual({
         fileId: 'new-file-id',
-        jobId: 'job-123'
+        jobId: 'job-123',
       });
       expect(fileMetadataRepository.create).toHaveBeenCalled();
       expect(indexingQueue.add).toHaveBeenCalled();
@@ -61,7 +64,7 @@ describe('FileService', () => {
       // Mock finding existing file
       (fileMetadataRepository.findByHash as jest.Mock).mockResolvedValue({
         _id: 'existing-file-id',
-        filename: 'test.txt'
+        filename: 'test.txt',
       });
 
       await expect(
@@ -87,4 +90,3 @@ describe('FileService', () => {
     });
   });
 });
-

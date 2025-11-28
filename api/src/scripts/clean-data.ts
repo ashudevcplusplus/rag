@@ -5,17 +5,17 @@ import fs from 'fs';
 import path from 'path';
 import { CONFIG } from '../config';
 import { logger } from '../utils/logger';
-import { 
-  CompanyModel, 
-  UserModel, 
-  ProjectModel, 
-  ProjectMemberModel, 
-  FileMetadataModel, 
-  ApiLogModel, 
-  EmbeddingModel 
+import {
+  CompanyModel,
+  UserModel,
+  ProjectModel,
+  ProjectMemberModel,
+  FileMetadataModel,
+  ApiLogModel,
+  EmbeddingModel,
 } from '../models';
 
-async function cleanData() {
+async function cleanData(): Promise<void> {
   logger.info('🧹 Starting comprehensive data cleanup...');
 
   // 1. MongoDB Cleanup
@@ -31,10 +31,11 @@ async function cleanData() {
       { name: 'ProjectMember', model: ProjectMemberModel },
       { name: 'FileMetadata', model: FileMetadataModel },
       { name: 'ApiLog', model: ApiLogModel },
-      { name: 'Embedding', model: EmbeddingModel }
+      { name: 'Embedding', model: EmbeddingModel },
     ];
 
     for (const { name, model } of models) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await (model as any).deleteMany({});
       logger.info(`Deleted ${result.deletedCount} documents from ${name}`);
     }
@@ -47,9 +48,9 @@ async function cleanData() {
     logger.info('🔌 Connecting to Qdrant...');
     const qdrant = new QdrantClient({ url: CONFIG.QDRANT_URL });
     const collections = await qdrant.getCollections();
-    
+
     logger.info(`Found ${collections.collections.length} Qdrant collections.`);
-    
+
     for (const collection of collections.collections) {
       await qdrant.deleteCollection(collection.name);
       logger.info(`Deleted Qdrant collection: ${collection.name}`);
@@ -91,14 +92,13 @@ async function cleanData() {
   }
 
   logger.info('✅ Cleanup complete!');
-  
+
   // Close MongoDB connection
   await mongoose.disconnect();
   process.exit(0);
 }
 
-cleanData().catch(err => {
+cleanData().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

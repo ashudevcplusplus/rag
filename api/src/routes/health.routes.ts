@@ -15,9 +15,9 @@ router.get('/', (_req, res) => {
       upload: 'POST /v1/companies/:companyId/uploads',
       search: 'POST /v1/companies/:companyId/search',
       jobStatus: 'GET /v1/jobs/:jobId',
-      queueDashboard: '/admin/queues'
+      queueDashboard: '/admin/queues',
     },
-    documentation: 'See README.md for API documentation'
+    documentation: 'See README.md for API documentation',
   });
 });
 

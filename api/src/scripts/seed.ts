@@ -15,7 +15,11 @@ async function seed(): Promise<void> {
     await database.connect();
 
     // Drop existing collections to prevent duplicate key errors
-    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.NODE_ENV) {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.NODE_ENV === 'test' ||
+      !process.env.NODE_ENV
+    ) {
       logger.info('Cleaning up existing data...');
       await companyRepository.model.deleteMany({});
       await userRepository.model.deleteMany({});
@@ -45,6 +49,7 @@ async function seed(): Promise<void> {
           apiAccess: true,
         },
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('Company created', { companyId: company1._id, apiKey: company1.apiKey });
 
@@ -78,6 +83,7 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: true,
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('User created', { userId: user1._id, email: user1.email });
 
@@ -95,6 +101,7 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: false,
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('User created', { userId: user2._id, email: user2.email });
 
@@ -112,6 +119,7 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: false,
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('User created', { userId: user3._id, email: user3.email });
 
@@ -126,6 +134,7 @@ async function seed(): Promise<void> {
       firstName: 'Sarah',
       lastName: 'Wilson',
       role: UserRole.OWNER,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('User created', { userId: user4._id, email: user4.email });
 
@@ -152,6 +161,7 @@ async function seed(): Promise<void> {
         department: 'Product',
         category: 'Documentation',
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('Project created', { projectId: project1._id, slug: project1.slug });
 
@@ -175,6 +185,7 @@ async function seed(): Promise<void> {
         department: 'Support',
         category: 'Knowledge Base',
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('Project created', { projectId: project2._id, slug: project2.slug });
 
@@ -193,6 +204,7 @@ async function seed(): Promise<void> {
         department: 'Legal',
         category: 'Confidential',
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('Project created', { projectId: project3._id, slug: project3.slug });
 
@@ -219,6 +231,7 @@ async function seed(): Promise<void> {
         department: 'Engineering',
         category: 'Technical',
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     logger.info('Project created', { projectId: project4._id, slug: project4.slug });
 

@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { projectRepository } from '../repositories/project.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import {
@@ -8,18 +7,23 @@ import {
   projectIdSchema,
 } from '../schemas/project.schema';
 import { logger } from '../utils/logger';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import {
+  handleControllerError,
+  sendConflictResponse,
+  sendNotFoundResponse,
+  sendBadRequestResponse,
+} from '../utils/response.util';
+import { getCompanyId } from '../utils/request.util';
+import { parsePaginationQuery, createPaginationResponse } from '../utils/pagination.util';
 
 /**
  * Create a new project
  */
 export const createProject = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const companyId = authReq.context?.companyId;
-
+    const companyId = getCompanyId(req);
     if (!companyId) {
-      res.status(400).json({ error: 'Company ID required' });
+      sendBadRequestResponse(res, 'Company ID required');
       return;
     }
 
@@ -28,7 +32,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
     // Check if slug already exists within this company
     const existing = await projectRepository.findBySlug(companyId, data.slug);
     if (existing) {
-      res.status(409).json({ error: 'Project with this slug already exists' });
+      sendConflictResponse(res, 'Project with this slug already exists');
       return;
     }
 
@@ -38,12 +42,7 @@ export const createProject = async (req: Request, res: Response): Promise<void> 
 
     res.status(201).json({ project });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to create project', { error });
-    throw error;
+    handleControllerError(res, error, 'create project');
   }
 };
 
@@ -56,18 +55,13 @@ export const getProject = async (req: Request, res: Response): Promise<void> => 
 
     const project = await projectRepository.findById(projectId);
     if (!project) {
-      res.status(404).json({ error: 'Project not found' });
+      sendNotFoundResponse(res, 'Project');
       return;
     }
 
     res.json({ project });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to get project', { error });
-    throw error;
+    handleControllerError(res, error, 'get project');
   }
 };
 
@@ -76,16 +70,13 @@ export const getProject = async (req: Request, res: Response): Promise<void> => 
  */
 export const listProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const companyId = authReq.context?.companyId;
-
+    const companyId = getCompanyId(req);
     if (!companyId) {
-      res.status(400).json({ error: 'Company ID required' });
+      sendBadRequestResponse(res, 'Company ID required');
       return;
     }
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { page, limit } = parsePaginationQuery(req);
     const status = req.query.status as string;
     const ownerId = req.query.ownerId as string;
     const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
@@ -96,18 +87,10 @@ export const listProjects = async (req: Request, res: Response): Promise<void> =
       tags,
     });
 
-    res.json({
-      projects: result.projects,
-      pagination: {
-        page: result.page,
-        limit,
-        total: result.total,
-        totalPages: result.totalPages,
-      },
-    });
+    const response = createPaginationResponse(result.projects, result.page, limit, result.total);
+    res.json({ projects: response.items, pagination: response.pagination });
   } catch (error) {
-    logger.error('Failed to list projects', { error });
-    throw error;
+    handleControllerError(res, error, 'list projects');
   }
 };
 
@@ -121,7 +104,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
     const project = await projectRepository.update(projectId, data);
     if (!project) {
-      res.status(404).json({ error: 'Project not found' });
+      sendNotFoundResponse(res, 'Project');
       return;
     }
 
@@ -129,12 +112,7 @@ export const updateProject = async (req: Request, res: Response): Promise<void> 
 
     res.json({ project });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to update project', { error });
-    throw error;
+    handleControllerError(res, error, 'update project');
   }
 };
 
@@ -147,7 +125,7 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
 
     const success = await projectRepository.delete(projectId);
     if (!success) {
-      res.status(404).json({ error: 'Project not found' });
+      sendNotFoundResponse(res, 'Project');
       return;
     }
 
@@ -155,12 +133,7 @@ export const deleteProject = async (req: Request, res: Response): Promise<void> 
 
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to delete project', { error });
-    throw error;
+    handleControllerError(res, error, 'delete project');
   }
 };
 
@@ -173,7 +146,7 @@ export const archiveProject = async (req: Request, res: Response): Promise<void>
     const { archive } = req.body;
 
     if (typeof archive !== 'boolean') {
-      res.status(400).json({ error: 'archive must be a boolean' });
+      sendBadRequestResponse(res, 'archive must be a boolean');
       return;
     }
 
@@ -182,7 +155,7 @@ export const archiveProject = async (req: Request, res: Response): Promise<void>
       : await projectRepository.unarchive(projectId);
 
     if (!success) {
-      res.status(404).json({ error: 'Project not found' });
+      sendNotFoundResponse(res, 'Project');
       return;
     }
 
@@ -190,8 +163,7 @@ export const archiveProject = async (req: Request, res: Response): Promise<void>
 
     res.json({ message: `Project ${archive ? 'archived' : 'unarchived'} successfully` });
   } catch (error) {
-    logger.error('Failed to update project archive status', { error });
-    throw error;
+    handleControllerError(res, error, 'update project archive status');
   }
 };
 
@@ -204,18 +176,13 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
 
     const stats = await projectRepository.getStats(projectId);
     if (!stats) {
-      res.status(404).json({ error: 'Project not found' });
+      sendNotFoundResponse(res, 'Project');
       return;
     }
 
     res.json({ stats });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to get project stats', { error });
-    throw error;
+    handleControllerError(res, error, 'get project stats');
   }
 };
 
@@ -225,33 +192,20 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
 export const listProjectFiles = async (req: Request, res: Response): Promise<void> => {
   try {
     const { projectId } = projectIdSchema.parse(req.params);
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { page, limit } = parsePaginationQuery(req);
 
     const project = await projectRepository.findById(projectId);
     if (!project) {
-      res.status(404).json({ error: 'Project not found' });
+      sendNotFoundResponse(res, 'Project');
       return;
     }
 
     const result = await fileMetadataRepository.list(projectId, page, limit);
 
-    res.json({
-      files: result.files,
-      pagination: {
-        page: result.page,
-        limit,
-        total: result.total,
-        totalPages: result.totalPages,
-      },
-    });
+    const response = createPaginationResponse(result.files, result.page, limit, result.total);
+    res.json({ files: response.items, pagination: response.pagination });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to list project files', { error });
-    throw error;
+    handleControllerError(res, error, 'list project files');
   }
 };
 
@@ -260,36 +214,25 @@ export const listProjectFiles = async (req: Request, res: Response): Promise<voi
  */
 export const searchProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const companyId = authReq.context?.companyId;
-
+    const companyId = getCompanyId(req);
     if (!companyId) {
-      res.status(400).json({ error: 'Company ID required' });
+      sendBadRequestResponse(res, 'Company ID required');
       return;
     }
 
     const searchTerm = req.query.q as string;
     if (!searchTerm) {
-      res.status(400).json({ error: 'Search term required' });
+      sendBadRequestResponse(res, 'Search term required');
       return;
     }
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { page, limit } = parsePaginationQuery(req);
 
     const result = await projectRepository.search(companyId, searchTerm, page, limit);
 
-    res.json({
-      projects: result.projects,
-      pagination: {
-        page: result.page,
-        limit,
-        total: result.total,
-        totalPages: result.totalPages,
-      },
-    });
+    const response = createPaginationResponse(result.projects, result.page, limit, result.total);
+    res.json({ projects: response.items, pagination: response.pagination });
   } catch (error) {
-    logger.error('Failed to search projects', { error });
-    throw error;
+    handleControllerError(res, error, 'search projects');
   }
 };

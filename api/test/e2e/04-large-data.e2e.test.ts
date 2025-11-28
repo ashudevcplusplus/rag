@@ -12,13 +12,11 @@ describe('Level 4: Large Data Tests', () => {
 
   test('4.1: Multiple File Uploads', async () => {
     if (!fs.existsSync(DATA_DIR)) {
-        console.warn('Skipping large data test - data dir missing');
-        return;
+      console.warn('Skipping large data test - data dir missing');
+      return;
     }
-    
-    const files = ['1mb.txt', '5mb.txt'].filter((f) =>
-      fs.existsSync(path.join(DATA_DIR, f))
-    );
+
+    const files = ['1mb.txt', '5mb.txt'].filter((f) => fs.existsSync(path.join(DATA_DIR, f)));
 
     if (files.length === 0) {
       console.warn('No test files found for level 4');
@@ -39,14 +37,14 @@ describe('Level 4: Large Data Tests', () => {
   }, 900000); // Set test timeout
 
   test('4.2: Performance Metrics', async () => {
-     // Need to check if 4.1 actually ran and populated data
-     if (!fs.existsSync(DATA_DIR)) return;
+    // Need to check if 4.1 actually ran and populated data
+    if (!fs.existsSync(DATA_DIR)) return;
 
-     await new Promise((r) => setTimeout(r, 2000));
-     const metrics = await gatherMetrics(companyId, 'policy refund processing');
+    await new Promise((r) => setTimeout(r, 2000));
+    const metrics = await gatherMetrics(companyId, 'policy refund processing');
 
-     expect(metrics.search.p95LatencyMs).toBeLessThan(1000);
-     expect(metrics.search.successRate).toBeGreaterThan(0.8);
+    expect(metrics.search.p95LatencyMs).toBeLessThan(1000);
+    expect(metrics.search.successRate).toBeGreaterThan(0.8);
   });
 
   test('4.3: Search with Large Collection', async () => {
@@ -61,4 +59,3 @@ describe('Level 4: Large Data Tests', () => {
     expect(searchRes.data.results.length).toBeGreaterThan(0);
   });
 });
-

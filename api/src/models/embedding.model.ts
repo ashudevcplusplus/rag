@@ -1,7 +1,9 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IEmbedding } from '../schemas/embedding.schema';
 
-export interface IEmbeddingDocument extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId'>, Document {
+export interface IEmbeddingDocument
+  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId'>,
+    Document {
   fileId: Types.ObjectId;
   projectId: Types.ObjectId;
 }
@@ -52,4 +54,3 @@ embeddingSchema.index({ projectId: 1 });
 // The 'expires' option creates a TTL index.
 
 export const EmbeddingModel = model<IEmbeddingDocument>('Embedding', embeddingSchema);
-

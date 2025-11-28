@@ -1,6 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import crypto from 'crypto';
 import fs from 'fs';
+import { generateContentHash, generatePointId } from '../utils/hash.util';
 import { CONFIG } from '../config';
 import { extractText, chunkText } from '../utils/text-processor';
 import { VectorService } from '../services/vector.service';
@@ -13,18 +13,7 @@ import { projectRepository } from '../repositories/project.repository';
 import { embeddingRepository } from '../repositories/embedding.repository';
 import { ProcessingStatus } from '../schemas/file-metadata.schema';
 
-// Helper for deterministic IDs
-function generatePointId(
-  companyId: string,
-  fileId: string,
-  contentHash: string,
-  index: number
-): string {
-  return crypto
-    .createHash('md5') // MD5 is fine for IDs, faster than SHA
-    .update(`${companyId}:${fileId}:${contentHash}:${index}`)
-    .digest('hex');
-}
+// generatePointId is now imported from hash.util
 
 const worker = new Worker<IndexingJobData, JobResult>(
   'indexing-queue',
@@ -105,7 +94,7 @@ const worker = new Worker<IndexingJobData, JobResult>(
 
         // Embed the batch
         const vectors = await VectorService.getEmbeddings(batchChunks);
-        
+
         // Collect for MongoDB
         allVectors.push(...vectors);
         allContents.push(...batchChunks);
@@ -114,7 +103,7 @@ const worker = new Worker<IndexingJobData, JobResult>(
         const points: VectorPoint[] = batchChunks.map((chunk, idx) => {
           const globalIndex = start + idx;
           // Hash the content for idempotency
-          const contentHash = crypto.createHash('sha256').update(chunk).digest('hex');
+          const contentHash = generateContentHash(chunk);
 
           return {
             id: generatePointId(companyId, fileId, contentHash, globalIndex),

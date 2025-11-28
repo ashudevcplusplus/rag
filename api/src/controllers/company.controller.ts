@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { indexingQueue } from '../queue/queue.client';
 import { VectorService } from '../services/vector.service';
 import { CacheService } from '../services/cache.service';
@@ -14,6 +13,8 @@ import {
   projectIdBodySchema,
 } from '../validators/upload.validator';
 import { projectRepository } from '../repositories/project.repository';
+import { handleControllerError, sendNotFoundResponse } from '../utils/response.util';
+import { QdrantFilter } from '../types/vector.types';
 
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -29,22 +30,22 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
 
     // Validate projectId is required
     const { projectId } = projectIdBodySchema.parse(req.body);
-    
+
     // Verify project exists and belongs to the company
     const project = await projectRepository.findById(projectId);
     if (!project) {
       logger.warn('Project not found', { projectId, companyId });
       throw new ValidationError('Project not found');
     }
-    
+
     // Compare company IDs (handle both string and ObjectId formats)
     const projectCompanyId = String(project.companyId);
-    
+
     if (projectCompanyId !== companyId) {
-      logger.warn('Project company mismatch', { 
-        projectId, 
-        projectCompanyId, 
-        requestedCompanyId: companyId 
+      logger.warn('Project company mismatch', {
+        projectId,
+        projectCompanyId,
+        requestedCompanyId: companyId,
       });
       throw new ValidationError('Project does not belong to this company');
     }
@@ -61,26 +62,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
       statusUrl: `/v1/jobs/${result.jobId}`,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.warn('File upload validation failed', { issues: error.issues });
-      res.status(400).json({
-        error: 'Validation failed',
-        details: error.issues,
-      });
-      return;
-    }
-
-    if (error instanceof ValidationError) {
-      if (error.message === 'Storage limit reached') {
-        res.status(403).json({ error: error.message });
-        return;
-      }
-      res.status(400).json({ error: error.message });
-      return;
-    }
-
-    logger.error('Failed to enqueue job', { error });
-    throw error;
+    handleControllerError(res, error, 'upload file');
   }
 };
 
@@ -91,7 +73,7 @@ export const getJobStatus = async (req: Request, res: Response): Promise<void> =
     const job = await indexingQueue.getJob(jobId);
     if (!job) {
       logger.warn('Job not found', { jobId });
-      res.status(404).json({ error: 'Job not found' });
+      sendNotFoundResponse(res, 'Job');
       return;
     }
 
@@ -104,17 +86,7 @@ export const getJobStatus = async (req: Request, res: Response): Promise<void> =
 
     res.json({ id: job.id, state, progress, result, reason });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.warn('Job status validation failed', { issues: error.issues });
-      res.status(400).json({
-        error: 'Validation failed',
-        details: error.issues,
-      });
-      return;
-    }
-
-    logger.error('Error getting job status', { error });
-    throw error;
+    handleControllerError(res, error, 'get job status');
   }
 };
 
@@ -146,7 +118,7 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
     res.setHeader('X-Cache', 'MISS');
 
     // Build Qdrant filter from API filter
-    let qdrantFilter: { must: any[] } | undefined = undefined;
+    let qdrantFilter: QdrantFilter | undefined = undefined;
     if (filter) {
       qdrantFilter = {
         must: [],
@@ -160,7 +132,7 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
           typeof fileIdValue === 'number' ||
           typeof fileIdValue === 'boolean'
         ) {
-          qdrantFilter.must.push({
+          qdrantFilter.must!.push({
             key: 'fileId',
             match: { value: fileIdValue },
           });
@@ -168,7 +140,7 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
       }
 
       if (filter.fileIds && Array.isArray(filter.fileIds)) {
-        qdrantFilter.must.push({
+        qdrantFilter.must!.push({
           key: 'fileId',
           match: { any: filter.fileIds },
         });
@@ -202,16 +174,6 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
 
     res.json({ results });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.warn('Search validation failed', { issues: error.issues });
-      res.status(400).json({
-        error: 'Validation failed',
-        details: error.issues,
-      });
-      return;
-    }
-
-    logger.error('Search error', { error });
-    throw error;
+    handleControllerError(res, error, 'search');
   }
 };

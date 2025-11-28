@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
 import fs from 'fs';
+import { generateFileHash } from '../utils/hash.util';
 import { indexingQueue } from '../queue/queue.client';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
@@ -32,7 +32,7 @@ export class FileService {
 
     // Calculate file hash for deduplication
     const fileBuffer = fs.readFileSync(file.path);
-    const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    const fileHash = generateFileHash(fileBuffer);
 
     // Check for duplicates
     const existingFile = await fileMetadataRepository.findByHash(fileHash, projectId);

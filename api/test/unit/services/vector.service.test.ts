@@ -1,12 +1,15 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { ExternalServiceError } from '../../../src/types/error.types';
+import { embeddingRepository } from '../../../src/repositories/embedding.repository';
 
 // Mock dependencies BEFORE importing VectorService
 jest.mock('@qdrant/js-client-rest');
+jest.mock('../../../src/repositories/embedding.repository');
 jest.mock('../../../src/config', () => ({
   CONFIG: {
     QDRANT_URL: 'http://localhost:6333',
     EMBED_URL: 'http://localhost:5001/embed',
+    RERANK_URL: 'http://localhost:5001/rerank',
   },
 }));
 jest.mock('../../../src/utils/logger', () => ({
@@ -37,6 +40,7 @@ import { VectorService } from '../../../src/services/vector.service';
 describe('VectorService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (embeddingRepository.findChunks as jest.Mock).mockResolvedValue([]);
   });
 
   describe('getEmbeddings', () => {

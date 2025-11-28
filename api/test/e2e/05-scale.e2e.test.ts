@@ -11,13 +11,11 @@ describe('Level 5: Extreme Scale Tests', () => {
 
   test('5.1: Large File Upload (5MB)', async () => {
     if (!fs.existsSync(DATA_DIR)) {
-        console.warn('Skipping scale test - data dir missing');
-        return;
+      console.warn('Skipping scale test - data dir missing');
+      return;
     }
 
-    const largeFiles = ['5mb.txt'].filter((f) =>
-      fs.existsSync(path.join(DATA_DIR, f))
-    );
+    const largeFiles = ['5mb.txt'].filter((f) => fs.existsSync(path.join(DATA_DIR, f)));
 
     if (largeFiles.length === 0) {
       console.warn('No large test files found');
@@ -36,7 +34,7 @@ describe('Level 5: Extreme Scale Tests', () => {
   }, 600000);
 
   test('5.2: Concurrent Uploads', async () => {
-     if (!fs.existsSync(DATA_DIR)) return;
+    if (!fs.existsSync(DATA_DIR)) return;
 
     const companyId2 = COMPANY_ID;
     const files = ['5mb.txt', '1mb.txt'].filter((f) => fs.existsSync(path.join(DATA_DIR, f)));
@@ -78,4 +76,3 @@ describe('Level 5: Extreme Scale Tests', () => {
     expect(successCount).toBe(jobIds.length);
   }, 600000);
 });
-

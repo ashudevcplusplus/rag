@@ -14,9 +14,9 @@ const PARAPHRASE_OVERLAP_THRESHOLD = 0.33; // allow 1/3 overlap for TOP_K=3 in s
 
 // Per-topic minimum score expectations (relaxed to reduce flakiness)
 const MIN_SCORE = {
-  AI: 0.40,
+  AI: 0.4,
   Cooking: 0.35,
-  Sports: 0.30,
+  Sports: 0.3,
 };
 
 describe('Level 2: Search Quality + Consistency Tests', () => {
@@ -28,57 +28,49 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
   const files = [
     {
       name: `ai_deep_${runSuffix}.txt`,
-      content:
-        `Artificial intelligence and machine learning are transforming industries. Neural networks and deep learning algorithms allow computers to learn from data. \nModern architectures (CNNs, RNNs, Transformers) enable state-of-the-art performance in vision, language, and decision systems. Practical deployment requires pretraining, fine-tuning, and careful dataset curation.`,
+      content: `Artificial intelligence and machine learning are transforming industries. Neural networks and deep learning algorithms allow computers to learn from data. \nModern architectures (CNNs, RNNs, Transformers) enable state-of-the-art performance in vision, language, and decision systems. Practical deployment requires pretraining, fine-tuning, and careful dataset curation.`,
       keywords: ['artificial intelligence', 'deep learning', 'transformers', 'neural networks'],
       metadata: { topic: 'AI', docType: 'article', quality: 'high' },
     },
     {
       name: `ai_dup_${runSuffix}.txt`,
-      content:
-        `Neural networks and deep learning algorithms allow computers to learn from data. This short intro is reused across internal notes.`,
+      content: `Neural networks and deep learning algorithms allow computers to learn from data. This short intro is reused across internal notes.`,
       keywords: ['neural networks', 'deep learning'],
       metadata: { topic: 'AI', docType: 'note', quality: 'low' },
     },
     {
       name: `cooking_carbonara_${runSuffix}.txt`,
-      content:
-        `Classic Carbonara\nIngredients: spaghetti, eggs, pecorino romano, guanciale, black pepper.\nSteps: render guanciale, combine hot pasta with egg+cheese off heat to create a creamy sauce. Do not use cream.\nNotes: authentic carbonara never includes cream — if someone uses cream it's a variant.`,
+      content: `Classic Carbonara\nIngredients: spaghetti, eggs, pecorino romano, guanciale, black pepper.\nSteps: render guanciale, combine hot pasta with egg+cheese off heat to create a creamy sauce. Do not use cream.\nNotes: authentic carbonara never includes cream — if someone uses cream it's a variant.`,
       keywords: ['carbonara', 'pecorino', 'guanciale', 'pasta'],
       metadata: { topic: 'Cooking', docType: 'recipe', quality: 'high' },
     },
     {
       name: `cooking_faq_${runSuffix}.txt`,
-      content:
-        `FAQ: How to cook dinner quickly? Try one-pan pasta, stir-fries, or sheet-pan meals. For authentic pasta, focus on quality pasta, proper salt in water, and finish in pan with sauce.`,
+      content: `FAQ: How to cook dinner quickly? Try one-pan pasta, stir-fries, or sheet-pan meals. For authentic pasta, focus on quality pasta, proper salt in water, and finish in pan with sauce.`,
       keywords: ['how to cook', 'one-pan pasta', 'quick dinner'],
       metadata: { topic: 'Cooking', docType: 'faq', quality: 'medium' },
     },
     {
       name: `sports_report_${runSuffix}.txt`,
-      content:
-        `Match Report: The match ended 1-1. In the 89th minute the striker stepped up for a penalty kick but missed. The goalkeeper made a decisive save. The match was notable for tactical substitutions.`,
+      content: `Match Report: The match ended 1-1. In the 89th minute the striker stepped up for a penalty kick but missed. The goalkeeper made a decisive save. The match was notable for tactical substitutions.`,
       keywords: ['penalty', 'striker', 'goalkeeper', 'match report'],
       metadata: { topic: 'Sports', docType: 'report', quality: 'high' },
     },
     {
       name: `finance_loans_${runSuffix}.txt`,
-      content:
-        `Personal loan for home renovations: interest, processing fees, and tenure impact monthly EMI. Bank offers vary; compare APR and prepayment penalties.`,
+      content: `Personal loan for home renovations: interest, processing fees, and tenure impact monthly EMI. Bank offers vary; compare APR and prepayment penalties.`,
       keywords: ['loan', 'EMI', 'APR', 'home renovation'],
       metadata: { topic: 'Finance', docType: 'guide', quality: 'medium' },
     },
     {
       name: `health_nutrition_${runSuffix}.txt`,
-      content:
-        `Nutrition: balanced diet includes proteins, carbohydrates, and fats. For cooking healthy dinners, prefer whole grains, lean proteins, and vegetables.`,
+      content: `Nutrition: balanced diet includes proteins, carbohydrates, and fats. For cooking healthy dinners, prefer whole grains, lean proteins, and vegetables.`,
       keywords: ['nutrition', 'healthy dinner', 'balanced diet'],
       metadata: { topic: 'Health', docType: 'note', quality: 'medium' },
     },
     {
       name: `boilerplate_privacy_${runSuffix}.txt`,
-      content:
-        `Privacy Policy excerpt: We collect personal data to provide services. This document includes standard legal language about data collection, retention, and user's rights.`,
+      content: `Privacy Policy excerpt: We collect personal data to provide services. This document includes standard legal language about data collection, retention, and user's rights.`,
       keywords: ['privacy', 'policy', 'data collection'],
       metadata: { topic: 'Legal', docType: 'policy', quality: 'boilerplate' },
     },
@@ -88,25 +80,56 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
 
   // Improved query set with paraphrases
   const queries = [
-    { q: 'deep learning algorithms', topic: 'AI', paraphrases: ['deep neural network algorithms', 'transformers and deep learning'] },
-    { q: 'neural network pretraining', topic: 'AI', paraphrases: ['pretraining transformers', 'how to fine-tune deep models'] },
-    { q: 'authentic pasta recipe', topic: 'Cooking', paraphrases: ['traditional carbonara recipe', 'how to make carbonara without cream'] },
-    { q: 'how to cook dinner', topic: 'Cooking/Health', paraphrases: ['quick dinner ideas', 'easy healthy dinner recipes'] },
-    { q: 'football penalty kick', topic: 'Sports', paraphrases: ['penalty kick miss', 'how to take a penalty in football'] },
-    { q: 'home loan interest', topic: 'Finance', paraphrases: ['personal loan interest rates', 'EMI calculation home renovation'] },
-    { q: 'recipe', topic: 'Cooking', paraphrases: ['best pasta recipe', 'easy recipe for beginners'] },
-    { q: 'penalty', topic: 'Sports/Generic', paraphrases: ['penalties in football', 'penalty kick rules'] },
+    {
+      q: 'deep learning algorithms',
+      topic: 'AI',
+      paraphrases: ['deep neural network algorithms', 'transformers and deep learning'],
+    },
+    {
+      q: 'neural network pretraining',
+      topic: 'AI',
+      paraphrases: ['pretraining transformers', 'how to fine-tune deep models'],
+    },
+    {
+      q: 'authentic pasta recipe',
+      topic: 'Cooking',
+      paraphrases: ['traditional carbonara recipe', 'how to make carbonara without cream'],
+    },
+    {
+      q: 'how to cook dinner',
+      topic: 'Cooking/Health',
+      paraphrases: ['quick dinner ideas', 'easy healthy dinner recipes'],
+    },
+    {
+      q: 'football penalty kick',
+      topic: 'Sports',
+      paraphrases: ['penalty kick miss', 'how to take a penalty in football'],
+    },
+    {
+      q: 'home loan interest',
+      topic: 'Finance',
+      paraphrases: ['personal loan interest rates', 'EMI calculation home renovation'],
+    },
+    {
+      q: 'recipe',
+      topic: 'Cooking',
+      paraphrases: ['best pasta recipe', 'easy recipe for beginners'],
+    },
+    {
+      q: 'penalty',
+      topic: 'Sports/Generic',
+      paraphrases: ['penalties in football', 'penalty kick rules'],
+    },
   ];
 
   // Helper: check near-duplicate text_preview entries and log a warning
-  function warnDuplicatePreviews(results: any[]) {
+  function warnDuplicatePreviews(results: any[]): void {
     const previews = results.map((r) => (r.payload && r.payload.text_preview) || '');
     for (let i = 0; i < previews.length; i++) {
       for (let j = i + 1; j < previews.length; j++) {
         if (!previews[i] || !previews[j]) continue;
         if (previews[i].trim() === previews[j].trim()) {
           // Do not fail tests here — surface a warning
-          // eslint-disable-next-line no-console
           console.warn(
             `Warning: Duplicate text_preview detected between results ${i} and ${j}. Consider deduping at ingest.`
           );
@@ -140,13 +163,17 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
       await new Promise((r) => setTimeout(r, 2000));
     } catch (err) {
       // cleanup
-      filePaths.forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });
+      filePaths.forEach((p) => {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      });
       throw err;
     }
   });
 
   afterAll(() => {
-    filePaths.forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });
+    filePaths.forEach((p) => {
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    });
   });
 
   const http = axios.create({ timeout: 20000 });
@@ -154,10 +181,17 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
   // Basic search-quality tests updated to use new content/thresholds
   test('7.1: Search for AI related content (deep learning algorithms)', async () => {
     const query = 'deep learning algorithms';
-    const res = await http.post(`${API_URL}/v1/companies/${companyId}/search`, { query, limit: TOP_K }, { headers: { 'x-api-key': API_KEY } });
+    const res = await http.post(
+      `${API_URL}/v1/companies/${companyId}/search`,
+      { query, limit: TOP_K },
+      { headers: { 'x-api-key': API_KEY } }
+    );
     expect(res.status).toBe(200);
     const results = res.data.results;
-    console.log(`7.1 Input: "${query}" | Vector Search Results (Topic: AI):`, JSON.stringify(results, null, 2));
+    console.log(
+      `7.1 Input: "${query}" | Vector Search Results (Topic: AI):`,
+      JSON.stringify(results, null, 2)
+    );
     expect(results.length).toBeGreaterThan(0);
     warnDuplicatePreviews(results);
 
@@ -171,71 +205,100 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
       console.warn(`Warning: AI score ${topResult.score} < ${MIN_SCORE.AI}`);
     } else {
       // expect(topResult.score).toBeGreaterThanOrEqual(MIN_SCORE.AI);
-    if (topResult.score < MIN_SCORE.AI) {
-      console.warn(`Warning: AI score ${topResult.score} < ${MIN_SCORE.AI}`);
-    } else {
-      expect(topResult.score).toBeGreaterThanOrEqual(MIN_SCORE.AI);
-    }
+      if (topResult.score < MIN_SCORE.AI) {
+        console.warn(`Warning: AI score ${topResult.score} < ${MIN_SCORE.AI}`);
+      } else {
+        expect(topResult.score).toBeGreaterThanOrEqual(MIN_SCORE.AI);
+      }
     }
   });
 
   test('7.2: Search for Cooking related content (authentic pasta recipe)', async () => {
     const query = 'authentic pasta recipe';
-    const res = await http.post(`${API_URL}/v1/companies/${companyId}/search`, { query, limit: TOP_K }, { headers: { 'x-api-key': API_KEY } });
+    const res = await http.post(
+      `${API_URL}/v1/companies/${companyId}/search`,
+      { query, limit: TOP_K },
+      { headers: { 'x-api-key': API_KEY } }
+    );
     expect(res.status).toBe(200);
     const results = res.data.results;
-    console.log(`7.2 Input: "${query}" | Vector Search Results (Topic: Cooking):`, JSON.stringify(results, null, 2));
+    console.log(
+      `7.2 Input: "${query}" | Vector Search Results (Topic: Cooking):`,
+      JSON.stringify(results, null, 2)
+    );
     expect(results.length).toBeGreaterThan(0);
     warnDuplicatePreviews(results);
 
-    const anyCooking = results.some((r: any) => files[2].keywords.some((k) => (r.payload?.text_preview || '').toLowerCase().includes(k)));
+    const anyCooking = results.some((r: any) =>
+      files[2].keywords.some((k) => (r.payload?.text_preview || '').toLowerCase().includes(k))
+    );
     expect(anyCooking).toBeTruthy();
     // expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Cooking);
     if (results[0].score < MIN_SCORE.Cooking) {
       console.warn(`Warning: Cooking score ${results[0].score} < ${MIN_SCORE.Cooking}`);
     } else {
       // expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Cooking);
-    if (results[0].score < MIN_SCORE.Cooking) {
-      console.warn(`Warning: Cooking score ${results[0].score} < ${MIN_SCORE.Cooking}`);
-    } else {
-      expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Cooking);
-    }
+      if (results[0].score < MIN_SCORE.Cooking) {
+        console.warn(`Warning: Cooking score ${results[0].score} < ${MIN_SCORE.Cooking}`);
+      } else {
+        expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Cooking);
+      }
     }
   });
 
   test('7.3: Search for Sports related content (football penalty kick)', async () => {
     const query = 'football penalty kick';
-    const res = await http.post(`${API_URL}/v1/companies/${companyId}/search`, { query, limit: TOP_K }, { headers: { 'x-api-key': API_KEY } });
+    const res = await http.post(
+      `${API_URL}/v1/companies/${companyId}/search`,
+      { query, limit: TOP_K },
+      { headers: { 'x-api-key': API_KEY } }
+    );
     expect(res.status).toBe(200);
     const results = res.data.results;
-    console.log(`7.3 Input: "${query}" | Vector Search Results (Topic: Sports):`, JSON.stringify(results, null, 2));
+    console.log(
+      `7.3 Input: "${query}" | Vector Search Results (Topic: Sports):`,
+      JSON.stringify(results, null, 2)
+    );
     expect(results.length).toBeGreaterThan(0);
     warnDuplicatePreviews(results);
 
-    const anySports = results.some((r: any) => files[4].keywords.some((k) => (r.payload?.text_preview || '').toLowerCase().includes(k)));
+    const anySports = results.some((r: any) =>
+      files[4].keywords.some((k) => (r.payload?.text_preview || '').toLowerCase().includes(k))
+    );
     expect(anySports).toBeTruthy();
     // expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Sports);
     if (results[0].score < MIN_SCORE.Sports) {
       console.warn(`Warning: Sports score ${results[0].score} < ${MIN_SCORE.Sports}`);
     } else {
       // expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Sports);
-    if (results[0].score < MIN_SCORE.Sports) {
-      console.warn(`Warning: Sports score ${results[0].score} < ${MIN_SCORE.Sports}`);
-    } else {
-      expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Sports);
-    }
+      if (results[0].score < MIN_SCORE.Sports) {
+        console.warn(`Warning: Sports score ${results[0].score} < ${MIN_SCORE.Sports}`);
+      } else {
+        expect(results[0].score).toBeGreaterThanOrEqual(MIN_SCORE.Sports);
+      }
     }
   });
 
   test('7.4: Search relevance check (negative test) - how to cook dinner', async () => {
     const query = 'how to cook dinner';
-    const res = await http.post(`${API_URL}/v1/companies/${companyId}/search`, { query, limit: 10 }, { headers: { 'x-api-key': API_KEY } });
+    const res = await http.post(
+      `${API_URL}/v1/companies/${companyId}/search`,
+      { query, limit: 10 },
+      { headers: { 'x-api-key': API_KEY } }
+    );
     const results = res.data.results;
-    console.log(`7.4 Input: "${query}" | Vector Search Results (Relevance Check):`, JSON.stringify(results, null, 2));
+    console.log(
+      `7.4 Input: "${query}" | Vector Search Results (Relevance Check):`,
+      JSON.stringify(results, null, 2)
+    );
     warnDuplicatePreviews(results);
 
-    const aiResult = results.find((r: any) => (r.payload?.text_preview || '').toLowerCase().includes('artificial intelligence'));
-    const cookingResult = results.find((r: any) => (r.payload?.text_preview || '').toLowerCase().includes('carbonara'));
+    const aiResult = results.find((r: any) =>
+      (r.payload?.text_preview || '').toLowerCase().includes('artificial intelligence')
+    );
+    const cookingResult = results.find((r: any) =>
+      (r.payload?.text_preview || '').toLowerCase().includes('carbonara')
+    );
 
     if (aiResult && cookingResult) {
       expect(cookingResult.score).toBeGreaterThan(aiResult.score);
@@ -246,17 +309,26 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
   });
 
   // Consistency & robustness helpers
-  async function searchQuery(http: any, companyId: string, query: string, limit = TOP_K) {
-    const res = await http.post(`${API_URL}/v1/companies/${companyId}/search`, { query, limit }, { headers: { 'x-api-key': API_KEY } });
+  async function searchQuery(
+    http: any,
+    companyId: string,
+    query: string,
+    limit = TOP_K
+  ): Promise<any[]> {
+    const res = await http.post(
+      `${API_URL}/v1/companies/${companyId}/search`,
+      { query, limit },
+      { headers: { 'x-api-key': API_KEY } }
+    );
     if (res.status !== 200) throw new Error(`Search returned ${res.status}`);
     return res.data.results || [];
   }
 
-  function topIds(results: any[], k = TOP_K) {
-    return (results.slice(0, k)).map((r: any) => r.id);
+  function topIds(results: any[], k = TOP_K): string[] {
+    return results.slice(0, k).map((r: any) => r.id);
   }
 
-  function compareIdArrays(a: string[], b: string[]) {
+  function compareIdArrays(a: string[], b: string[]): boolean {
     return a.length === b.length && a.every((v, i) => v === b[i]);
   }
 
@@ -279,7 +351,10 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
       expect(typeof s1).toBe('number');
       expect(typeof s2).toBe('number');
       const diff = Math.abs(s1 - s2);
-      const allowed = Math.max(SCORE_TOLERANCE, SCORE_TOLERANCE * Math.max(Math.abs(s1), Math.abs(s2)));
+      const allowed = Math.max(
+        SCORE_TOLERANCE,
+        SCORE_TOLERANCE * Math.max(Math.abs(s1), Math.abs(s2))
+      );
       if (diff > allowed) {
         console.warn(`Warning: Score drift ${diff} > ${allowed} for item ${i}`);
       } else {
@@ -309,7 +384,8 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
     const afterTop = topIds(after);
 
     const sameExact = compareIdArrays(beforeTop, afterTop);
-    const sameSet = beforeTop.length === afterTop.length && beforeTop.every((id) => afterTop.includes(id));
+    const sameSet =
+      beforeTop.length === afterTop.length && beforeTop.every((id) => afterTop.includes(id));
 
     expect(sameExact || sameSet).toBeTruthy();
 
@@ -342,7 +418,9 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
 
       // Allow lower threshold because small corpus and noisy top-K
       if (overlapRatio < PARAPHRASE_OVERLAP_THRESHOLD) {
-        console.warn(`Warning: Paraphrase overlap ${overlapRatio} < ${PARAPHRASE_OVERLAP_THRESHOLD} for "${item.q}"`);
+        console.warn(
+          `Warning: Paraphrase overlap ${overlapRatio} < ${PARAPHRASE_OVERLAP_THRESHOLD} for "${item.q}"`
+        );
       } else {
         expect(overlapRatio).toBeGreaterThanOrEqual(PARAPHRASE_OVERLAP_THRESHOLD);
       }
@@ -353,13 +431,19 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
     const query = 'football penalty kick';
     const res = await searchQuery(http, companyId, query, TOP_K);
 
-    const snapshot = res.slice(0, TOP_K).map((r: any) => ({ id: r.id, score: r.score, version: r.version }));
+    const snapshot = res
+      .slice(0, TOP_K)
+      .map((r: any) => ({ id: r.id, score: r.score, version: r.version }));
     const SNAPSHOT_PATH = path.join(__dirname, '../.test_snapshots/search_snapshot.json');
 
-    if (!fs.existsSync(path.dirname(SNAPSHOT_PATH))) fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
+    if (!fs.existsSync(path.dirname(SNAPSHOT_PATH)))
+      fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
 
     if (!fs.existsSync(SNAPSHOT_PATH)) {
-      fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify({ query, snapshot, createdAt: Date.now() }, null, 2));
+      fs.writeFileSync(
+        SNAPSHOT_PATH,
+        JSON.stringify({ query, snapshot, createdAt: Date.now() }, null, 2)
+      );
       console.log('Created baseline search snapshot:', SNAPSHOT_PATH);
       expect(true).toBeTruthy();
     } else {
@@ -371,20 +455,30 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
       const currIds = snapshot.map((s: any) => s.id);
 
       const exact = compareIdArrays(prevIds, currIds);
-      const sameSet = prevIds.length === currIds.length && prevIds.every((id: string) => currIds.includes(id));
+      const sameSet =
+        prevIds.length === currIds.length && prevIds.every((id: string) => currIds.includes(id));
 
       expect(exact || sameSet).toBeTruthy();
 
       if (sameSet) {
         for (let i = 0; i < prev.snapshot.length; i++) {
           const prevScore = prev.snapshot[i].score;
-          const currScore = snapshot.find((s: any) => s.id === prev.snapshot[i].id).score;
+          const found = snapshot.find((s: any) => s.id === prev.snapshot[i].id);
+          if (!found) {
+            throw new Error(`Snapshot item with id ${prev.snapshot[i].id} not found`);
+          }
+          const currScore = found.score;
           const diff = Math.abs(prevScore - currScore);
-          const allowed = Math.max(0.02, SCORE_TOLERANCE * Math.max(Math.abs(prevScore), Math.abs(currScore)));
+          const allowed = Math.max(
+            0.02,
+            SCORE_TOLERANCE * Math.max(Math.abs(prevScore), Math.abs(currScore))
+          );
           if (diff > allowed) {
-             console.warn(`Warning: Snapshot score drift ${diff} > ${allowed} for id ${prev.snapshot[i].id}`);
+            console.warn(
+              `Warning: Snapshot score drift ${diff} > ${allowed} for id ${prev.snapshot[i].id}`
+            );
           } else {
-             expect(diff).toBeLessThanOrEqual(allowed);
+            expect(diff).toBeLessThanOrEqual(allowed);
           }
         }
       }

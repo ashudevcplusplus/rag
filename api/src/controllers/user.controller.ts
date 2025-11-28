@@ -1,24 +1,34 @@
 import { Request, Response } from 'express';
-import { z } from 'zod';
 import { userRepository } from '../repositories/user.repository';
 import { createUserSchema, updateUserSchema, userIdSchema } from '../schemas/user.schema';
 import { logger } from '../utils/logger';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import {
+  handleControllerError,
+  sendConflictResponse,
+  sendNotFoundResponse,
+  sendBadRequestResponse,
+} from '../utils/response.util';
+import { removePasswordHash, removePasswordHashFromArray } from '../utils/object.util';
+import { getCompanyId } from '../utils/request.util';
+import { parsePaginationQuery, createPaginationResponse } from '../utils/pagination.util';
 
 /**
  * Create a new user
  */
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const companyId = authReq.context?.companyId || req.body.companyId;
+    const companyId = getCompanyId(req);
+    if (!companyId) {
+      sendBadRequestResponse(res, 'Company ID required');
+      return;
+    }
 
     const data = createUserSchema.parse({ ...req.body, companyId });
 
     // Check if email already exists
     const existing = await userRepository.findByEmail(data.email);
     if (existing) {
-      res.status(409).json({ error: 'User with this email already exists' });
+      sendConflictResponse(res, 'User with this email already exists');
       return;
     }
 
@@ -34,17 +44,11 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     logger.info('User created', { userId: user._id, email: user.email, companyId });
 
     // Remove sensitive data
-    const userObj = user as unknown as Record<string, unknown>;
-    const { passwordHash: _, ...userResponse } = userObj;
+    const userResponse = removePasswordHash(user);
 
     res.status(201).json({ user: userResponse });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to create user', { error });
-    throw error;
+    handleControllerError(res, error, 'create user');
   }
 };
 
@@ -57,22 +61,16 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 
     const user = await userRepository.findById(userId);
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
+      sendNotFoundResponse(res, 'User');
       return;
     }
 
     // Remove sensitive data
-    const userObj = user as unknown as Record<string, unknown>;
-    const { passwordHash: _, ...userResponse } = userObj;
+    const userResponse = removePasswordHash(user);
 
     res.json({ user: userResponse });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to get user', { error });
-    throw error;
+    handleControllerError(res, error, 'get user');
   }
 };
 
@@ -81,16 +79,13 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
  */
 export const listUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authReq = req as AuthenticatedRequest;
-    const companyId = authReq.context?.companyId;
-
+    const companyId = getCompanyId(req);
     if (!companyId) {
-      res.status(400).json({ error: 'Company ID required' });
+      sendBadRequestResponse(res, 'Company ID required');
       return;
     }
 
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const { page, limit } = parsePaginationQuery(req);
     const role = req.query.role as string;
     const isActive = req.query.isActive ? req.query.isActive === 'true' : undefined;
 
@@ -100,24 +95,12 @@ export const listUsers = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Remove sensitive data
-    const usersResponse = result.users.map((user) => {
-      const userObj = user as unknown as Record<string, unknown>;
-      const { passwordHash: _, ...userResponse } = userObj;
-      return userResponse;
-    });
+    const usersResponse = removePasswordHashFromArray(result.users);
 
-    res.json({
-      users: usersResponse,
-      pagination: {
-        page: result.page,
-        limit,
-        total: result.total,
-        totalPages: result.totalPages,
-      },
-    });
+    const response = createPaginationResponse(usersResponse, result.page, limit, result.total);
+    res.json({ users: response.items, pagination: response.pagination });
   } catch (error) {
-    logger.error('Failed to list users', { error });
-    throw error;
+    handleControllerError(res, error, 'list users');
   }
 };
 
@@ -131,24 +114,18 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
     const user = await userRepository.update(userId, data);
     if (!user) {
-      res.status(404).json({ error: 'User not found' });
+      sendNotFoundResponse(res, 'User');
       return;
     }
 
     logger.info('User updated', { userId, updates: Object.keys(data) });
 
     // Remove sensitive data
-    const userObj = user as unknown as Record<string, unknown>;
-    const { passwordHash: _, ...userResponse } = userObj;
+    const userResponse = removePasswordHash(user);
 
     res.json({ user: userResponse });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to update user', { error });
-    throw error;
+    handleControllerError(res, error, 'update user');
   }
 };
 
@@ -161,7 +138,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 
     const success = await userRepository.delete(userId);
     if (!success) {
-      res.status(404).json({ error: 'User not found' });
+      sendNotFoundResponse(res, 'User');
       return;
     }
 
@@ -169,12 +146,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.issues });
-      return;
-    }
-    logger.error('Failed to delete user', { error });
-    throw error;
+    handleControllerError(res, error, 'delete user');
   }
 };
 
@@ -187,13 +159,13 @@ export const setUserActive = async (req: Request, res: Response): Promise<void> 
     const { isActive } = req.body;
 
     if (typeof isActive !== 'boolean') {
-      res.status(400).json({ error: 'isActive must be a boolean' });
+      sendBadRequestResponse(res, 'isActive must be a boolean');
       return;
     }
 
     const success = await userRepository.setActive(userId, isActive);
     if (!success) {
-      res.status(404).json({ error: 'User not found' });
+      sendNotFoundResponse(res, 'User');
       return;
     }
 
@@ -201,7 +173,6 @@ export const setUserActive = async (req: Request, res: Response): Promise<void> 
 
     res.json({ message: `User ${isActive ? 'activated' : 'deactivated'} successfully` });
   } catch (error) {
-    logger.error('Failed to update user active status', { error });
-    throw error;
+    handleControllerError(res, error, 'update user active status');
   }
 };

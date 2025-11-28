@@ -11,8 +11,8 @@ describe('Level 3: Production-Grade Features', () => {
 
   test('3.1: Metadata Filtering', async () => {
     if (!fs.existsSync(testFile2000) || !fs.existsSync(testFile3000)) {
-        console.warn('Skipping metadata test due to missing files');
-        return;
+      console.warn('Skipping metadata test due to missing files');
+      return;
     }
 
     const companyId = COMPANY_ID;
@@ -33,7 +33,7 @@ describe('Level 3: Production-Grade Features', () => {
       headers: { ...form2.getHeaders(), 'x-api-key': API_KEY },
     });
     await waitForIndexing(upload2.data.jobId, 120000);
-    
+
     await new Promise((r) => setTimeout(r, 2000));
 
     // Search with Filter
@@ -61,28 +61,27 @@ describe('Level 3: Production-Grade Features', () => {
 
     // Send 105 requests sequentially
     for (let i = 0; i < 105; i++) {
-        const res = await axios.post(
-            `${API_URL}/v1/companies/${companyId}/search`,
-            { query: 'test', limit: 1 },
-            {
-                headers: { 'x-api-key': API_KEY },
-                validateStatus: () => true,
-            }
-        );
-         if (res.status === 200) successCount++;
-         if (res.status === 429) rateLimitedCount++;
+      const res = await axios.post(
+        `${API_URL}/v1/companies/${companyId}/search`,
+        { query: 'test', limit: 1 },
+        {
+          headers: { 'x-api-key': API_KEY },
+          validateStatus: () => true,
+        }
+      );
+      if (res.status === 200) successCount++;
+      if (res.status === 429) rateLimitedCount++;
     }
 
     // If rate limiting is not enabled in the environment, this might fail.
     // But based on the original test, it expects it to be enabled.
     // If it fails in some environments (like CI without Redis), we might need to adjust.
     expect(rateLimitedCount).toBeGreaterThan(0);
-    expect(successCount).toBeLessThanOrEqual(100); 
+    expect(successCount).toBeLessThanOrEqual(100);
   });
 
   test('3.3: Graceful Shutdown Check', async () => {
-      const health = await axios.get(`${API_URL}/health`);
-      expect(health.status).toBe(200);
+    const health = await axios.get(`${API_URL}/health`);
+    expect(health.status).toBe(200);
   });
 });
-

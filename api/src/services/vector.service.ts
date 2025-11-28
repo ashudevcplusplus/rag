@@ -176,7 +176,7 @@ export class VectorService {
               if (content) {
                 payload.content = content;
                 // Also update text_preview to be full text if available, or keep as is
-                // payload.text_preview = content; 
+                // payload.text_preview = content;
               }
             }
             return r;
@@ -217,7 +217,11 @@ export class VectorService {
       const data = (await response.json()) as RerankResponse;
       return data.scores;
     } catch (error) {
-      logger.error('Failed to rerank', { error, docsCount: documents.length, url: CONFIG.RERANK_URL });
+      logger.error('Failed to rerank', {
+        error,
+        docsCount: documents.length,
+        url: CONFIG.RERANK_URL,
+      });
       throw error;
     }
   }
@@ -254,14 +258,17 @@ export class VectorService {
     let fullTextsMap: Record<string, string> = {};
     try {
       const embeddings = await embeddingRepository.findChunks(chunksToFetch);
-      fullTextsMap = embeddings.reduce((acc, curr) => {
-        const key = `${curr.fileId}:${curr.chunkIndex}`;
-        acc[key] = curr.content;
-        return acc;
-      }, {} as Record<string, string>);
-      logger.debug('Fetched full texts for reranking', { 
+      fullTextsMap = embeddings.reduce(
+        (acc, curr) => {
+          const key = `${curr.fileId}:${curr.chunkIndex}`;
+          acc[key] = curr.content;
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+      logger.debug('Fetched full texts for reranking', {
         count: Object.keys(fullTextsMap).length,
-        total: chunksToFetch.length 
+        total: chunksToFetch.length,
       });
     } catch (error) {
       logger.warn('Failed to fetch full texts for reranking, falling back to previews', { error });

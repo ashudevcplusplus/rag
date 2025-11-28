@@ -23,7 +23,7 @@ export class CompanyRepository {
     // but data is CreateCompanyDTO which includes it now.
     // However, CompanyModel constructor handles extra fields gracefully or we should spread carefully.
     const { apiKey: _, ...rest } = data;
-    
+
     const company = new CompanyModel({
       ...rest,
       apiKey,
