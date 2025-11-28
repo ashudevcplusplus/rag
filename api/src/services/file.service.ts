@@ -4,6 +4,7 @@ import fs from 'fs';
 import { indexingQueue } from '../queue/queue.client';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
+import { projectRepository } from '../repositories/project.repository';
 import { ProcessingStatus } from '../schemas/file-metadata.schema';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
@@ -33,6 +34,26 @@ export class FileService {
     const fileBuffer = fs.readFileSync(file.path);
     const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
+    // Check for duplicates
+    const existingFile = await fileMetadataRepository.findByHash(fileHash, projectId);
+    if (existingFile) {
+      // Clean up the uploaded file since we won't use it
+      try {
+        fs.unlinkSync(file.path);
+      } catch (err) {
+        logger.warn('Failed to delete duplicate file', { path: file.path, error: err });
+      }
+
+      logger.info('Duplicate file detected', {
+        companyId,
+        projectId,
+        hash: fileHash,
+        existingFileId: existingFile._id,
+      });
+
+      throw new ValidationError('File already exists in project');
+    }
+
     logger.info('File upload processing', {
       companyId,
       fileId,
@@ -54,6 +75,12 @@ export class FileService {
       size: file.size,
       hash: fileHash,
       tags: [],
+    });
+
+    // Update project stats (increment file count and size)
+    await projectRepository.updateStats(projectId, {
+      fileCount: 1,
+      totalSize: file.size,
     });
 
     // Add to Queue

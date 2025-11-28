@@ -40,13 +40,15 @@ export interface QdrantFilter {
   must?: Array<{
     key: string;
     match: {
-      value: string | number | boolean;
+      value?: string | number | boolean;
+      any?: (string | number | boolean)[];
     };
   }>;
   should?: Array<{
     key: string;
     match: {
-      value: string | number | boolean;
+      value?: string | number | boolean;
+      any?: (string | number | boolean)[];
     };
   }>;
 }

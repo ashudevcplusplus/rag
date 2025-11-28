@@ -65,6 +65,7 @@ async function seed(): Promise<void> {
     const passwordHash = await userRepository.hashPassword('password123');
 
     const user1 = await userRepository.create({
+      _id: '507f1f77bcf86cd799439020',
       companyId: company1._id,
       email: 'john.doe@acme-corp.com',
       passwordHash,
@@ -77,10 +78,11 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: true,
       },
-    });
+    } as any);
     logger.info('User created', { userId: user1._id, email: user1.email });
 
     const user2 = await userRepository.create({
+      _id: '507f1f77bcf86cd799439021',
       companyId: company1._id,
       email: 'jane.smith@acme-corp.com',
       passwordHash,
@@ -93,10 +95,11 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: false,
       },
-    });
+    } as any);
     logger.info('User created', { userId: user2._id, email: user2.email });
 
     const user3 = await userRepository.create({
+      _id: '507f1f77bcf86cd799439022',
       companyId: company1._id,
       email: 'bob.johnson@acme-corp.com',
       passwordHash,
@@ -109,26 +112,28 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: false,
       },
-    });
+    } as any);
     logger.info('User created', { userId: user3._id, email: user3.email });
 
     // Create users for company2
     logger.info('Creating users for TechStart Inc...');
 
     const user4 = await userRepository.create({
+      _id: '507f1f77bcf86cd799439023',
       companyId: company2._id,
       email: 'sarah.wilson@techstart.io',
       passwordHash,
       firstName: 'Sarah',
       lastName: 'Wilson',
       role: UserRole.OWNER,
-    });
+    } as any);
     logger.info('User created', { userId: user4._id, email: user4.email });
 
     // Create projects for company1
     logger.info('Creating projects for Acme Corporation...');
 
     const project1 = await projectRepository.create({
+      _id: '507f1f77bcf86cd799439030',
       companyId: company1._id,
       ownerId: user1._id,
       name: 'Product Documentation',
@@ -147,10 +152,11 @@ async function seed(): Promise<void> {
         department: 'Product',
         category: 'Documentation',
       },
-    });
+    } as any);
     logger.info('Project created', { projectId: project1._id, slug: project1.slug });
 
     const project2 = await projectRepository.create({
+      _id: '507f1f77bcf86cd799439031',
       companyId: company1._id,
       ownerId: user2._id,
       name: 'Customer Support KB',
@@ -169,10 +175,11 @@ async function seed(): Promise<void> {
         department: 'Support',
         category: 'Knowledge Base',
       },
-    });
+    } as any);
     logger.info('Project created', { projectId: project2._id, slug: project2.slug });
 
     const project3 = await projectRepository.create({
+      _id: '507f1f77bcf86cd799439032',
       companyId: company1._id,
       ownerId: user1._id,
       name: 'Legal Documents',
@@ -186,13 +193,14 @@ async function seed(): Promise<void> {
         department: 'Legal',
         category: 'Confidential',
       },
-    });
+    } as any);
     logger.info('Project created', { projectId: project3._id, slug: project3.slug });
 
     // Create projects for company2
     logger.info('Creating projects for TechStart Inc...');
 
     const project4 = await projectRepository.create({
+      _id: '507f1f77bcf86cd799439033',
       companyId: company2._id,
       ownerId: user4._id,
       name: 'Engineering Docs',
@@ -211,7 +219,7 @@ async function seed(): Promise<void> {
         department: 'Engineering',
         category: 'Technical',
       },
-    });
+    } as any);
     logger.info('Project created', { projectId: project4._id, slug: project4.slug });
 
     logger.info('✅ Database seed completed successfully!');

@@ -27,7 +27,12 @@ createBullBoard({
 
 // Security middleware
 app.use(helmet()); // Set security headers
-app.use(cors()); // Enable CORS
+app.use(cors({
+  origin: true, // Allow all origins (or specify: ['http://localhost:8080'])
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+})); // Enable CORS
 app.use(compression()); // Compress responses
 
 // General rate limiting

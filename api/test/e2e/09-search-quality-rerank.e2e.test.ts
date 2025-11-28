@@ -118,6 +118,9 @@ describe('Level 3: Search Quality with Reranking', () => {
       }
 
       const jobIds = uploadResults.map((r) => r.jobId as string);
+      // Store uploaded file IDs for isolation
+      uploadedFileIds = uploadResults.map((r) => r.fileId as string).filter(id => !!id);
+      
       await waitForBatch(jobIds);
       await new Promise((r) => setTimeout(r, 2000));
     } catch (err) {
@@ -131,11 +134,19 @@ describe('Level 3: Search Quality with Reranking', () => {
   });
 
   const http = axios.create({ timeout: 20000 });
+  let uploadedFileIds: string[] = [];
 
-  // Helper to perform search with rerank=true
+  // Helper to perform search with rerank=true and filter by current file IDs
   async function searchWithRerank(query: string, limit = TOP_K) {
     const res = await http.post(`${API_URL}/v1/companies/${companyId}/search`, 
-        { query, limit, rerank: true }, 
+        { 
+          query, 
+          limit, 
+          rerank: true,
+          filter: {
+            fileIds: uploadedFileIds
+          }
+        }, 
         { headers: { 'x-api-key': API_KEY } }
     );
     if (res.status !== 200) throw new Error(`Search returned ${res.status}`);

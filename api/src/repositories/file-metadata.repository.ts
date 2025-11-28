@@ -164,11 +164,34 @@ export class FileMetadataRepository {
    * Soft delete file
    */
   async delete(id: string): Promise<boolean> {
+    // Get file info before deleting to update project stats
+    const file = await FileMetadataModel.findById(id).lean();
+    if (!file) {
+      return false;
+    }
+
     const result = await FileMetadataModel.findByIdAndUpdate(
       id,
       { $set: { deletedAt: new Date() } },
       { new: true }
     );
+
+    // Update project stats (decrement file count, total size, and vector count)
+    if (result) {
+      const { projectRepository } = await import('./project.repository');
+      const statsUpdate: { fileCount: number; totalSize: number; vectorCount?: number } = {
+        fileCount: -1,
+        totalSize: -file.size,
+      };
+
+      // Decrement vector count if file was indexed
+      if (file.chunkCount && file.chunkCount > 0) {
+        statsUpdate.vectorCount = -file.chunkCount;
+      }
+
+      await projectRepository.updateStats(file.projectId.toString(), statsUpdate);
+    }
+
     return !!result;
   }
 

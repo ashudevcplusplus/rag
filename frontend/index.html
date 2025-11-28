@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>📚 RAG Dashboard</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="overview">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Overview</span>
+                </button>
+                <button class="nav-item" data-tab="upload">
+                    <span class="nav-icon">📤</span>
+                    <span class="nav-text">Upload</span>
+                </button>
+                <button class="nav-item" data-tab="projects">
+                    <span class="nav-icon">📁</span>
+                    <span class="nav-text">Projects</span>
+                </button>
+                <button class="nav-item" data-tab="search">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-text">Search</span>
+                </button>
+                <button class="nav-item" data-tab="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Settings</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="dashboard-header">
+                <h2 id="pageTitle">Overview</h2>
+                <div class="header-actions">
+                    <div class="account-switcher">
+                        <label for="accountSelect">Account:</label>
+                        <select id="accountSelect" class="account-select">
+                            <option value="">Select Account...</option>
+                        </select>
+                        <button id="addAccountBtn" class="btn btn-secondary btn-sm">+ Add</button>
+                    </div>
+                    <div class="connection-status" id="connectionStatus">
+                        <span class="status-dot"></span>
+                        <span>Not Connected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Overview Tab -->
+                <div class="tab-pane active" id="overview-tab">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📁</div>
+                            <div class="stat-info">
+                                <h3 id="projectsCount">-</h3>
+                                <p>Projects</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📄</div>
+                            <div class="stat-info">
+                                <h3 id="filesCount">-</h3>
+                                <p>Files</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🔍</div>
+                            <div class="stat-info">
+                                <h3 id="searchCount">0</h3>
+                                <p>Searches Today</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-info">
+                                <h3 id="apiStatus">-</h3>
+                                <p>API Status</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="recent-section">
+                        <h3>Recent Activity</h3>
+                        <div id="recentActivity" class="activity-list">
+                            <p class="empty-state">No recent activity</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Tab -->
+                <div class="tab-pane" id="upload-tab">
+                    <div class="card">
+                        <h3>Upload Document</h3>
+                        <div class="form-group">
+                            <label for="projectSelect">Project <span class="required">*</span>:</label>
+                            <select id="projectSelect" class="form-control" required>
+                                <option value="">Select a project...</option>
+                            </select>
+                            <p class="form-hint">You must select a project before uploading files</p>
+                        </div>
+                        <div class="upload-area" id="uploadArea">
+                            <input type="file" id="fileInput" accept=".pdf,.txt,.json,.md" style="display: none;" disabled>
+                            <div class="upload-content" id="uploadContent">
+                                <p class="upload-icon">📁</p>
+                                <p id="uploadMessage">Please select a project first</p>
+                                <p class="upload-hint">Supports: PDF, TXT, JSON, MD (Max 50MB)</p>
+                            </div>
+                        </div>
+                        <div id="uploadStatus" class="status-message"></div>
+                        <div id="jobStatus" class="job-status" style="display: none;">
+                            <h4>Processing Status</h4>
+                            <div class="job-info">
+                                <div class="job-item">
+                                    <strong>Job ID:</strong> <span id="jobId">-</span>
+                                </div>
+                                <div class="job-item">
+                                    <strong>Status:</strong> <span id="jobState" class="job-state">-</span>
+                                </div>
+                                <div class="job-item">
+                                    <strong>Progress:</strong> <span id="jobProgress">-</span>
+                                </div>
+                            </div>
+                            <button id="checkJobStatus" class="btn btn-secondary">Refresh Status</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Tab -->
+                <div class="tab-pane" id="projects-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Projects</h3>
+                            <button id="createProjectBtn" class="btn btn-primary">+ New Project</button>
+                        </div>
+                        <div id="projectsStatus" class="status-message"></div>
+                        <div id="projectsList" class="projects-list">
+                            <p class="empty-state">Loading projects...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project Detail Tab -->
+                <div class="tab-pane" id="project-detail-tab">
+                    <div class="detail-header-container">
+                        <button id="backToProjectsBtn" class="btn btn-secondary btn-sm">← Back to Projects</button>
+                        <div class="detail-header">
+                            <div class="detail-title-section">
+                                <h2 id="detailProjectName">Project Name</h2>
+                                <p id="detailProjectDescription">Project description...</p>
+                            </div>
+                            <div class="detail-actions">
+                                <button id="detailUploadBtn" class="btn btn-primary">Upload File</button>
+                                <button id="deleteProjectBtn" class="btn btn-danger">Delete Project</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card small">
+                            <div class="stat-icon">📄</div>
+                            <div class="stat-info">
+                                <h3 id="detailFileCount">-</h3>
+                                <p>Files</p>
+                            </div>
+                        </div>
+                        <div class="stat-card small">
+                            <div class="stat-icon">🔍</div>
+                            <div class="stat-info">
+                                <h3 id="detailVectorCount">-</h3>
+                                <p>Vectors</p>
+                            </div>
+                        </div>
+                        <div class="stat-card small">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-info">
+                                <h3 id="detailCreatedDate">-</h3>
+                                <p>Created</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Files</h3>
+                        <div id="detailFilesList" class="files-list">
+                            <p class="empty-state">Loading files...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Tab -->
+                <div class="tab-pane" id="search-tab">
+                    <div class="card">
+                        <h3>Search Documents</h3>
+                        <div class="search-form">
+                            <div class="form-group">
+                                <label for="searchQuery">Search Query:</label>
+                                <textarea id="searchQuery" rows="3" placeholder="Enter your search query in natural language..." class="form-control" aria-label="Search query input"></textarea>
+                                <p class="form-hint">Press Ctrl+Enter (or Cmd+Enter on Mac) to search</p>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="searchLimit">Results Limit:</label>
+                                    <input type="number" id="searchLimit" value="10" min="1" max="50" class="form-control" aria-label="Maximum number of results">
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="useRerank" aria-label="Enable reranking for more accurate results"> Use Reranking (more accurate)
+                                    </label>
+                                </div>
+                            </div>
+                            <button id="searchBtn" class="btn btn-primary" aria-label="Perform search">🔍 Search</button>
+                        </div>
+                        <div id="searchStatus" class="status-message"></div>
+                    </div>
+                    <div class="card" id="resultsCard" style="display: none;">
+                        <div class="card-header">
+                            <h3>Search Results</h3>
+                            <div class="card-header-actions">
+                            <span id="resultsCount" class="results-count"></span>
+                                <button id="exportResultsBtn" class="btn btn-secondary btn-sm" onclick="exportSearchResults()" style="display: none;">📥 Export</button>
+                            </div>
+                        </div>
+                        <div id="resultsContainer" class="results-container"></div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div class="tab-pane" id="settings-tab">
+                    <div class="card">
+                        <h3>Configuration</h3>
+                        <div class="config-form">
+                            <div class="form-group">
+                                <label for="apiUrl">API Base URL:</label>
+                                <input type="text" id="apiUrl" placeholder="http://localhost:8000" value="http://localhost:8000" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="apiKey">API Key:</label>
+                                <input type="password" id="apiKey" placeholder="Enter your API key" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyId">Company ID:</label>
+                                <input type="text" id="companyId" placeholder="Enter company ID" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="accountName">Account Name (optional):</label>
+                                <input type="text" id="accountName" placeholder="e.g., Acme Corp" class="form-control">
+                            </div>
+                            <div class="form-actions">
+                                <button id="saveConfig" class="btn btn-primary">Save Configuration</button>
+                                <button id="testConnection" class="btn btn-secondary">Test Connection</button>
+                            </div>
+                        </div>
+                        <div id="configStatus" class="status-message"></div>
+                    </div>
+                    <div class="card">
+                        <h3>Saved Accounts</h3>
+                        <div id="savedAccounts" class="saved-accounts-list">
+                            <p class="empty-state">No saved accounts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

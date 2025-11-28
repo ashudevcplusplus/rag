@@ -10,6 +10,7 @@ import {
 } from '../types/vector.types';
 import { ExternalServiceError } from '../types/error.types';
 import { logger } from '../utils/logger';
+import { embeddingRepository } from '../repositories/embedding.repository';
 
 const qdrant = new QdrantClient({ url: CONFIG.QDRANT_URL });
 
@@ -151,7 +152,41 @@ export class VectorService {
         resultsCount: result.length,
       });
 
-      return result as SearchResult[];
+      // Fetch full text content
+      const searchResults = result as SearchResult[];
+      const chunksToFetch = searchResults
+        .map((r) => {
+          const payload = r.payload as SearchResultPayload;
+          return payload ? { fileId: payload.fileId, chunkIndex: payload.chunkIndex } : null;
+        })
+        .filter((c): c is { fileId: string; chunkIndex: number } => c !== null);
+
+      if (chunksToFetch.length > 0) {
+        try {
+          const contents = await embeddingRepository.findChunks(chunksToFetch);
+          const contentMap = new Map(
+            contents.map((c) => [`${c.fileId}:${c.chunkIndex}`, c.content])
+          );
+
+          return searchResults.map((r) => {
+            const payload = r.payload as SearchResultPayload;
+            if (payload) {
+              const key = `${payload.fileId}:${payload.chunkIndex}`;
+              const content = contentMap.get(key);
+              if (content) {
+                payload.content = content;
+                // Also update text_preview to be full text if available, or keep as is
+                // payload.text_preview = content; 
+              }
+            }
+            return r;
+          });
+        } catch (error) {
+          logger.warn('Failed to fetch full text content', { error });
+        }
+      }
+
+      return searchResults;
     } catch (error) {
       logger.error('Search failed', {
         collection: collectionName,
@@ -208,21 +243,57 @@ export class VectorService {
       return [];
     }
 
-    // 3. Extract texts for reranking
-    const documents = initialResults.map((r) => (r.payload as SearchResultPayload)?.text_preview || '');
+    // 3. Fetch full text for reranking
+    const chunksToFetch = initialResults
+      .map((r) => {
+        const payload = r.payload as SearchResultPayload;
+        return payload ? { fileId: payload.fileId, chunkIndex: payload.chunkIndex } : null;
+      })
+      .filter((c): c is { fileId: string; chunkIndex: number } => c !== null);
 
-    // 4. Rerank
+    let fullTextsMap: Record<string, string> = {};
+    try {
+      const embeddings = await embeddingRepository.findChunks(chunksToFetch);
+      fullTextsMap = embeddings.reduce((acc, curr) => {
+        const key = `${curr.fileId}:${curr.chunkIndex}`;
+        acc[key] = curr.content;
+        return acc;
+      }, {} as Record<string, string>);
+      logger.debug('Fetched full texts for reranking', { 
+        count: Object.keys(fullTextsMap).length,
+        total: chunksToFetch.length 
+      });
+    } catch (error) {
+      logger.warn('Failed to fetch full texts for reranking, falling back to previews', { error });
+    }
+
+    // 4. Extract texts for reranking (prefer full text)
+    const documents = initialResults.map((r) => {
+      const payload = r.payload as SearchResultPayload;
+      if (!payload) return '';
+      const key = `${payload.fileId}:${payload.chunkIndex}`;
+      return fullTextsMap[key] || payload.text_preview || '';
+    });
+
+    // 5. Rerank
     const scores = await this.rerank(query, documents);
 
-    // 5. Update scores and sort
-    const rerankedResults = initialResults.map((result, index) => ({
-      ...result,
-      score: scores[index],
-      payload: {
-        ...result.payload,
-        original_score: result.score, // Keep original vector score for reference
-      } as SearchResultPayload,
-    }));
+    // 6. Update scores, attach full text, and sort
+    const rerankedResults = initialResults.map((result, index) => {
+      const payload = result.payload as SearchResultPayload;
+      const key = `${payload.fileId}:${payload.chunkIndex}`;
+      const content = fullTextsMap[key];
+
+      return {
+        ...result,
+        score: scores[index],
+        payload: {
+          ...payload,
+          original_score: result.score, // Keep original vector score for reference
+          content: content || payload.text_preview, // Attach full text
+        } as SearchResultPayload,
+      };
+    });
 
     rerankedResults.sort((a, b) => b.score - a.score);
 

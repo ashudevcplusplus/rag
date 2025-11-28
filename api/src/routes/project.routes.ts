@@ -9,6 +9,7 @@ import {
   archiveProject,
   getProjectStats,
   searchProjects,
+  listProjectFiles,
 } from '../controllers/project.controller';
 
 const router = Router({ mergeParams: true });
@@ -17,6 +18,7 @@ router.post('/', asyncHandler(createProject));
 router.get('/', asyncHandler(listProjects));
 router.get('/search', asyncHandler(searchProjects));
 router.get('/:projectId', asyncHandler(getProject));
+router.get('/:projectId/files', asyncHandler(listProjectFiles));
 router.patch('/:projectId', asyncHandler(updateProject));
 router.delete('/:projectId', asyncHandler(deleteProject));
 router.post('/:projectId/archive', asyncHandler(archiveProject));

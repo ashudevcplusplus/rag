@@ -186,6 +186,59 @@ export class ProjectRepository {
   }
 
   /**
+   * Recalculate and sync project stats from actual file metadata
+   */
+  async recalculateStats(id: string): Promise<boolean> {
+    const project = await this.findById(id);
+    if (!project) {
+      return false;
+    }
+
+    // Import FileMetadataModel and EmbeddingModel inline to avoid circular dependencies
+    const { FileMetadataModel } = await import('../models/file-metadata.model');
+    const { EmbeddingModel } = await import('../models/embedding.model');
+    const { Types } = await import('mongoose');
+
+    // Calculate actual file count and total size from file metadata
+    const fileStats = await FileMetadataModel.aggregate([
+      { $match: { projectId: new Types.ObjectId(id), deletedAt: null } },
+      {
+        $group: {
+          _id: null,
+          fileCount: { $sum: 1 },
+          totalSize: { $sum: '$size' },
+        },
+      },
+    ]);
+
+    // Calculate actual vector count from embeddings
+    const vectorStats = await EmbeddingModel.aggregate([
+      { $match: { projectId: new Types.ObjectId(id) } },
+      {
+        $group: {
+          _id: null,
+          vectorCount: { $sum: '$chunkCount' },
+        },
+      },
+    ]);
+
+    const actualFileCount = fileStats.length > 0 ? fileStats[0].fileCount : 0;
+    const actualTotalSize = fileStats.length > 0 ? fileStats[0].totalSize : 0;
+    const actualVectorCount = vectorStats.length > 0 ? vectorStats[0].vectorCount : 0;
+
+    // Update project with actual stats
+    await ProjectModel.findByIdAndUpdate(id, {
+      $set: {
+        fileCount: actualFileCount,
+        totalSize: actualTotalSize,
+        vectorCount: actualVectorCount,
+      },
+    });
+
+    return true;
+  }
+
+  /**
    * Search projects by name or tags
    */
   async search(

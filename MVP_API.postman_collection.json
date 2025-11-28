@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "MVP API - RAG System",
-    "description": "Complete API collection for MVP RAG System with document indexing and search",
+    "description": "Complete API collection for MVP RAG System with document indexing, search, projects, and user management",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "mvp-rag-api"
   },
@@ -21,123 +21,499 @@
       "response": []
     },
     {
-      "name": "Upload File",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "x-api-key",
-            "value": "{{api_key}}",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
+      "name": "Companies",
+      "item": [
+        {
+          "name": "Upload File",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload a file (PDF, TXT, JSON, etc.)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/companies/{{company_id}}/uploads",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "companies", "{{company_id}}", "uploads"]
+            },
+            "description": "Upload a file for indexing. Returns jobId to track indexing progress."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Documents",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"{{search_query}}\",\n  \"limit\": 10,\n  \"filter\": {\n    \"fileId\": \"{{file_id}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/companies/{{company_id}}/search",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "companies", "{{company_id}}", "search"]
+            },
+            "description": "Search company documents using semantic search. Filter is optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Documents (Simple)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"{{search_query}}\",\n  \"limit\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/companies/{{company_id}}/search",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "companies", "{{company_id}}", "search"]
+            },
+            "description": "Simple search without filters"
+          },
+          "response": []
+        },
+        {
+          "name": "Projects",
+          "item": [
             {
-              "key": "file",
-              "type": "file",
-              "src": [],
-              "description": "Upload a file (PDF, TXT, JSON, etc.)"
+              "name": "Create Project",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"My New Project\",\n  \"slug\": \"my-new-project\",\n  \"description\": \"A sample project\",\n  \"companyId\": \"{{company_id}}\",\n  \"ownerId\": \"{{user_id}}\",\n  \"visibility\": \"PRIVATE\",\n  \"tags\": [\"sample\", \"test\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects"]
+                },
+                "description": "Create a new project"
+              },
+              "response": []
+            },
+            {
+              "name": "List Projects",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects"]
+                },
+                "description": "List all projects for the company"
+              },
+              "response": []
+            },
+            {
+              "name": "Search Projects",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects/search?q=project",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects", "search"],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "project"
+                    }
+                  ]
+                },
+                "description": "Search projects by name or description"
+              },
+              "response": []
+            },
+            {
+              "name": "Get Project",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects", "{{project_id}}"]
+                },
+                "description": "Get project details"
+              },
+              "response": []
+            },
+            {
+              "name": "Update Project",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Project Name\",\n  \"description\": \"Updated description\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects", "{{project_id}}"]
+                },
+                "description": "Update project details"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Project",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects", "{{project_id}}"]
+                },
+                "description": "Delete a project"
+              },
+              "response": []
+            },
+            {
+              "name": "Archive Project",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}/archive",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects", "{{project_id}}", "archive"]
+                },
+                "description": "Archive a project"
+              },
+              "response": []
+            },
+            {
+              "name": "Get Project Stats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}/stats",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "projects", "{{project_id}}", "stats"]
+                },
+                "description": "Get project statistics"
+              },
+              "response": []
             }
           ]
         },
-        "url": {
-          "raw": "{{base_url}}/v1/companies/{{company_id}}/uploads",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "companies", "{{company_id}}", "uploads"]
-        },
-        "description": "Upload a file for indexing. Returns jobId to track indexing progress."
-      },
-      "response": []
-    },
-    {
-      "name": "Get Job Status",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "x-api-key",
-            "value": "{{api_key}}",
-            "type": "text"
-          }
-        ],
-        "url": {
-          "raw": "{{base_url}}/v1/jobs/{{job_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "jobs", "{{job_id}}"]
-        },
-        "description": "Get the status and progress of an indexing job"
-      },
-      "response": []
-    },
-    {
-      "name": "Search Documents",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
-          },
-          {
-            "key": "x-api-key",
-            "value": "{{api_key}}",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"query\": \"{{search_query}}\",\n  \"limit\": 10,\n  \"filter\": {\n    \"fileId\": \"{{file_id}}\"\n  }\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+        {
+          "name": "Users",
+          "item": [
+            {
+              "name": "Create User",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyId\": \"{{company_id}}\",\n  \"email\": \"user@example.com\",\n  \"password\": \"securepassword123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"role\": \"MEMBER\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/users",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "users"]
+                },
+                "description": "Create a new user"
+              },
+              "response": []
+            },
+            {
+              "name": "List Users",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/users",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "users"]
+                },
+                "description": "List all users for the company"
+              },
+              "response": []
+            },
+            {
+              "name": "Get User",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "users", "{{user_id}}"]
+                },
+                "description": "Get user details"
+              },
+              "response": []
+            },
+            {
+              "name": "Update User",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Johnny\",\n  \"lastName\": \"Doe\",\n  \"role\": \"ADMIN\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "users", "{{user_id}}"]
+                },
+                "description": "Update user details"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete User",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "users", "{{user_id}}"]
+                },
+                "description": "Delete a user"
+              },
+              "response": []
+            },
+            {
+              "name": "Set User Active Status",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "x-api-key",
+                    "value": "{{api_key}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}/active",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "companies", "{{company_id}}", "users", "{{user_id}}", "active"]
+                },
+                "description": "Activate or deactivate a user"
+              },
+              "response": []
             }
-          }
-        },
-        "url": {
-          "raw": "{{base_url}}/v1/companies/{{company_id}}/search",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "companies", "{{company_id}}", "search"]
-        },
-        "description": "Search company documents using semantic search. Filter is optional."
-      },
-      "response": []
+          ]
+        }
+      ]
     },
     {
-      "name": "Search Documents (Simple)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json",
-            "type": "text"
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "Get Job Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{api_key}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/jobs/{{job_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "jobs", "{{job_id}}"]
+            },
+            "description": "Get the status and progress of an indexing job"
           },
-          {
-            "key": "x-api-key",
-            "value": "{{api_key}}",
-            "type": "text"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"query\": \"{{search_query}}\",\n  \"limit\": 10\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{base_url}}/v1/companies/{{company_id}}/search",
-          "host": ["{{base_url}}"],
-          "path": ["v1", "companies", "{{company_id}}", "search"]
-        },
-        "description": "Simple search without filters"
-      },
-      "response": []
+          "response": []
+        }
+      ]
     },
     {
       "name": "Queue Dashboard",
@@ -167,7 +543,7 @@
     },
     {
       "key": "company_id",
-      "value": "test-company",
+      "value": "507f1f77bcf86cd799439011",
       "type": "string"
     },
     {
@@ -181,10 +557,19 @@
       "type": "string"
     },
     {
+      "key": "project_id",
+      "value": "507f1f77bcf86cd799439030",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "507f1f77bcf86cd799439020",
+      "type": "string"
+    },
+    {
       "key": "search_query",
       "value": "company policies",
       "type": "string"
     }
   ]
 }
-

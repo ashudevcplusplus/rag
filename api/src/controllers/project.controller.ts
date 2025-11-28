@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { projectRepository } from '../repositories/project.repository';
+import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -214,6 +215,42 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
       return;
     }
     logger.error('Failed to get project stats', { error });
+    throw error;
+  }
+};
+
+/**
+ * List files in a project
+ */
+export const listProjectFiles = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { projectId } = projectIdSchema.parse(req.params);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const project = await projectRepository.findById(projectId);
+    if (!project) {
+      res.status(404).json({ error: 'Project not found' });
+      return;
+    }
+
+    const result = await fileMetadataRepository.list(projectId, page, limit);
+
+    res.json({
+      files: result.files,
+      pagination: {
+        page: result.page,
+        limit,
+        total: result.total,
+        totalPages: result.totalPages,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.issues });
+      return;
+    }
+    logger.error('Failed to list project files', { error });
     throw error;
   }
 };

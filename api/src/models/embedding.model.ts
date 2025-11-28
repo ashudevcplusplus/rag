@@ -18,16 +18,16 @@ const embeddingSchema = new Schema<IEmbeddingDocument>(
       ref: 'Project',
       required: true,
     },
-    chunkIndex: {
+    chunkCount: {
       type: Number,
       required: true,
     },
-    content: {
-      type: String,
+    contents: {
+      type: [String],
       required: true,
     },
-    vector: {
-      type: [Number],
+    vectors: {
+      type: [[Number]],
       required: true,
     },
     metadata: {
@@ -46,7 +46,7 @@ const embeddingSchema = new Schema<IEmbeddingDocument>(
 );
 
 // Indexes
-embeddingSchema.index({ fileId: 1, chunkIndex: 1 }); // For retrieving chunks in order
+embeddingSchema.index({ fileId: 1 }); // For retrieving file embeddings
 embeddingSchema.index({ projectId: 1 });
 // createdAt index is created automatically by the 'expires' option, but we can explicit if needed.
 // The 'expires' option creates a TTL index.

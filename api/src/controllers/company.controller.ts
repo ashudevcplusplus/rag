@@ -11,7 +11,9 @@ import {
   fileUploadSchema,
   searchQuerySchema,
   jobIdSchema,
+  projectIdBodySchema,
 } from '../validators/upload.validator';
+import { projectRepository } from '../repositories/project.repository';
 
 export const uploadFile = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -25,9 +27,28 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
     // Validate file
     fileUploadSchema.parse({ file: req.file });
 
-    // TODO: Get projectId from request (for now using a default project approach)
-    // In a full implementation, you'd require projectId as a parameter
-    const projectId = req.body.projectId || companyId; // Temporary: use companyId as projectId
+    // Validate projectId is required
+    const { projectId } = projectIdBodySchema.parse(req.body);
+    
+    // Verify project exists and belongs to the company
+    const project = await projectRepository.findById(projectId);
+    if (!project) {
+      logger.warn('Project not found', { projectId, companyId });
+      throw new ValidationError('Project not found');
+    }
+    
+    // Compare company IDs (handle both string and ObjectId formats)
+    const projectCompanyId = String(project.companyId);
+    
+    if (projectCompanyId !== companyId) {
+      logger.warn('Project company mismatch', { 
+        projectId, 
+        projectCompanyId, 
+        requestedCompanyId: companyId 
+      });
+      throw new ValidationError('Project does not belong to this company');
+    }
+
     const uploadedBy = req.body.uploadedBy || companyId; // Temporary: would come from authenticated user
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,10 +146,10 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
     res.setHeader('X-Cache', 'MISS');
 
     // Build Qdrant filter from API filter
-    let qdrantFilter = undefined;
+    let qdrantFilter: { must: any[] } | undefined = undefined;
     if (filter) {
       qdrantFilter = {
-        must: [] as Array<{ key: string; match: { value: string | number | boolean } }>,
+        must: [],
       };
 
       if (filter.fileId) {
@@ -144,6 +165,13 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
             match: { value: fileIdValue },
           });
         }
+      }
+
+      if (filter.fileIds && Array.isArray(filter.fileIds)) {
+        qdrantFilter.must.push({
+          key: 'fileId',
+          match: { any: filter.fileIds },
+        });
       }
 
       // Add more filter conditions as needed

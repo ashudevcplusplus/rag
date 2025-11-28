@@ -9,6 +9,14 @@ export const companyIdSchema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Invalid company ID format' }),
 });
 
+// Project ID validation
+export const projectIdBodySchema = z.object({
+  projectId: z
+    .string()
+    .min(1, { message: 'Project ID is required' })
+    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Invalid project ID format' }),
+});
+
 // File upload validation
 export const fileUploadSchema = z.object({
   file: z.object({

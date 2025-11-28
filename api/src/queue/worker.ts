@@ -9,6 +9,7 @@ import { VectorPoint } from '../types/vector.types';
 import { logger } from '../utils/logger';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
+import { projectRepository } from '../repositories/project.repository';
 import { embeddingRepository } from '../repositories/embedding.repository';
 import { ProcessingStatus } from '../schemas/file-metadata.schema';
 
@@ -87,6 +88,9 @@ const worker = new Worker<IndexingJobData, JobResult>(
       const BATCH_SIZE = 50; // Process 50 chunks at a time
       const totalBatches = Math.ceil(chunks.length / BATCH_SIZE);
 
+      const allVectors: number[][] = [];
+      const allContents: string[] = [];
+
       for (let i = 0; i < totalBatches; i++) {
         const start = i * BATCH_SIZE;
         const end = start + BATCH_SIZE;
@@ -101,6 +105,10 @@ const worker = new Worker<IndexingJobData, JobResult>(
 
         // Embed the batch
         const vectors = await VectorService.getEmbeddings(batchChunks);
+        
+        // Collect for MongoDB
+        allVectors.push(...vectors);
+        allContents.push(...batchChunks);
 
         // Map to Qdrant Points with Deterministic IDs
         const points: VectorPoint[] = batchChunks.map((chunk, idx) => {
@@ -127,23 +135,22 @@ const worker = new Worker<IndexingJobData, JobResult>(
         await VectorService.ensureCollection(collection);
         await VectorService.upsertBatch(collection, points);
 
-        // Save embeddings to MongoDB (7-day retention)
-        const embeddingDtos = batchChunks.map((chunk, idx) => ({
-          fileId,
-          projectId,
-          chunkIndex: start + idx,
-          content: chunk,
-          vector: vectors[idx],
-          metadata: {
-            characterCount: chunk.length,
-          },
-        }));
-        await embeddingRepository.createMany(embeddingDtos);
-
         // Update job progress
         const progress = 30 + Math.floor(((i + 1) / totalBatches) * 70);
         await job.updateProgress(progress);
       }
+
+      // Save embeddings to MongoDB (Single Document per File)
+      await embeddingRepository.create({
+        fileId,
+        projectId,
+        chunkCount: chunks.length,
+        contents: allContents,
+        vectors: allVectors,
+        metadata: {
+          characterCount: rawText.length,
+        },
+      });
 
       // Update vector indexing status
       const collection = `company_${companyId}`;
@@ -155,6 +162,11 @@ const worker = new Worker<IndexingJobData, JobResult>(
       if (meta) {
         await companyRepository.updateStorageUsed(companyId, meta.size);
       }
+
+      // Update project stats (increment vector count)
+      await projectRepository.updateStats(projectId, {
+        vectorCount: chunks.length,
+      });
 
       // Cleanup uploaded file to save disk space
       try {
