@@ -1,9 +1,15 @@
 import { UserModel, IUserDocument } from '../models/user.model';
 import { CreateUserDTO, UpdateUserDTO, IUser } from '../schemas/user.schema';
-import { FilterQuery, UpdateQuery } from 'mongoose';
+import { FilterQuery, UpdateQuery, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export class UserRepository {
+  public model: Model<IUserDocument>;
+
+  constructor() {
+    this.model = UserModel;
+  }
+
   /**
    * Create a new user
    */

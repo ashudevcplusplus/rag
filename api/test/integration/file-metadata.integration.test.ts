@@ -13,6 +13,9 @@ describe('File Metadata Repository Integration Tests', () => {
   beforeAll(async () => {
     await database.connect();
 
+    // Clean up FileMetadata
+    await fileMetadataRepository.model.deleteMany({});
+
     // Get test data from seed
     const company = await companyRepository.findBySlug('acme-corp');
     const project = await projectRepository.findBySlug(company!._id, 'product-docs');

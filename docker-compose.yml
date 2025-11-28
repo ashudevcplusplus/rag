@@ -19,6 +19,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    volumes:
+      - ./embed:/app
+    command: uvicorn app:app --host 0.0.0.0 --port 5001 --reload
 
   redis:
     image: redis:alpine
@@ -56,6 +59,9 @@ services:
       - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/rag_db?authSource=admin
     volumes:
       - ./data:/app/data
+      - ./api:/app
+      - /app/node_modules
+    command: npm run dev
 
 volumes:
   qdrant_storage:

@@ -60,7 +60,7 @@ npm run test:large -- --mode=full
 ```bash
 # Using ts-node directly
 npx ts-node test/generate-test-data.ts --full
-npx ts-node test/test-unified.ts --difficulty=4
+npm run test:e2e -- 04-large-data
 ```
 
 ## Environment Variables

@@ -1,6 +1,13 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { CONFIG } from '../config';
-import { VectorPoint, SearchResult, EmbeddingResponse, QdrantFilter } from '../types/vector.types';
+import {
+  VectorPoint,
+  SearchResult,
+  EmbeddingResponse,
+  QdrantFilter,
+  RerankResponse,
+  SearchResultPayload,
+} from '../types/vector.types';
 import { ExternalServiceError } from '../types/error.types';
 import { logger } from '../utils/logger';
 
@@ -153,5 +160,72 @@ export class VectorService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Rerank documents using cross-encoder
+   */
+  static async rerank(query: string, documents: string[]): Promise<number[]> {
+    try {
+      logger.debug('Reranking documents', { count: documents.length, url: CONFIG.RERANK_URL });
+
+      const response = await fetch(CONFIG.RERANK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, documents }),
+      });
+
+      if (!response.ok) {
+        throw new ExternalServiceError('Rerank service', response.statusText);
+      }
+
+      const data = (await response.json()) as RerankResponse;
+      return data.scores;
+    } catch (error) {
+      logger.error('Failed to rerank', { error, docsCount: documents.length, url: CONFIG.RERANK_URL });
+      throw error;
+    }
+  }
+
+  /**
+   * Search with hybrid reranking (Vector + Cross-Encoder)
+   */
+  static async searchWithReranking(
+    collectionName: string,
+    query: string,
+    limit: number = 10,
+    filter?: QdrantFilter,
+    rerankLimit: number = 50
+  ): Promise<SearchResult[]> {
+    // 1. Get query embedding
+    const embeddings = await this.getEmbeddings([query]);
+    const queryVector = embeddings[0];
+
+    // 2. Initial vector search with higher limit
+    const initialResults = await this.search(collectionName, queryVector, rerankLimit, filter);
+
+    if (initialResults.length === 0) {
+      return [];
+    }
+
+    // 3. Extract texts for reranking
+    const documents = initialResults.map((r) => (r.payload as SearchResultPayload)?.text_preview || '');
+
+    // 4. Rerank
+    const scores = await this.rerank(query, documents);
+
+    // 5. Update scores and sort
+    const rerankedResults = initialResults.map((result, index) => ({
+      ...result,
+      score: scores[index],
+      payload: {
+        ...result.payload,
+        original_score: result.score, // Keep original vector score for reference
+      } as SearchResultPayload,
+    }));
+
+    rerankedResults.sort((a, b) => b.score - a.score);
+
+    return rerankedResults.slice(0, limit);
   }
 }

@@ -3,6 +3,7 @@ export interface IndexingJobData {
   fileId: string;
   filePath: string;
   mimetype: string;
+  fileSizeMB: number;
 }
 
 export interface JobResult {

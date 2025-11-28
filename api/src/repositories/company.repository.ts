@@ -1,20 +1,31 @@
 import { CompanyModel, ICompanyDocument } from '../models/company.model';
 import { CreateCompanyDTO, UpdateCompanyDTO, ICompany } from '../schemas/company.schema';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 
 export class CompanyRepository {
+  public model: Model<ICompanyDocument>;
+
+  constructor() {
+    this.model = CompanyModel;
+  }
+
   /**
    * Create a new company
    */
   async create(data: CreateCompanyDTO): Promise<ICompany> {
     // Generate API key
-    const apiKey = `ck_${uuidv4().replace(/-/g, '')}`;
+    const apiKey = data.apiKey || `ck_${uuidv4().replace(/-/g, '')}`;
     const apiKeyHash = await bcrypt.hash(apiKey, 10);
 
+    // Remove apiKey from data to avoid passing it twice if it exists
+    // but data is CreateCompanyDTO which includes it now.
+    // However, CompanyModel constructor handles extra fields gracefully or we should spread carefully.
+    const { apiKey: _, ...rest } = data;
+    
     const company = new CompanyModel({
-      ...data,
+      ...rest,
       apiKey,
       apiKeyHash,
     });

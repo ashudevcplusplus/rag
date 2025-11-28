@@ -3,8 +3,8 @@ import { logger } from '../utils/logger';
 
 // Rate limiter for file uploads
 export const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 uploads per windowMs
+  windowMs: 1 * 60 * 1000, // 1 minutes
+  max: 100, // Increased for testing
   message: 'Too many file uploads from this IP, please try again later',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -15,7 +15,7 @@ export const uploadLimiter = rateLimit({
     });
     res.status(429).json({
       error: 'Too many requests, please try again later',
-      retryAfter: 15 * 60, // seconds
+      retryAfter: 60, // seconds
     });
   },
 });
@@ -23,7 +23,7 @@ export const uploadLimiter = rateLimit({
 // Rate limiter for search queries
 export const searchLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // Limit each IP to 30 searches per minute
+  max: 100, // Limit each IP to 100 searches per minute
   message: 'Too many search requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
@@ -42,7 +42,7 @@ export const searchLimiter = rateLimit({
 // General API rate limiter
 export const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per minute
+  max: 1000, // Increased for testing
   message: 'Too many requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,

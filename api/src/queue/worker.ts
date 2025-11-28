@@ -9,6 +9,7 @@ import { VectorPoint } from '../types/vector.types';
 import { logger } from '../utils/logger';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
+import { embeddingRepository } from '../repositories/embedding.repository';
 import { ProcessingStatus } from '../schemas/file-metadata.schema';
 
 // Helper for deterministic IDs
@@ -27,20 +28,31 @@ function generatePointId(
 const worker = new Worker<IndexingJobData, JobResult>(
   'indexing-queue',
   async (job: Job<IndexingJobData, JobResult>) => {
-    const { companyId, fileId, filePath, mimetype } = job.data;
+    const { companyId, fileId, filePath, mimetype, fileSizeMB } = job.data;
 
     logger.info('Processing job started', {
       jobId: job.id,
       companyId,
       fileId,
       mimetype,
+      fileSizeMB,
     });
 
     await job.updateProgress(10); // 10% - Starting
 
     try {
+      // Fetch file metadata to get projectId
+      const fileMetadata = await fileMetadataRepository.findById(fileId);
+      if (!fileMetadata) {
+        throw new Error('File metadata not found');
+      }
+      const projectId = fileMetadata.projectId;
+
       // Update file status to PROCESSING
       await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.PROCESSING);
+
+      // Clean up any existing embeddings for this file (e.g. re-indexing)
+      await embeddingRepository.deleteByFileId(fileId);
 
       // 1. Extract
       logger.debug('Extracting text', { jobId: job.id, filePath });
@@ -115,6 +127,19 @@ const worker = new Worker<IndexingJobData, JobResult>(
         await VectorService.ensureCollection(collection);
         await VectorService.upsertBatch(collection, points);
 
+        // Save embeddings to MongoDB (7-day retention)
+        const embeddingDtos = batchChunks.map((chunk, idx) => ({
+          fileId,
+          projectId,
+          chunkIndex: start + idx,
+          content: chunk,
+          vector: vectors[idx],
+          metadata: {
+            characterCount: chunk.length,
+          },
+        }));
+        await embeddingRepository.createMany(embeddingDtos);
+
         // Update job progress
         const progress = 30 + Math.floor(((i + 1) / totalBatches) * 70);
         await job.updateProgress(progress);
@@ -126,9 +151,9 @@ const worker = new Worker<IndexingJobData, JobResult>(
       await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.COMPLETED);
 
       // Update company storage used
-      const fileMetadata = await fileMetadataRepository.findById(fileId);
-      if (fileMetadata) {
-        await companyRepository.updateStorageUsed(companyId, fileMetadata.size);
+      const meta = await fileMetadataRepository.findById(fileId);
+      if (meta) {
+        await companyRepository.updateStorageUsed(companyId, meta.size);
       }
 
       // Cleanup uploaded file to save disk space

@@ -1,9 +1,15 @@
 import { ProjectModel, IProjectDocument } from '../models/project.model';
 import { CreateProjectDTO, UpdateProjectDTO, IProject } from '../schemas/project.schema';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Model } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
 
 export class ProjectRepository {
+  public model: Model<IProjectDocument>;
+
+  constructor() {
+    this.model = ProjectModel;
+  }
+
   /**
    * Create a new project
    */

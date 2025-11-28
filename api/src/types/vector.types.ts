@@ -32,6 +32,10 @@ export interface EmbeddingResponse {
   vectors?: number[][];
 }
 
+export interface RerankResponse {
+  scores: number[];
+}
+
 export interface QdrantFilter {
   must?: Array<{
     key: string;

@@ -15,3 +15,6 @@ export * from './file-metadata.schema';
 
 // API Log schemas
 export * from './api-log.schema';
+
+// Embedding schemas
+export * from './embedding.schema';

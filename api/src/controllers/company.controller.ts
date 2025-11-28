@@ -100,17 +100,18 @@ export const getJobStatus = async (req: Request, res: Response): Promise<void> =
 export const searchCompany = async (req: Request, res: Response): Promise<void> => {
   try {
     const { companyId } = companyIdSchema.parse(req.params);
-    const { query, limit, filter } = searchQuerySchema.parse(req.body);
+    const { query, limit, filter, rerank } = searchQuerySchema.parse(req.body);
 
     logger.info('Search requested', {
       companyId,
       query: query.substring(0, 100), // Log first 100 chars
       limit,
       hasFilter: !!filter,
+      rerank,
     });
 
-    // 1. Check Cache (include filter in cache key!)
-    const cacheKey = CacheService.generateKey(companyId, query, limit, filter);
+    // 1. Check Cache (include filter and rerank in cache key!)
+    const cacheKey = CacheService.generateKey(companyId, query, limit, filter, rerank);
     const cachedResults = await CacheService.get(cacheKey);
 
     if (cachedResults) {
@@ -122,9 +123,6 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
 
     // 2. Cache miss - perform search
     res.setHeader('X-Cache', 'MISS');
-
-    // Get embedding for the query
-    const [queryVector] = await VectorService.getEmbeddings([query]);
 
     // Build Qdrant filter from API filter
     let qdrantFilter = undefined;
@@ -154,7 +152,15 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
 
     // Search in company collection
     const collection = `company_${companyId}`;
-    const results = await VectorService.search(collection, queryVector, limit, qdrantFilter);
+    let results;
+
+    if (rerank) {
+      results = await VectorService.searchWithReranking(collection, query, limit, qdrantFilter);
+    } else {
+      // Get embedding for the query
+      const [queryVector] = await VectorService.getEmbeddings([query]);
+      results = await VectorService.search(collection, queryVector, limit, qdrantFilter);
+    }
 
     // 3. Cache the results
     await CacheService.set(cacheKey, results, 3600); // Cache for 1 hour
@@ -163,6 +169,7 @@ export const searchCompany = async (req: Request, res: Response): Promise<void> 
       companyId,
       resultsCount: results.length,
       filtered: !!filter,
+      rerank,
     });
 
     res.json({ results });

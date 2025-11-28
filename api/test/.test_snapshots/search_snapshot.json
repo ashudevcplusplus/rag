@@ -1,0 +1,21 @@
+{
+  "query": "football penalty kick",
+  "snapshot": [
+    {
+      "id": "0599be41-53b9-4982-100c-b65566aa0ce4",
+      "score": 0.5337788,
+      "version": 364
+    },
+    {
+      "id": "a85f2c75-fca3-e7ff-d072-7d5aac98c059",
+      "score": 0.5337788,
+      "version": 378
+    },
+    {
+      "id": "f4244bfd-a3f1-50e5-a035-535454d5e9f7",
+      "score": 0.06604788,
+      "version": 6
+    }
+  ],
+  "createdAt": 1764331722578
+}

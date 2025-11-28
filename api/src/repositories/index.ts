@@ -5,3 +5,4 @@ export { ProjectRepository, projectRepository } from './project.repository';
 export { ProjectMemberRepository, projectMemberRepository } from './project-member.repository';
 export { FileMetadataRepository, fileMetadataRepository } from './file-metadata.repository';
 export { ApiLogRepository, apiLogRepository } from './api-log.repository';
+export { EmbeddingRepository, embeddingRepository } from './embedding.repository';

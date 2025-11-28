@@ -64,6 +64,7 @@ export class FileService {
         fileId: fileMetadata._id,
         filePath: file.path,
         mimetype: file.mimetype,
+        fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
       },
       {
         attempts: 3, // Retry failed jobs 3 times

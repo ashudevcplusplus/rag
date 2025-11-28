@@ -88,6 +88,7 @@ export const createCompanySchema = z.object({
   maxUsers: z.number().int().positive().optional().default(5),
   maxProjects: z.number().int().positive().optional().default(10),
   settings: companySettingsSchema,
+  apiKey: z.string().optional(),
 });
 
 export const updateCompanySchema = z.object({

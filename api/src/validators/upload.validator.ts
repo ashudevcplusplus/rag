@@ -29,6 +29,7 @@ export const searchQuerySchema = z.object({
     .max(1000, { message: 'Query too long (Max 1000 characters)' }),
   limit: z.number().int().min(1).max(100).optional().default(10),
   filter: z.record(z.string(), z.unknown()).optional(),
+  rerank: z.boolean().optional().default(false),
 });
 
 // Job ID validation

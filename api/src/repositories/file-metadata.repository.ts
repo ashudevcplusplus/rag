@@ -5,10 +5,16 @@ import {
   IFileMetadata,
   ProcessingStatus,
 } from '../schemas/file-metadata.schema';
-import { FilterQuery, UpdateQuery, Types } from 'mongoose';
+import { FilterQuery, UpdateQuery, Types, Model } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
 
 export class FileMetadataRepository {
+  public model: Model<IFileMetadataDocument>;
+
+  constructor() {
+    this.model = FileMetadataModel;
+  }
+
   /**
    * Create new file metadata
    */

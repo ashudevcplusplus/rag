@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "seed": "ts-node src/scripts/seed.ts",
     "test": "jest",
@@ -14,7 +14,7 @@
     "test:db": "jest test/integration/database.integration.test.ts --runInBand",
     "test:file": "jest test/integration/file-metadata.integration.test.ts --runInBand",
     "test:watch": "jest --watch",
-    "test:unified": "ts-node test/test-unified.ts",
+    "test:e2e": "jest -c jest.e2e.config.js --runInBand",
     "generate:test-data": "ts-node test/generate-test-data.ts",
     "generate:test-data:large": "ts-node test/generate-test-data.ts --large",
     "generate:test-data:full": "ts-node test/generate-test-data.ts --full",

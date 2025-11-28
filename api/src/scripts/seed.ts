@@ -14,13 +14,23 @@ async function seed(): Promise<void> {
     // Connect to MongoDB
     await database.connect();
 
+    // Drop existing collections to prevent duplicate key errors
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test' || !process.env.NODE_ENV) {
+      logger.info('Cleaning up existing data...');
+      await companyRepository.model.deleteMany({});
+      await userRepository.model.deleteMany({});
+      await projectRepository.model.deleteMany({});
+    }
+
     // Create companies
     logger.info('Creating companies...');
 
     const company1 = await companyRepository.create({
+      _id: '507f1f77bcf86cd799439011',
       name: 'Acme Corporation',
       slug: 'acme-corp',
       email: 'admin@acme-corp.com',
+      apiKey: 'dev-key-123',
       subscriptionTier: SubscriptionTier.PROFESSIONAL,
       storageLimit: 10737418240, // 10GB
       maxUsers: 50,
@@ -35,7 +45,7 @@ async function seed(): Promise<void> {
           apiAccess: true,
         },
       },
-    });
+    } as any);
     logger.info('Company created', { companyId: company1._id, apiKey: company1.apiKey });
 
     const company2 = await companyRepository.create({

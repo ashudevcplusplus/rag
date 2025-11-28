@@ -30,11 +30,12 @@ export class CacheService {
     companyId: string,
     query: string,
     limit: number,
-    filter?: Record<string, unknown>
+    filter?: Record<string, unknown>,
+    rerank: boolean = false
   ): string {
     const normalizedQuery = query.trim().toLowerCase();
     const filterStr = filter ? JSON.stringify(filter) : '';
-    const combined = `${normalizedQuery}:${limit}:${filterStr}`;
+    const combined = `${normalizedQuery}:${limit}:${filterStr}:${rerank}`;
     const hash = crypto.createHash('sha256').update(combined).digest('hex').substring(0, 16);
     return `${companyId}:${hash}`;
   }

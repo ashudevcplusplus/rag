@@ -6,36 +6,31 @@ This directory contains all test-related files for the MVP API.
 
 ```
 test/
-├── test-unified.ts          # Unified test suite with difficulty levels 1-5
+├── e2e/                     # Jest-based E2E tests
+│   ├── 01-basic.e2e.test.ts
+│   ├── 02-cache.e2e.test.ts
+│   ├── 03-production.e2e.test.ts
+│   ├── 04-large-data.e2e.test.ts
+│   ├── 05-scale.e2e.test.ts
+│   ├── config.ts
+│   └── utils.ts
+├── unit/                    # Unit tests
+├── integration/             # Integration tests
 ├── generate-test-data.ts    # Script to generate test data files
-├── lib/                     # Test utilities
-│   ├── uploader.ts          # File upload helpers
-│   ├── index-wait.ts        # Indexing wait utilities
-│   └── metrics.ts           # Performance metrics collection
-├── data/                    # Test data files
-│   ├── 1mb.txt
-│   ├── 5mb.txt
-│   └── ... (generated files)
-├── docs/                    # Test documentation
-│   ├── README_UNIFIED_TESTS.md
-│   ├── TICKET_LARGE_DATA_TESTING.md
-│   └── PHASE_A_README.md
-├── test-data-2000.txt       # Legacy test files
-├── test-data-3000.txt
-└── test-sample-small.txt
+├── lib/                     # Test utilities (shared)
+└── data/                    # Test data files
 ```
 
 ## Usage
 
-### Run Unified Tests
+### Run E2E Tests
 
 ```bash
-# Run with difficulty level 1-5
-npm run test:unified -- --difficulty=1
-npm run test:unified -- --difficulty=2
-npm run test:unified -- --difficulty=3
-npm run test:unified -- --difficulty=4
-npm run test:unified -- --difficulty=5
+# Run all E2E tests
+npm run test:e2e
+
+# Run specific test file
+npm run test:e2e -- 01-basic
 ```
 
 ### Generate Test Data
@@ -44,19 +39,12 @@ npm run test:unified -- --difficulty=5
 npm run generate:test-data
 ```
 
-This will generate test data files in the `data/` directory.
+## Test Levels
 
-## Test Reports
+The E2E tests are split into levels:
 
-Test reports are saved to `api/reports/test-report-level{N}-{timestamp}.json`
-
-## Difficulty Levels
-
-- **Level 1**: Basic E2E tests (small files, health checks)
-- **Level 2**: Cache & chunking tests (performance, quality)
-- **Level 3**: Production-grade features (metadata filtering, rate limiting)
-- **Level 4**: Large data tests (multiple files, performance metrics)
-- **Level 5**: Extreme scale tests (large files, concurrent uploads, stress tests)
-
-See `docs/README_UNIFIED_TESTS.md` for detailed documentation.
-
+- **01-basic**: Basic E2E tests (small files, health checks)
+- **02-cache**: Cache & chunking tests
+- **03-production**: Production-grade features (metadata filtering, rate limiting)
+- **04-large-data**: Large data tests
+- **05-scale**: Extreme scale tests

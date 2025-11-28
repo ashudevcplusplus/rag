@@ -1,6 +1,11 @@
+const embedUrl = process.env.EMBED_URL || 'http://localhost:5001/embed';
+// Replace /embed at the end of the string with /rerank
+const defaultRerankUrl = embedUrl.replace(/\/embed$/, '/rerank');
+
 export const CONFIG = {
   QDRANT_URL: process.env.QDRANT_URL || 'http://localhost:6333',
-  EMBED_URL: process.env.EMBED_URL || 'http://localhost:5001/embed',
+  EMBED_URL: embedUrl,
+  RERANK_URL: process.env.RERANK_URL || defaultRerankUrl,
   REDIS_HOST: process.env.REDIS_HOST || 'localhost',
   REDIS_PORT: parseInt(process.env.REDIS_PORT || '6379', 10),
   MONGODB_URI:
