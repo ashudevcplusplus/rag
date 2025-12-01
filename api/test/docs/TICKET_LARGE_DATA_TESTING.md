@@ -150,7 +150,7 @@ Current test suite (`test-production-grade.ts`, `test-improvements.ts`) validate
 ```
 api/test/
 ├── test-unified.ts             # Main unified test suite
-├── generate-test-data.ts       # Script to generate test files
+├── data/                       # Test data files
 ├── data/                       # Test data files
 │   ├── 1mb.txt
 │   ├── 10mb.txt

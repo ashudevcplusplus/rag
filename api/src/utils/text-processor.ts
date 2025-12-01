@@ -50,16 +50,16 @@ export function recursiveChunkText(
     if (chunkText.length <= chunkOverlap) {
       return chunkText;
     }
-    
+
     // Extract last chunkOverlap characters, trying to break at word boundaries
     // Start from the ideal position
     let overlapStart = chunkText.length - chunkOverlap;
-    
+
     // Try to find a good break point (space, newline, etc.) but don't go too far back
     // We want to preserve at least 80% of the requested overlap
     const minOverlap = Math.floor(chunkOverlap * 0.8);
     const maxSearchBack = chunkOverlap - minOverlap;
-    
+
     // Search forward from the ideal start position to find a word boundary
     const searchWindow = Math.min(30, maxSearchBack);
     for (let i = overlapStart; i < chunkText.length && i < overlapStart + searchWindow; i++) {
@@ -72,7 +72,7 @@ export function recursiveChunkText(
         break;
       }
     }
-    
+
     return chunkText.substring(overlapStart);
   };
 
@@ -84,7 +84,7 @@ export function recursiveChunkText(
         // Prepend overlap from previous chunk to current chunk
         const fullChunk = overlapText + doc;
         finalChunks.push(fullChunk.trim());
-        
+
         // Extract overlap from the END of this chunk for the next chunk
         overlapText = extractOverlap(fullChunk);
       }
@@ -106,7 +106,7 @@ export function recursiveChunkText(
           const availableSize = chunkSize - overlapText.length;
           const endPos = Math.min(startPos + availableSize, text.length);
           const piece = text.substring(startPos, endPos);
-          
+
           if (piece.length > 0) {
             if (currentLength + piece.length > availableSize) {
               mergeCurrent();
@@ -117,7 +117,7 @@ export function recursiveChunkText(
               mergeCurrent();
             }
           }
-          
+
           // Move forward by chunkSize - overlap to ensure overlap
           startPos += chunkSize - chunkOverlap;
         }

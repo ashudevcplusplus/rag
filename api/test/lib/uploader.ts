@@ -16,11 +16,13 @@ export interface UploadResult {
 
 export async function uploadFileWithTiming(
   companyId: string,
-  filePath: string
+  filePath: string,
+  projectId: string
 ): Promise<UploadResult> {
   const form = new FormData();
   const fileStream = fs.createReadStream(filePath);
   form.append('file', fileStream);
+  form.append('projectId', projectId);
 
   const fileName = filePath.split('/').pop() || 'unknown';
   const fileSize = fs.statSync(filePath).size;
@@ -68,13 +70,17 @@ export async function uploadFileWithTiming(
   }
 }
 
-export async function uploadBatch(companyId: string, filePaths: string[]): Promise<UploadResult[]> {
+export async function uploadBatch(
+  companyId: string,
+  filePaths: string[],
+  projectId: string
+): Promise<UploadResult[]> {
   console.log(`📦 Uploading batch of ${filePaths.length} files...`);
 
   const results: UploadResult[] = [];
 
   for (const filePath of filePaths) {
-    const result = await uploadFileWithTiming(companyId, filePath);
+    const result = await uploadFileWithTiming(companyId, filePath, projectId);
     results.push(result);
 
     // Small delay between uploads to avoid overwhelming the system

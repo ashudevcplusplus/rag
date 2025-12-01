@@ -3,6 +3,7 @@ import { CreateCompanyDTO, UpdateCompanyDTO, ICompany } from '../schemas/company
 import { FilterQuery, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import { toStringId, toStringIds } from './helpers';
 
 export class CompanyRepository {
   public model: Model<ICompanyDocument>;
@@ -34,7 +35,8 @@ export class CompanyRepository {
 
     // Return company with plain API key (only time it's visible)
     const companyObj = saved.toObject();
-    return { ...companyObj, _id: companyObj._id.toString(), apiKey };
+    const result = toStringId(companyObj) as unknown as ICompany;
+    return { ...result, apiKey };
   }
 
   /**
@@ -43,7 +45,7 @@ export class CompanyRepository {
   async findById(id: string): Promise<ICompany | null> {
     const company = await CompanyModel.findById(id).where({ deletedAt: null }).lean();
     if (!company) return null;
-    return { ...company, _id: company._id.toString() } as ICompany;
+    return toStringId(company) as unknown as ICompany;
   }
 
   /**
@@ -52,7 +54,7 @@ export class CompanyRepository {
   async findBySlug(slug: string): Promise<ICompany | null> {
     const company = await CompanyModel.findOne({ slug, deletedAt: null }).lean();
     if (!company) return null;
-    return { ...company, _id: company._id.toString() } as ICompany;
+    return toStringId(company) as unknown as ICompany;
   }
 
   /**
@@ -61,7 +63,7 @@ export class CompanyRepository {
   async findByApiKey(apiKey: string): Promise<ICompany | null> {
     const company = await CompanyModel.findOne({ apiKey, deletedAt: null }).lean();
     if (!company) return null;
-    return { ...company, _id: company._id.toString() } as ICompany;
+    return toStringId(company) as unknown as ICompany;
   }
 
   /**
@@ -94,7 +96,7 @@ export class CompanyRepository {
       .lean();
 
     if (!company) return null;
-    return { ...company, _id: company._id.toString() } as ICompany;
+    return toStringId(company) as unknown as ICompany;
   }
 
   /**
@@ -155,7 +157,7 @@ export class CompanyRepository {
     ]);
 
     return {
-      companies: companies.map((c) => ({ ...c, _id: c._id.toString() })) as ICompany[],
+      companies: toStringIds(companies) as unknown as ICompany[],
       total,
       page,
       totalPages: Math.ceil(total / limit),

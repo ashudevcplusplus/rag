@@ -75,4 +75,3 @@ jest.mock('ioredis', () => {
 
   return MockRedis;
 });
-

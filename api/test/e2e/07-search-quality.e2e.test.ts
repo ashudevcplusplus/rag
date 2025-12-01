@@ -4,6 +4,7 @@ import * as path from 'path';
 import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { uploadBatch } from '../lib/uploader';
 import { waitForBatch } from '../lib/index-wait';
+import { createTestProject } from '../lib/project-helper';
 
 jest.setTimeout(300000); // 5 minutes global timeout for this file
 
@@ -23,6 +24,7 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
   const companyId = COMPANY_ID;
   const dataDir = path.join(__dirname, '../data');
   const runSuffix = Date.now().toString().slice(-6);
+  let projectId: string;
 
   // Files to upload for tests (more realistic & diverse)
   const files = [
@@ -144,9 +146,11 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
     // Write files
     files.forEach((f, i) => fs.writeFileSync(filePaths[i], f.content));
 
+    projectId = await createTestProject(companyId, 'Search Quality Project');
+
     try {
       console.log('Uploading test files...');
-      const uploadResults = await uploadBatch(companyId, filePaths);
+      const uploadResults = await uploadBatch(companyId, filePaths, projectId);
       const failedUploads = uploadResults.filter((r) => !r.success);
       if (failedUploads.length > 0) {
         const ids = failedUploads.map((f) => f.jobId || JSON.stringify(f));
@@ -369,7 +373,7 @@ describe('Level 2: Search Quality + Consistency Tests', () => {
     const beforeTop = topIds(before);
 
     console.log('Re-uploading files to simulate reindex...');
-    const uploadResults = await uploadBatch(companyId, filePaths);
+    const uploadResults = await uploadBatch(companyId, filePaths, projectId);
     const failed = uploadResults.filter((u) => !u.success);
     expect(failed.length).toBe(0);
 

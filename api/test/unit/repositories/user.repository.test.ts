@@ -2,6 +2,7 @@ import { userRepository } from '../../../src/repositories/user.repository';
 import { UserModel } from '../../../src/models/user.model';
 import { UserRole } from '../../../src/schemas/user.schema';
 import bcrypt from 'bcryptjs';
+import { Types } from 'mongoose';
 
 // Mock Mongoose model
 jest.mock('../../../src/models/user.model');
@@ -25,12 +26,12 @@ describe('UserRepository', () => {
 
       const mockSavedUser = {
         ...mockData,
-        _id: { toString: () => 'user-123' },
-        companyId: { toString: () => 'company-123' },
+        _id: new Types.ObjectId('5f8d04b3b54764421b7156c1'),
+        companyId: new Types.ObjectId('5f8d04b3b54764421b7156c2'),
         toObject: jest.fn().mockReturnValue({
           ...mockData,
-          _id: { toString: () => 'user-123' },
-          companyId: { toString: () => 'company-123' },
+          _id: new Types.ObjectId('5f8d04b3b54764421b7156c1'),
+          companyId: new Types.ObjectId('5f8d04b3b54764421b7156c2'),
         }),
       };
 
@@ -43,7 +44,7 @@ describe('UserRepository', () => {
       expect(result).toEqual(
         expect.objectContaining({
           email: mockData.email,
-          _id: 'user-123',
+          _id: '5f8d04b3b54764421b7156c1',
         })
       );
     });
@@ -52,8 +53,8 @@ describe('UserRepository', () => {
   describe('findByEmail', () => {
     it('should find user by email', async () => {
       const mockUser = {
-        _id: { toString: () => 'user-123' },
-        companyId: { toString: () => 'company-123' },
+        _id: new Types.ObjectId('5f8d04b3b54764421b7156c1'),
+        companyId: new Types.ObjectId('5f8d04b3b54764421b7156c2'),
         email: 'test@example.com',
       };
 
@@ -71,6 +72,7 @@ describe('UserRepository', () => {
       expect(result).toEqual(
         expect.objectContaining({
           email: 'test@example.com',
+          _id: '5f8d04b3b54764421b7156c1',
         })
       );
     });

@@ -4,20 +4,25 @@ import * as path from 'path';
 import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { uploadFileWithTiming } from '../lib/uploader';
 import { waitForIndexing } from '../lib/index-wait';
+import { createTestProject } from '../lib/project-helper';
 
 describe('Level 1: Basic E2E Tests', () => {
   const companyId = COMPANY_ID;
   const smallContent =
     'This is a test document about refund policy. Refunds are processed within 14 business days.';
   const smallFilePath = path.join(__dirname, '../data', 'temp-small-e2e.txt');
+  let projectId: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Ensure data directory exists
     const dataDir = path.join(__dirname, '../data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     fs.writeFileSync(smallFilePath, smallContent);
+
+    // Create a test project
+    projectId = await createTestProject(companyId, 'Basic E2E Project');
   });
 
   afterAll(() => {
@@ -28,7 +33,7 @@ describe('Level 1: Basic E2E Tests', () => {
 
   test('1.1: Small File Upload & Search', async () => {
     console.log('Testing with companyId:', companyId);
-    const upload = await uploadFileWithTiming(companyId, smallFilePath);
+    const upload = await uploadFileWithTiming(companyId, smallFilePath, projectId);
     expect(upload.success).toBe(true);
     expect(upload.jobId).toBeDefined();
 

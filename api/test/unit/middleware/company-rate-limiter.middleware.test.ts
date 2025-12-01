@@ -42,9 +42,12 @@ describe('Company Rate Limiter Middleware', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
+  const originalNodeEnv = process.env.NODE_ENV;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Set NODE_ENV to development so rate limiting logic runs
+    process.env.NODE_ENV = 'development';
 
     mockRequest = {
       params: {},
@@ -57,6 +60,10 @@ describe('Company Rate Limiter Middleware', () => {
       setHeader: jest.fn(),
     };
     mockNext = jest.fn();
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   describe('companyRateLimiter', () => {

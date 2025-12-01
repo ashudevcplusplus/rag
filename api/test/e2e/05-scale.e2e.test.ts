@@ -4,10 +4,16 @@ import * as path from 'path';
 import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { uploadFileWithTiming, uploadBatch } from '../lib/uploader';
 import { waitForIndexing, waitForBatch } from '../lib/index-wait';
+import { createTestProject } from '../lib/project-helper';
 
 describe('Level 5: Extreme Scale Tests', () => {
   const DATA_DIR = path.join(__dirname, '../data');
   const companyId = COMPANY_ID;
+  let projectId: string;
+
+  beforeAll(async () => {
+    projectId = await createTestProject(companyId, 'Scale Test Project');
+  });
 
   test('5.1: Large File Upload (5MB)', async () => {
     if (!fs.existsSync(DATA_DIR)) {
@@ -23,7 +29,7 @@ describe('Level 5: Extreme Scale Tests', () => {
     }
 
     const filePath = path.join(DATA_DIR, largeFiles[0]);
-    const upload = await uploadFileWithTiming(companyId, filePath);
+    const upload = await uploadFileWithTiming(companyId, filePath, projectId);
 
     expect(upload.success).toBe(true);
     expect(upload.jobId).toBeDefined();
@@ -45,7 +51,7 @@ describe('Level 5: Extreme Scale Tests', () => {
     }
 
     const filePaths = files.map((f) => path.join(DATA_DIR, f));
-    const uploadPromises = filePaths.map((fp) => uploadFileWithTiming(companyId2, fp));
+    const uploadPromises = filePaths.map((fp) => uploadFileWithTiming(companyId2, fp, projectId));
     const uploadResults = await Promise.all(uploadPromises);
 
     const jobIds = uploadResults.filter((r) => r.success && r.jobId).map((r) => r.jobId as string);
@@ -66,7 +72,7 @@ describe('Level 5: Extreme Scale Tests', () => {
     if (files.length === 0) return;
 
     const filePaths = files.map((f) => path.join(DATA_DIR, f));
-    const uploadResults = await uploadBatch(companyId3, filePaths);
+    const uploadResults = await uploadBatch(companyId3, filePaths, projectId);
 
     const jobIds = uploadResults.filter((r) => r.success && r.jobId).map((r) => r.jobId as string);
 

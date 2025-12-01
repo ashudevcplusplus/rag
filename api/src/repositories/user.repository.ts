@@ -2,6 +2,7 @@ import { UserModel, IUserDocument } from '../models/user.model';
 import { CreateUserDTO, UpdateUserDTO, IUser } from '../schemas/user.schema';
 import { FilterQuery, UpdateQuery, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { toStringId, toStringIds } from './helpers';
 
 export class UserRepository {
   public model: Model<IUserDocument>;
@@ -16,12 +17,7 @@ export class UserRepository {
   async create(data: Omit<CreateUserDTO, 'password'> & { passwordHash: string }): Promise<IUser> {
     const user = new UserModel(data);
     const saved = await user.save();
-    const userObj = saved.toObject();
-    return {
-      ...userObj,
-      _id: userObj._id.toString(),
-      companyId: userObj.companyId.toString(),
-    } as IUser;
+    return toStringId(saved.toObject()) as unknown as IUser;
   }
 
   /**
@@ -44,7 +40,7 @@ export class UserRepository {
   async findById(id: string): Promise<IUser | null> {
     const user = await UserModel.findById(id).where({ deletedAt: null }).lean();
     if (!user) return null;
-    return { ...user, _id: user._id.toString(), companyId: user.companyId.toString() } as IUser;
+    return toStringId(user) as unknown as IUser;
   }
 
   /**
@@ -53,7 +49,7 @@ export class UserRepository {
   async findByEmail(email: string): Promise<IUser | null> {
     const user = await UserModel.findOne({ email: email.toLowerCase(), deletedAt: null }).lean();
     if (!user) return null;
-    return { ...user, _id: user._id.toString(), companyId: user.companyId.toString() } as IUser;
+    return toStringId(user) as unknown as IUser;
   }
 
   /**
@@ -63,11 +59,7 @@ export class UserRepository {
     const users = await UserModel.find({ companyId, deletedAt: null })
       .sort({ createdAt: -1 })
       .lean();
-    return users.map((u) => ({
-      ...u,
-      _id: u._id.toString(),
-      companyId: u.companyId.toString(),
-    })) as IUser[];
+    return toStringIds(users) as unknown as IUser[];
   }
 
   /**
@@ -83,7 +75,7 @@ export class UserRepository {
       .lean();
 
     if (!user) return null;
-    return { ...user, _id: user._id.toString(), companyId: user.companyId.toString() } as IUser;
+    return toStringId(user) as unknown as IUser;
   }
 
   /**
@@ -185,11 +177,7 @@ export class UserRepository {
     ]);
 
     return {
-      users: users.map((u) => ({
-        ...u,
-        _id: u._id.toString(),
-        companyId: u.companyId.toString(),
-      })) as IUser[],
+      users: toStringIds(users) as unknown as IUser[],
       total,
       page,
       totalPages: Math.ceil(total / limit),

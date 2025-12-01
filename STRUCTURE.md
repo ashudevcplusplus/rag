@@ -35,8 +35,7 @@ api/
 │   ├── lib/          # Test utilities
 │   ├── data/         # Test data files
 │   ├── docs/         # Test documentation
-│   ├── test-unified.ts
-│   └── generate-test-data.ts
+│   └── test-unified.ts
 ├── reports/          # Test reports and metrics
 ├── data/             # Runtime data (uploads, etc.)
 ├── logs/             # Application logs

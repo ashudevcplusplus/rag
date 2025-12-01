@@ -4,10 +4,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { waitForIndexing } from '../lib/index-wait';
+import { createTestProject } from '../lib/project-helper';
 
 describe('Level 3: Production-Grade Features', () => {
   const testFile2000 = path.join(__dirname, '../test-data-2000.txt');
   const testFile3000 = path.join(__dirname, '../test-data-3000.txt');
+  const companyId = COMPANY_ID;
+  let projectId: string;
+
+  beforeAll(async () => {
+    projectId = await createTestProject(companyId, 'Production Features Project');
+  });
 
   test('3.1: Metadata Filtering', async () => {
     if (!fs.existsSync(testFile2000) || !fs.existsSync(testFile3000)) {
@@ -15,11 +22,10 @@ describe('Level 3: Production-Grade Features', () => {
       return;
     }
 
-    const companyId = COMPANY_ID;
-
     // Upload File 1
     const form1 = new FormData();
     form1.append('file', fs.createReadStream(testFile2000));
+    form1.append('projectId', projectId);
     const upload1 = await axios.post(`${API_URL}/v1/companies/${companyId}/uploads`, form1, {
       headers: { ...form1.getHeaders(), 'x-api-key': API_KEY },
     });
@@ -29,6 +35,7 @@ describe('Level 3: Production-Grade Features', () => {
     // Upload File 2
     const form2 = new FormData();
     form2.append('file', fs.createReadStream(testFile3000));
+    form2.append('projectId', projectId);
     const upload2 = await axios.post(`${API_URL}/v1/companies/${companyId}/uploads`, form2, {
       headers: { ...form2.getHeaders(), 'x-api-key': API_KEY },
     });

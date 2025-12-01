@@ -2,6 +2,7 @@ import { companyRepository } from '../../../src/repositories/company.repository'
 import { CompanyModel } from '../../../src/models/company.model';
 import { SubscriptionTier, CompanyStatus } from '../../../src/schemas/company.schema';
 import bcrypt from 'bcryptjs';
+import { Types } from 'mongoose';
 
 // Mock Mongoose model
 jest.mock('../../../src/models/company.model');
@@ -37,14 +38,14 @@ describe('CompanyRepository', () => {
 
       const mockSavedCompany = {
         ...mockData,
-        _id: { toString: () => 'company-123' },
+        _id: new Types.ObjectId('5f8d04b3b54764421b7156c3'),
         apiKey: 'ck_12345',
         apiKeyHash: 'hashed_key',
         status: CompanyStatus.ACTIVE,
         subscriptionTier: SubscriptionTier.FREE,
         toObject: jest.fn().mockReturnValue({
           ...mockData,
-          _id: { toString: () => 'company-123' },
+          _id: new Types.ObjectId('5f8d04b3b54764421b7156c3'),
           apiKey: 'ck_12345',
           status: CompanyStatus.ACTIVE,
         }),
@@ -70,7 +71,7 @@ describe('CompanyRepository', () => {
   describe('findById', () => {
     it('should return company if found', async () => {
       const mockCompany = {
-        _id: { toString: () => 'company-123' },
+        _id: new Types.ObjectId('5f8d04b3b54764421b7156c3'),
         name: 'Test Company',
       };
 
@@ -81,12 +82,12 @@ describe('CompanyRepository', () => {
 
       (CompanyModel.findById as jest.Mock).mockReturnValue(mockQuery);
 
-      const result = await companyRepository.findById('company-123');
+      const result = await companyRepository.findById('5f8d04b3b54764421b7156c3');
 
       expect(result).toEqual(
         expect.objectContaining({
           name: 'Test Company',
-          _id: 'company-123',
+          _id: '5f8d04b3b54764421b7156c3',
         })
       );
     });
@@ -108,7 +109,7 @@ describe('CompanyRepository', () => {
   describe('validateApiKey', () => {
     it('should return company and update last used timestamp if key is valid', async () => {
       const mockCompany = {
-        _id: { toString: () => 'company-123' },
+        _id: new Types.ObjectId('5f8d04b3b54764421b7156c3'),
         apiKey: 'valid-key',
       };
 
@@ -123,7 +124,7 @@ describe('CompanyRepository', () => {
 
       expect(result).toBeTruthy();
       expect(CompanyModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        'company-123',
+        '5f8d04b3b54764421b7156c3',
         expect.objectContaining({
           apiKeyLastUsed: expect.any(Date),
         })

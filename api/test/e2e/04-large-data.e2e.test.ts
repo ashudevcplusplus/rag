@@ -5,10 +5,16 @@ import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { uploadBatch } from '../lib/uploader';
 import { waitForBatch } from '../lib/index-wait';
 import { gatherMetrics } from '../lib/metrics';
+import { createTestProject } from '../lib/project-helper';
 
 describe('Level 4: Large Data Tests', () => {
   const DATA_DIR = path.join(__dirname, '../data');
   const companyId = COMPANY_ID;
+  let projectId: string;
+
+  beforeAll(async () => {
+    projectId = await createTestProject(companyId, 'Large Data Project');
+  });
 
   test('4.1: Multiple File Uploads', async () => {
     if (!fs.existsSync(DATA_DIR)) {
@@ -24,7 +30,7 @@ describe('Level 4: Large Data Tests', () => {
     }
 
     const filePaths = files.map((f) => path.join(DATA_DIR, f));
-    const uploadResults = await uploadBatch(companyId, filePaths);
+    const uploadResults = await uploadBatch(companyId, filePaths, projectId);
 
     const jobIds = uploadResults.filter((r) => r.success && r.jobId).map((r) => r.jobId as string);
     expect(jobIds.length).toBeGreaterThan(0);

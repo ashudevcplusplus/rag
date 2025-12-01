@@ -6,6 +6,7 @@ import { ValidationError, NotFoundError } from '../../../src/types/error.types';
 jest.mock('../../../src/utils/logger', () => ({
   logger: {
     error: jest.fn(),
+    warn: jest.fn(),
   },
 }));
 
@@ -38,7 +39,6 @@ describe('Error Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         error: 'Invalid input',
-        statusCode: 400,
       });
       expect(mockNext).not.toHaveBeenCalled();
       process.env.NODE_ENV = originalEnv;

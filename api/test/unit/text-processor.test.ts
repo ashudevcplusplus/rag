@@ -35,11 +35,11 @@ describe('Text Processor', () => {
         for (let i = 0; i < chunks.length - 1; i++) {
           const currentChunk = chunks[i];
           const nextChunk = chunks[i + 1];
-          
+
           // Check that there's actual overlap between chunks
           // Due to word boundary adjustments, we check for at least 3 characters of overlap
           let hasOverlap = false;
-          
+
           // Check if the end of current chunk appears at the start of next chunk
           // Try different overlap lengths (from requested down to minimum)
           for (let overlapLen = 10; overlapLen >= 3; overlapLen--) {
@@ -50,16 +50,17 @@ describe('Text Processor', () => {
               break;
             }
           }
-          
+
           // If exact match not found, check for substring overlap
           if (!hasOverlap) {
             // Check if any significant portion of the end appears at the start
             const currentEnd = currentChunk.slice(-8);
             const nextStart = nextChunk.slice(0, 8);
-            hasOverlap = currentEnd.includes(nextStart.slice(0, 3)) || 
-                        nextStart.includes(currentEnd.slice(-3));
+            hasOverlap =
+              currentEnd.includes(nextStart.slice(0, 3)) ||
+              nextStart.includes(currentEnd.slice(-3));
           }
-          
+
           expect(hasOverlap).toBe(true);
         }
       }

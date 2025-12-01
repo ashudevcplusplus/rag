@@ -4,6 +4,7 @@ import * as path from 'path';
 import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { uploadBatch } from '../lib/uploader';
 import { waitForBatch } from '../lib/index-wait';
+import { createTestProject } from '../lib/project-helper';
 
 jest.setTimeout(300000); // 5 minutes
 
@@ -11,6 +12,7 @@ describe('Level 3: Hybrid Reranking', () => {
   const companyId = COMPANY_ID;
   const dataDir = path.join(__dirname, '../data');
   const runSuffix = Date.now().toString().slice(-6);
+  let projectId: string;
 
   const files = [
     {
@@ -59,9 +61,11 @@ The future of writing is likely to be shaped by artificial intelligence and othe
     // Write files
     files.forEach((f, i) => fs.writeFileSync(filePaths[i], f.content));
 
+    projectId = await createTestProject(companyId, 'Reranking Project');
+
     try {
       console.log('Uploading test files for reranking...');
-      const uploadResults = await uploadBatch(companyId, filePaths);
+      const uploadResults = await uploadBatch(companyId, filePaths, projectId);
       const jobIds = uploadResults.map((r) => r.jobId as string);
       await waitForBatch(jobIds);
       // small buffer

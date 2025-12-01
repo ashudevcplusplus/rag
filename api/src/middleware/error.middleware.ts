@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../types/error.types';
+import { z } from 'zod';
+import { AppError, ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 
 export const errorHandler = (
@@ -8,6 +9,27 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
+  // Handle Zod validation errors
+  if (err instanceof z.ZodError) {
+    logger.warn('Validation failed', { issues: err.issues });
+    res.status(400).json({
+      error: 'Validation failed',
+      details: err.issues,
+    });
+    return;
+  }
+
+  // Handle custom validation errors
+  if (err instanceof ValidationError) {
+    logger.warn('Validation error', { message: err.message });
+    // Handle specific validation errors with custom status codes
+    const statusCode = err.message === 'Storage limit reached' ? 403 : 400;
+    res.status(statusCode).json({
+      error: err.message,
+    });
+    return;
+  }
+
   // Handle known operational errors
   if (err instanceof AppError) {
     logger.error('Operational error', {

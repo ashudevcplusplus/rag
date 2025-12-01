@@ -5,16 +5,19 @@ import { API_URL, API_KEY, COMPANY_ID } from './config';
 import { uploadFileWithTiming } from '../lib/uploader';
 import { waitForIndexing } from '../lib/index-wait';
 import { recursiveChunkText } from '../../src/utils/text-processor';
+import { createTestProject } from '../lib/project-helper';
 
 describe('Level 2: Cache & Chunking Tests', () => {
   const companyId = COMPANY_ID;
   const testFile2000 = path.join(__dirname, '../test-data-2000.txt');
+  let projectId: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     if (!fs.existsSync(testFile2000)) {
       console.warn('test-data-2000.txt not found, skipping cache tests might fail');
       // Ideally generate it here or fail
     }
+    projectId = await createTestProject(companyId, 'Cache Test Project');
   });
 
   test('2.1: Cache Performance', async () => {
@@ -23,7 +26,7 @@ describe('Level 2: Cache & Chunking Tests', () => {
       return;
     }
 
-    const upload = await uploadFileWithTiming(companyId, testFile2000);
+    const upload = await uploadFileWithTiming(companyId, testFile2000, projectId);
     expect(upload.success).toBe(true);
     expect(upload.jobId).toBeDefined();
 

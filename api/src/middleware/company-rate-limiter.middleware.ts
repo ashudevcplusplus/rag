@@ -36,6 +36,11 @@ export const companyRateLimiter = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Skip rate limiting in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return next();
+    }
+
     // Extract company ID from route params
     const companyId = req.params.companyId;
 
@@ -106,6 +111,11 @@ export const ipRateLimiter = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    // Skip rate limiting in test environment
+    if (process.env.NODE_ENV === 'test') {
+      return next();
+    }
+
     const ip = req.ip || 'unknown';
     const key = `ip:${ip}`;
     const MAX_IP_REQUESTS = 20; // 20 requests per minute per IP
