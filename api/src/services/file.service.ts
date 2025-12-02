@@ -37,6 +37,13 @@ export class FileService {
     // Check for duplicates
     const existingFile = await fileMetadataRepository.findByHash(fileHash, projectId);
     if (existingFile) {
+      // Clean up the duplicate file immediately
+      try {
+        fs.unlinkSync(file.path);
+      } catch (error) {
+        logger.warn('Failed to cleanup duplicate file', { filePath: file.path, error });
+      }
+
       // One-line event publishing
       void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.DUPLICATE });
 

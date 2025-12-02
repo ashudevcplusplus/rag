@@ -20,7 +20,14 @@ describe('Error Middleware', () => {
     mockRequest = {
       path: '/test',
       method: 'GET',
-    };
+      ip: '127.0.0.1',
+      get: jest.fn((header: string) => {
+        if (header === 'user-agent') {
+          return 'test-user-agent';
+        }
+        return undefined;
+      }) as Request['get'],
+    } as Request;
     mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
