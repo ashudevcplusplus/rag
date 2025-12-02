@@ -1,3 +1,4 @@
-import worker from './worker';
+import worker, { closeAllWorkers } from './worker';
 
 export default worker;
+export { closeAllWorkers };

@@ -1,15 +1,15 @@
 # Simplified Async Queue Architecture
 
 ## Overview
-Consolidated all async task queues into a **single queue** with **one worker** and **one-line utility functions** for event publishing.
+Consolidated all async task queues into **separate queues per task type** with **dedicated workers** and **one-line utility functions** for event publishing. This approach provides better isolation, monitoring, and concurrency control per task type.
 
 ## Architecture
 
 ### Files Created (5 files total)
 
-1. **`api/src/queue/async-tasks.queue.ts`** - Single consolidated queue
+1. **`api/src/queue/async-tasks.queue.ts`** - Creates 10 separate queues (one per task type)
 2. **`api/src/consumers/async-tasks/processor.ts`** - Routes tasks to appropriate processors
-3. **`api/src/consumers/async-tasks/worker.ts`** - Single worker with 10 concurrency
+3. **`api/src/consumers/async-tasks/worker.ts`** - Dynamically creates workers for each queue (10 concurrency each)
 4. **`api/src/consumers/async-tasks/index.ts`** - Worker export
 5. **`api/src/utils/async-events.util.ts`** - One-line publishing utilities
 
@@ -117,12 +117,15 @@ publishApiLog({ companyId, method, endpoint, statusCode, responseTime, ... });
 
 ## How It Works
 
-1. **Single Queue**: `asyncTasksQueue` handles all task types
-2. **Task Router**: `processor.ts` routes based on `taskType` field
-3. **Reuses Existing Processors**: No changes to actual processing logic
-4. **Type-Safe**: All utilities are strongly typed
-5. **Error Handling**: Built into utility functions (fire-and-forget)
-6. **Retry Logic**: Configured per task type in the utility
+1. **Separate Queues**: 10 individual queues, one per task type (e.g., `api-logging-queue`, `file-cleanup-queue`)
+2. **Dedicated Workers**: Each queue has its own worker with 10 concurrency
+3. **Task Router**: `processor.ts` routes based on `taskType` field to appropriate processor
+4. **Reuses Existing Processors**: No changes to actual processing logic
+5. **Type-Safe**: All utilities are strongly typed
+6. **Error Handling**: Built into utility functions with error logging
+7. **Retry Logic**: Configured per task type in the utility functions
+8. **Better Isolation**: Issues with one task type don't affect others
+9. **Independent Monitoring**: Each queue visible separately in Bull Board
 
 ## Task Types Supported
 
@@ -140,14 +143,44 @@ All 10 async task categories:
 
 ## Bull Board
 
-All tasks visible in dashboard at `/admin/queues` under single `async-tasks-queue`.
+All tasks visible in dashboard at `/admin/queues` with **separate queues** for better monitoring:
+- `api-logging-queue`
+- `file-cleanup-queue`
+- `cache-invalidation-queue`
+- `error-logging-queue`
+- `search-caching-queue`
+- `api-key-tracking-queue`
+- `analytics-queue`
+- `project-stats-queue`
+- `webhooks-queue`
+- `storage-updates-queue`
+- Plus `indexing-queue` and `consistency-check-queue`
 
 ## Result
 
 - **Reduced from 51 files to 5 files** (90% reduction)
 - **One-line event publishing** everywhere
-- **Easier to maintain** - single queue/worker
+- **Easier to maintain** - centralized queue management
+- **Better isolation** - separate queues prevent cross-contamination
+- **Independent scaling** - each queue has 10 concurrency
+- **Enhanced monitoring** - granular visibility per task type
 - **Same functionality** - all processors still work
 - **Type-safe** - strongly typed utilities
 - **Clean code** - no verbose queue calls
+
+## Additional Queues
+
+The system also includes two specialized queues with their own workers:
+
+1. **Indexing Queue** (`indexing-queue`)
+   - Worker: `api/src/consumers/indexing/worker.ts`
+   - Concurrency: 2 (process 2 files in parallel)
+   - Purpose: File upload processing and vector indexing
+
+2. **Consistency Check Queue** (`consistency-check-queue`)
+   - Worker: `api/src/consumers/consistency-check/worker.ts`
+   - Concurrency: 1 (to avoid overloading)
+   - Purpose: MongoDB-Qdrant consistency validation
+
+All queues are visible in the Bull Board dashboard at `/admin/queues`.
 

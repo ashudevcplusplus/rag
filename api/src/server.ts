@@ -7,8 +7,12 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import worker from './consumers/indexing';
 import consistencyCheckWorker from './consumers/consistency-check';
-import asyncTasksWorker from './consumers/async-tasks';
-import { indexingQueue, consistencyCheckQueue, asyncTasksQueue } from './queue/async-tasks.queue';
+import { closeAllWorkers } from './consumers/async-tasks';
+import {
+  indexingQueue,
+  consistencyCheckQueue,
+  allAsyncTaskQueues,
+} from './queue/async-tasks.queue';
 import { CONFIG } from './config';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/error.middleware';
@@ -26,7 +30,7 @@ createBullBoard({
   queues: [
     new BullMQAdapter(indexingQueue),
     new BullMQAdapter(consistencyCheckQueue),
-    new BullMQAdapter(asyncTasksQueue),
+    ...allAsyncTaskQueues.map((queue) => new BullMQAdapter(queue)),
   ],
   serverAdapter: serverAdapter,
 });
@@ -111,14 +115,14 @@ async function startServer(): Promise<void> {
         logger.info('Closing BullMQ workers...');
         await worker.close();
         await consistencyCheckWorker.close();
-        await asyncTasksWorker.close();
+        await closeAllWorkers();
         logger.info('Workers closed successfully');
 
         // 3. Close queue connections
         logger.info('Closing queue connections...');
         await indexingQueue.close();
         await consistencyCheckQueue.close();
-        await asyncTasksQueue.close();
+        await Promise.all(allAsyncTaskQueues.map((queue) => queue.close()));
         logger.info('Queue connections closed');
 
         // 4. Close MongoDB connection

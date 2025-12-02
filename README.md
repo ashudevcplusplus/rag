@@ -14,38 +14,69 @@ This system provides document indexing and semantic search capabilities with:
 ## 🏗️ Architecture
 
 ```
-┌──────────┐    ┌─────────┐    ┌─────────┐
-│  Client  │───▶│   API   │───▶│  Queue  │
-└──────────┘    │ Express │    │ BullMQ  │
-                └────┬────┘    └────┬────┘
-                     │              │
-                     ▼              ▼
-              ┌──────────┐    ┌─────────┐
-              │  Redis   │    │ Worker  │
-              │  Cache   │    └────┬────┘
-              └──────────┘         │
-                     ▲              ▼
-                     │         ┌─────────┐
-                     │         │  Embed  │
-                     │         │ FastAPI │
-                     │         └────┬────┘
-                     │              │
-                     │              ▼
-                     │         ┌─────────┐
-                     └─────────│ Qdrant  │
-                               │ Vector  │
-                               └─────────┘
+┌──────────┐    ┌─────────┐    ┌──────────────────┐
+│  Client  │───▶│   API   │───▶│  Queue Manager   │
+└──────────┘    │ Express │    │    (BullMQ)      │
+                └────┬────┘    └─────────┬────────┘
+                     │                   │
+                     │         ┌─────────┴────────────────┐
+                     │         │                          │
+                     ▼         ▼                          ▼
+              ┌──────────┐  ┌──────────┐        ┌───────────────┐
+              │  Redis   │  │ Indexing │        │  Async Tasks  │
+              │  Cache + │  │  Worker  │        │  Workers (×10)│
+              │  Queues  │  │  (×1)    │        │  (×10 each)   │
+              └────┬─────┘  └────┬─────┘        └───────┬───────┘
+                   │             │                      │
+                   │             ▼                      │
+                   │        ┌─────────┐                │
+                   │        │ MongoDB │                │
+                   │        │  Docs   │                │
+                   │        └────┬────┘                │
+                   │             │                     │
+                   │             ▼                     │
+                   │        ┌─────────┐               │
+                   │        │  Embed  │◄──────────────┘
+                   │        │ FastAPI │
+                   │        └────┬────┘
+                   │             │
+                   │             ▼
+                   │        ┌─────────┐
+                   └───────▶│ Qdrant  │
+                            │ Vector  │
+                            └─────────┘
 ```
+
+### Queue Architecture Details
+
+The system uses **12 specialized queues** for different tasks:
+
+**Document Processing (2 queues):**
+- `indexing-queue` - File uploads & vector indexing (2 workers)
+- `consistency-check-queue` - MongoDB-Qdrant validation (1 worker)
+
+**Async Tasks (10 queues, each with 10 workers):**
+- `api-logging-queue` - API request logging
+- `file-cleanup-queue` - File deletion operations
+- `cache-invalidation-queue` - Cache invalidation
+- `error-logging-queue` - Error tracking
+- `search-caching-queue` - Search result caching
+- `api-key-tracking-queue` - API key usage tracking
+- `analytics-queue` - Analytics events
+- `project-stats-queue` - Project statistics
+- `webhooks-queue` - Webhook notifications
+- `storage-updates-queue` - Storage usage updates
 
 ### Components
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
 | **API** | Express.js (TypeScript) | REST endpoints, auth, rate limiting |
-| **Worker** | BullMQ (TypeScript) | Async document processing |
+| **Workers** | BullMQ (TypeScript) | 12 specialized workers for async tasks |
 | **Embed** | FastAPI (Python) | Text embedding generation (384d) |
 | **Qdrant** | Vector DB | Semantic search storage |
-| **Redis** | Cache + Queue | Job queue + search result caching |
+| **MongoDB** | NoSQL DB | Companies, users, projects, file metadata |
+| **Redis** | Cache + Queue | 12 job queues + search result caching |
 | **Bull Board** | Web UI | Queue monitoring dashboard |
 
 ## ⚡ Key Features
@@ -247,18 +278,21 @@ rag-main/
 ├── api/                        # Express API (TypeScript)
 │   ├── src/
 │   │   ├── config/           # Configuration (database, app config)
-│   │   ├── consumers/        # BullMQ workers (indexing, consistency-check)
+│   │   ├── consumers/        # BullMQ workers
+│   │   │   ├── indexing/     # File indexing worker (2 concurrency)
+│   │   │   ├── consistency-check/  # Consistency worker (1 concurrency)
+│   │   │   └── async-tasks/  # 10 async task workers (10 concurrency each)
 │   │   ├── controllers/      # Route handlers (company, project, user)
 │   │   ├── middleware/       # Auth, rate limiting, errors, upload
 │   │   ├── models/           # Mongoose models (Company, User, Project, etc.)
-│   │   ├── queue/            # BullMQ queue clients
+│   │   ├── queue/            # BullMQ queue clients (12 queues)
 │   │   ├── repositories/     # Data access layer (repository pattern)
 │   │   ├── routes/           # Express route definitions
 │   │   ├── schemas/          # TypeScript interfaces & Zod validation
 │   │   ├── scripts/          # Utility scripts (seed, clean-data)
 │   │   ├── services/         # Business logic (cache, vector, file, consistency)
-│   │   ├── types/            # TypeScript type definitions
-│   │   ├── utils/            # Utilities (logger, text processor, hash, etc.)
+│   │   ├── types/            # TypeScript type definitions & enums
+│   │   ├── utils/            # Utilities (logger, async-events, text, hash)
 │   │   ├── validators/       # Input validation
 │   │   └── server.ts         # App entry point
 │   ├── test/                 # Test suite
