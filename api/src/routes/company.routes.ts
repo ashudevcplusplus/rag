@@ -23,7 +23,7 @@ router.use('/:companyId/projects', projectRoutes);
 router.use('/:companyId/users', userRoutes);
 
 // Company specific routes
-router.post('/:companyId/uploads', uploadLimiter, upload.single('file'), uploadFile);
+router.post('/:companyId/uploads', uploadLimiter, upload.array('files', 10), uploadFile);
 router.get('/:companyId/vectors', getCompanyVectors);
 
 router.post('/:companyId/search', searchLimiter, searchCompany);

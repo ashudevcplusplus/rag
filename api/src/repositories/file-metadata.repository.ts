@@ -111,13 +111,23 @@ export class FileMetadataRepository {
   /**
    * Update processing status
    */
-  async updateProcessingStatus(id: string, status: ProcessingStatus): Promise<void> {
+  async updateProcessingStatus(
+    id: string,
+    status: ProcessingStatus,
+    errorMessage?: string
+  ): Promise<void> {
     const updates: UpdateQuery<IFileMetadataDocument> = { processingStatus: status };
 
     if (status === ProcessingStatus.PROCESSING) {
       updates.processingStartedAt = new Date();
     } else if (status === ProcessingStatus.COMPLETED) {
       updates.processingCompletedAt = new Date();
+    } else if (status === ProcessingStatus.FAILED) {
+      // Always set processingCompletedAt when processing fails
+      updates.processingCompletedAt = new Date();
+      // Always save error message when processing fails (use provided message or default)
+      // Handle empty strings by using default message
+      updates.errorMessage = errorMessage?.trim() || 'Processing failed';
     }
 
     await FileMetadataModel.findByIdAndUpdate(id, { $set: updates });
@@ -216,7 +226,7 @@ export class FileMetadataRepository {
     const [files, total] = await Promise.all([
       FileMetadataModel.find(query)
         .select(
-          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags'
+          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags errorMessage'
         ) // Only fetch needed fields
         .sort({ uploadedAt: -1 })
         .skip(skip)
@@ -275,7 +285,7 @@ export class FileMetadataRepository {
     const [files, total] = await Promise.all([
       FileMetadataModel.find(query)
         .select(
-          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags'
+          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags errorMessage'
         ) // Only fetch needed fields
         .sort({ uploadedAt: -1 })
         .skip(skip)

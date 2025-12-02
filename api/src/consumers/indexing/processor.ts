@@ -10,6 +10,7 @@ import { fileMetadataRepository } from '../../repositories/file-metadata.reposit
 import { projectRepository } from '../../repositories/project.repository';
 import { embeddingRepository } from '../../repositories/embedding.repository';
 import { publishStorageUpdate, publishFileCleanup } from '../../utils/async-events.util';
+import { getErrorMessage } from '../../types/error.types';
 
 export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): Promise<JobResult> {
   const { companyId, fileId, filePath, mimetype, fileSizeMB } = job.data;
@@ -64,11 +65,13 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     });
 
     if (chunks.length === 0) {
-      await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.FAILED);
-      await fileMetadataRepository.update(fileId, {
-        errorMessage: 'No text extracted from file',
-      });
-      throw new Error('No text extracted');
+      const errorMessage = 'No text extracted from file';
+      await fileMetadataRepository.updateProcessingStatus(
+        fileId,
+        ProcessingStatus.FAILED,
+        errorMessage
+      );
+      throw new Error(errorMessage);
     }
 
     // Update file metadata with text info
@@ -181,12 +184,14 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       error,
     });
 
-    // Update file status to FAILED and increment retry count
-    await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.FAILED);
-    await fileMetadataRepository.incrementRetryCount(
+    // Update file status to FAILED with error message and increment retry count
+    const errorMessage = getErrorMessage(error) || 'Processing failed';
+    await fileMetadataRepository.updateProcessingStatus(
       fileId,
-      error instanceof Error ? error.message : 'Unknown error'
+      ProcessingStatus.FAILED,
+      errorMessage
     );
+    await fileMetadataRepository.incrementRetryCount(fileId, errorMessage);
 
     throw error;
   }

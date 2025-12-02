@@ -26,7 +26,6 @@ export class VectorService {
     try {
       logger.debug('Requesting embeddings', { count: texts.length, url: CONFIG.EMBED_URL });
 
-      // eslint-disable-next-line no-undef
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 

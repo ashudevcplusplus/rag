@@ -903,15 +903,16 @@ function handleDrop(e) {
         return;
     }
     
-    const files = e.dataTransfer.files;
+    const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-        handleFileUpload(files[0]);
+        handleMultipleFiles(files);
     }
 }
 
 function handleFileSelect(e) {
-    if (e.target.files.length > 0) {
-        handleFileUpload(e.target.files[0]);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+        handleMultipleFiles(files);
     }
 }
 
@@ -934,7 +935,7 @@ function handleProjectSelectChange() {
     }
 }
 
-async function handleFileUpload(file) {
+function handleMultipleFiles(files) {
     if (!validateConfig()) {
         return;
     }
@@ -947,124 +948,265 @@ async function handleFileUpload(file) {
         return;
     }
 
-    // Validate file size (50MB limit)
+    // Validate all files
     const maxSize = 50 * 1024 * 1024; // 50MB
-    if (file.size > maxSize) {
-        showStatus(uploadStatus, `File too large. Maximum size is 50MB. Your file is ${formatBytes(file.size)}`, 'error');
+    const validFiles = [];
+    const invalidFiles = [];
+
+    files.forEach(file => {
+        if (file.size > maxSize) {
+            invalidFiles.push({ name: file.name, reason: `File too large (${formatBytes(file.size)})` });
+        } else {
+            validFiles.push(file);
+        }
+    });
+
+    if (invalidFiles.length > 0) {
+        const errorMsg = invalidFiles.map(f => `${f.name}: ${f.reason}`).join(', ');
+        showStatus(uploadStatus, `Some files are invalid: ${errorMsg}`, 'error');
+    }
+
+    if (validFiles.length === 0) {
         return;
     }
 
-    showStatus(uploadStatus, 'Uploading file...', 'info');
+    // Show selected files
+    displaySelectedFiles(validFiles);
+    
+    // Upload all valid files
+    uploadMultipleFiles(validFiles, projectId);
+}
+
+function displaySelectedFiles(files) {
+    const fileList = document.getElementById('fileList');
+    const selectedFilesList = document.getElementById('selectedFilesList');
+    
+    if (files.length === 0) {
+        fileList.style.display = 'none';
+        return;
+    }
+    
+    fileList.style.display = 'block';
+    selectedFilesList.innerHTML = files.map((file, index) => `
+        <li>
+            <span>${escapeHtml(file.name)}</span>
+            <span class="file-size">${formatBytes(file.size)}</span>
+        </li>
+    `).join('');
+}
+
+async function uploadMultipleFiles(files, projectId) {
+    showStatus(uploadStatus, `Uploading ${files.length} file(s)...`, 'info');
     jobStatus.style.display = 'none';
     fileInput.disabled = true;
     uploadArea.classList.add('loading');
     
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('projectId', projectId);
+    // Show upload progress
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadProgressList = document.getElementById('uploadProgressList');
+    uploadProgress.style.display = 'block';
+    uploadProgressList.innerHTML = '';
+    
+    const uploadResults = [];
+    const jobIds = [];
+    
+    // Create progress items for each file
+    files.forEach((file, index) => {
+        const progressItem = document.createElement('div');
+        progressItem.className = 'upload-progress-item';
+        progressItem.id = `progress-${index}`;
+        progressItem.innerHTML = `
+            <div class="progress-header">
+                <span class="progress-filename">${escapeHtml(file.name)}</span>
+                <span class="progress-status">Pending...</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 0%"></div>
+            </div>
+        `;
+        uploadProgressList.appendChild(progressItem);
+    });
 
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for large files
+    // Upload files sequentially to avoid overwhelming the server
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const progressItem = document.getElementById(`progress-${i}`);
+        const progressFill = progressItem.querySelector('.progress-fill');
+        const progressStatus = progressItem.querySelector('.progress-status');
         
-        const response = await fetch(`${config.apiUrl}/v1/companies/${config.companyId}/uploads`, {
-        method: 'POST',
-        headers: {
-            'x-api-key': config.apiKey
-        },
-            body: formData,
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || `Upload failed: HTTP ${response.status}`);
+        try {
+            progressStatus.textContent = 'Uploading...';
+            progressFill.style.width = '50%';
+            
+            const formData = new FormData();
+            formData.append('files', file);
+            formData.append('projectId', projectId);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+            
+            const response = await fetch(`${config.apiUrl}/v1/companies/${config.companyId}/uploads`, {
+                method: 'POST',
+                headers: {
+                    'x-api-key': config.apiKey
+                },
+                body: formData,
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            const data = await response.json();
+            
+            // Handle different response statuses
+            if (response.ok || response.status === 207) {
+                // Success or partial success
+                progressFill.style.width = '100%';
+                progressStatus.textContent = 'Uploaded';
+                progressItem.classList.add('success');
+                
+                // Handle response - could be single or array
+                if (Array.isArray(data.results)) {
+                    data.results.forEach(result => {
+                        uploadResults.push({ file: file.name, success: true, ...result });
+                        if (result.jobId) jobIds.push(result.jobId);
+                    });
+                } else if (data.jobId) {
+                    // Single file response (backward compatibility)
+                    uploadResults.push({ file: file.name, success: true, ...data });
+                    jobIds.push(data.jobId);
+                } else {
+                    // Unexpected response format
+                    uploadResults.push({ file: file.name, success: false, error: 'Unexpected response format' });
+                }
+            } else {
+                // Error response
+                progressFill.style.width = '100%';
+                progressStatus.textContent = 'Failed';
+                progressItem.classList.add('error');
+                
+                const errorMsg = data.error || data.message || `Upload failed: HTTP ${response.status}`;
+                uploadResults.push({ file: file.name, success: false, error: errorMsg });
+            }
+            
+            addActivity(`Uploaded file: ${file.name}`);
+        } catch (error) {
+            progressFill.style.width = '100%';
+            progressStatus.textContent = error.name === 'AbortError' ? 'Timeout' : 'Failed';
+            progressItem.classList.add('error');
+            
+            uploadResults.push({ 
+                file: file.name, 
+                error: error.message,
+                success: false 
+            });
         }
-        
-        const data = await response.json();
-        showStatus(uploadStatus, 'File uploaded successfully! Processing...', 'success');
-        currentJobId = data.jobId;
-        jobIdSpan.textContent = data.jobId;
-        jobStateSpan.textContent = 'queued';
-        jobStateSpan.className = 'job-state processing';
-        jobProgressSpan.textContent = '0%';
+    }
+    
+    // Show job status for all uploaded files
+    if (jobIds.length > 0) {
+        currentJobId = jobIds[0]; // Keep first for backward compatibility
+        displayJobStatuses(jobIds);
         jobStatus.style.display = 'block';
-        checkJobStatus();
         
-        addActivity(`Uploaded file: ${file.name}`);
-        
-        // Poll job status every 2 seconds
+        // Poll job statuses
         if (jobStatusInterval) {
             clearInterval(jobStatusInterval);
         }
-        jobStatusInterval = setInterval(checkJobStatus, JOB_POLL_INTERVAL);
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            showStatus(uploadStatus, 'Upload timeout. The file may be too large or the connection is slow.', 'error');
-        } else {
-        showStatus(uploadStatus, `Upload failed: ${error.message}`, 'error');
+        jobStatusInterval = setInterval(() => checkAllJobStatuses(jobIds), JOB_POLL_INTERVAL);
+    }
+    
+    const successCount = uploadResults.filter(r => r.success !== false).length;
+    showStatus(uploadStatus, `Upload complete: ${successCount}/${files.length} file(s) uploaded successfully`, 
+        successCount === files.length ? 'success' : 'info');
+    
+    fileInput.disabled = false;
+    uploadArea.classList.remove('loading');
+    fileInput.value = ''; // Reset file input
+    
+    // Hide file list after a delay
+    setTimeout(() => {
+        const fileList = document.getElementById('fileList');
+        if (fileList) {
+            fileList.style.display = 'none';
         }
-        if (jobStatusInterval) {
-            clearInterval(jobStatusInterval);
-            jobStatusInterval = null;
+    }, 3000);
+    
+    // Refresh projects to show updated file count
+    if (config.apiKey && config.companyId) {
+        loadProjects();
+    }
+}
+
+function displayJobStatuses(jobIds) {
+    const jobStatusList = document.getElementById('jobStatusList');
+    jobStatusList.innerHTML = jobIds.map((jobId, index) => `
+        <div class="job-item" id="job-${jobId}">
+            <div class="job-header">
+                <strong>Job ${index + 1}:</strong> <span class="job-id">${jobId}</span>
+            </div>
+            <div class="job-details">
+                <div><strong>Status:</strong> <span class="job-state processing" id="job-state-${jobId}">queued</span></div>
+                <div><strong>Progress:</strong> <span id="job-progress-${jobId}">0%</span></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function checkAllJobStatuses(jobIds) {
+    if (!validateConfig()) {
+        return;
+    }
+    
+    let allCompleted = true;
+    
+    for (const jobId of jobIds) {
+        try {
+            const response = await fetch(`${config.apiUrl}/v1/jobs/${jobId}`, {
+                method: 'GET',
+                headers: {
+                    'x-api-key': config.apiKey
+                }
+            });
+            
+            if (!response.ok) {
+                continue;
+            }
+            
+            const data = await response.json();
+            const stateSpan = document.getElementById(`job-state-${jobId}`);
+            const progressSpan = document.getElementById(`job-progress-${jobId}`);
+            
+            if (stateSpan && progressSpan) {
+                stateSpan.textContent = data.state || 'unknown';
+                progressSpan.textContent = data.progress ? `${data.progress}%` : '-';
+                
+                if (data.state === 'completed') {
+                    stateSpan.className = 'job-state completed';
+                } else if (data.state === 'failed') {
+                    stateSpan.className = 'job-state failed';
+                } else {
+                    stateSpan.className = 'job-state processing';
+                    allCompleted = false;
+                }
+            }
+        } catch (error) {
+            console.error(`Error checking job status for ${jobId}:`, error);
         }
-    } finally {
-        fileInput.disabled = false;
-        uploadArea.classList.remove('loading');
-        fileInput.value = ''; // Reset file input
+    }
+    
+    if (allCompleted && jobStatusInterval) {
+        clearInterval(jobStatusInterval);
+        jobStatusInterval = null;
+        showStatus(uploadStatus, 'All files processed!', 'success');
+        addActivity('All file processing completed');
     }
 }
 
 async function checkJobStatus() {
-    if (!currentJobId || !validateConfig()) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`${config.apiUrl}/v1/jobs/${currentJobId}`, {
-        method: 'GET',
-        headers: {
-            'x-api-key': config.apiKey
-        }
-        });
-        
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Failed to get job status');
-        }
-        
-        const data = await response.json();
-        jobStateSpan.textContent = data.state || 'unknown';
-        jobProgressSpan.textContent = data.progress ? `${data.progress}%` : '-';
-        
-        if (data.state === 'completed') {
-            jobStateSpan.className = 'job-state completed';
-            showStatus(uploadStatus, 'File processing completed!', 'success');
-            addActivity('File processing completed');
-            if (jobStatusInterval) {
-                clearInterval(jobStatusInterval);
-                jobStatusInterval = null;
-            }
-            // Refresh projects to show updated file count
-            if (config.apiKey && config.companyId) {
-                loadProjects();
-            }
-        } else if (data.state === 'failed') {
-            jobStateSpan.className = 'job-state failed';
-            showStatus(uploadStatus, `Processing failed: ${data.reason || 'Unknown error'}`, 'error');
-            addActivity('File processing failed');
-            if (jobStatusInterval) {
-                clearInterval(jobStatusInterval);
-                jobStatusInterval = null;
-            }
-        } else {
-            jobStateSpan.className = 'job-state processing';
-        }
-    } catch (error) {
-        console.error('Error checking job status:', error);
-        // Don't stop polling on transient errors, but log them
+    // Legacy function for single file uploads - now redirects to checkAllJobStatuses
+    if (currentJobId && validateConfig()) {
+        checkAllJobStatuses([currentJobId]);
     }
 }
 
@@ -1175,9 +1317,9 @@ function displayResults(results) {
         const content = result.payload?.content || result.payload?.text || result.payload?.text_preview || '';
         const hasContent = content && content.trim().length > 0;
         
-        // File info
+        // File info - prefer originalFilename over stored filename
         const fileId = result.payload?.fileId || 'Unknown';
-        const fileName = result.payload?.fileName || result.payload?.originalFilename || 'Unknown';
+        const originalFileName = result.payload?.originalFilename || result.payload?.fileName || 'Unknown';
         
         // Project info
         const projectId = result.payload?.projectId || 'N/A';
@@ -1227,7 +1369,7 @@ function displayResults(results) {
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">File</span>
-                    <span class="meta-value truncate" title="${escapeHtml(fileName)}">${escapeHtml(truncateName(fileName))}</span>
+                    <span class="meta-value truncate" title="${escapeHtml(originalFileName)}">${escapeHtml(truncateName(originalFileName, 40))}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">File ID</span>

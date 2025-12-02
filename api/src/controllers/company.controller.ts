@@ -29,12 +29,12 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
   // Validate company ID
   const { companyId } = companyIdSchema.parse(req.params);
 
-  if (!req.file) {
-    throw new ValidationError('No file uploaded');
-  }
+  // Support both single file (req.file) and multiple files (req.files)
+  const files = req.files && Array.isArray(req.files) ? req.files : req.file ? [req.file] : [];
 
-  // Validate file
-  fileUploadSchema.parse({ file: req.file });
+  if (files.length === 0) {
+    throw new ValidationError('No files uploaded');
+  }
 
   // Validate projectId is required
   const { projectId } = projectIdBodySchema.parse(req.body);
@@ -60,29 +60,93 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
 
   const uploadedBy = req.body.uploadedBy || companyId; // Temporary: would come from authenticated user
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await fileService.uploadFile(companyId, req.file as any, projectId, uploadedBy);
+  // Validate all files
+  for (const file of files) {
+    fileUploadSchema.parse({ file });
+  }
 
-  // One-line event publishing
-  void publishCacheInvalidation({ companyId });
-  void publishAnalytics({
-    eventType: AnalyticsEventType.UPLOAD,
-    companyId,
-    projectId,
-    metadata: {
-      fileId: result.fileId,
-      filename: req.file?.originalname,
-      size: req.file?.size,
-      mimetype: req.file?.mimetype,
-    },
-  });
+  // Process all files
+  const results = [];
+  const errors = [];
 
-  res.status(202).json({
-    message: 'File queued for indexing',
-    jobId: result.jobId,
-    fileId: result.fileId,
-    statusUrl: `/v1/jobs/${result.jobId}`,
-  });
+  for (const file of files) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await fileService.uploadFile(companyId, file as any, projectId, uploadedBy);
+      results.push({
+        fileId: result.fileId,
+        jobId: result.jobId,
+        filename: file.originalname,
+        statusUrl: `/v1/jobs/${result.jobId}`,
+      });
+
+      // One-line event publishing for each file
+      void publishAnalytics({
+        eventType: AnalyticsEventType.UPLOAD,
+        companyId,
+        projectId,
+        metadata: {
+          fileId: result.fileId,
+          filename: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype,
+        },
+      });
+    } catch (error) {
+      logger.error('File upload error', {
+        companyId,
+        projectId,
+        filename: file.originalname,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      errors.push({
+        filename: file.originalname,
+        error: error instanceof Error ? error.message : 'Upload failed',
+      });
+    }
+  }
+
+  // One-line event publishing for cache invalidation
+  if (results.length > 0) {
+    void publishCacheInvalidation({ companyId });
+  }
+
+  // Return response based on results
+  if (results.length === 0) {
+    // All files failed
+    res.status(400).json({
+      message: 'All file uploads failed',
+      errors,
+    });
+    return;
+  }
+
+  if (errors.length > 0) {
+    // Some files succeeded, some failed
+    res.status(207).json({
+      message: 'Partial success',
+      results,
+      errors,
+    });
+    return;
+  }
+
+  // All files succeeded
+  if (results.length === 1) {
+    // Single file - return simple response for backward compatibility
+    res.status(202).json({
+      message: 'File queued for indexing',
+      jobId: results[0].jobId,
+      fileId: results[0].fileId,
+      statusUrl: results[0].statusUrl,
+    });
+  } else {
+    // Multiple files - return array response
+    res.status(202).json({
+      message: `${results.length} files queued for indexing`,
+      results,
+    });
+  }
 });
 
 export const getJobStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {

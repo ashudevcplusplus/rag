@@ -115,28 +115,26 @@
                             <p class="form-hint">You must select a project before uploading files</p>
                         </div>
                         <div class="upload-area" id="uploadArea">
-                            <input type="file" id="fileInput" accept=".pdf,.txt,.json,.md" style="display: none;" disabled>
+                            <input type="file" id="fileInput" accept=".pdf,.txt,.json,.md" multiple style="display: none;" disabled>
                             <div class="upload-content" id="uploadContent">
                                 <p class="upload-icon">📁</p>
                                 <p id="uploadMessage">Please select a project first</p>
-                                <p class="upload-hint">Supports: PDF, TXT, JSON, MD (Max 50MB)</p>
+                                <p class="upload-hint">Supports: PDF, TXT, JSON, MD (Max 50MB per file)</p>
                             </div>
                         </div>
+                        <div id="fileList" class="file-list" style="display: none; margin-top: 15px;">
+                            <h4>Selected Files:</h4>
+                            <ul id="selectedFilesList"></ul>
+                        </div>
                         <div id="uploadStatus" class="status-message"></div>
+                        <div id="uploadProgress" class="upload-progress" style="display: none; margin-top: 15px;">
+                            <h4>Upload Progress</h4>
+                            <div id="uploadProgressList"></div>
+                        </div>
                         <div id="jobStatus" class="job-status" style="display: none;">
                             <h4>Processing Status</h4>
-                            <div class="job-info">
-                                <div class="job-item">
-                                    <strong>Job ID:</strong> <span id="jobId">-</span>
-                                </div>
-                                <div class="job-item">
-                                    <strong>Status:</strong> <span id="jobState" class="job-state">-</span>
-                                </div>
-                                <div class="job-item">
-                                    <strong>Progress:</strong> <span id="jobProgress">-</span>
-                                </div>
-                            </div>
-                            <button id="checkJobStatus" class="btn btn-secondary">Refresh Status</button>
+                            <div id="jobStatusList" class="job-status-list"></div>
+                            <button id="checkJobStatus" class="btn btn-secondary">Refresh All Statuses</button>
                         </div>
                     </div>
                 </div>
