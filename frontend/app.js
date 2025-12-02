@@ -740,7 +740,6 @@ async function viewProjectDetails(projectId) {
         
         detailProjectName.textContent = project.name || 'Unnamed Project';
         detailProjectDescription.textContent = project.description || 'No description';
-        detailFileCount.textContent = project.fileCount || 0;
         detailVectorCount.textContent = project.vectorCount || 0;
         detailCreatedDate.textContent = new Date(project.createdAt).toLocaleDateString();
 
@@ -756,6 +755,11 @@ async function viewProjectDetails(projectId) {
              throw new Error(err.error || 'Failed to load files');
         }
         const filesData = await filesRes.json();
+        
+        // Use actual file count from pagination total (most reliable), fallback to project.fileCount if not available
+        const actualFileCount = filesData.pagination?.total ?? filesData.files?.length ?? project.fileCount ?? 0;
+        detailFileCount.textContent = actualFileCount;
+        
         displayProjectFiles(filesData.files || []);
 
     } catch (error) {

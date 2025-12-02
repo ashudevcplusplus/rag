@@ -1,4 +1,5 @@
 // Export all models
+export { AnalyticsModel, IAnalytics } from './analytics.model';
 export { CompanyModel, ICompanyDocument } from './company.model';
 export { UserModel, IUserDocument } from './user.model';
 export { ProjectModel, IProjectDocument } from './project.model';

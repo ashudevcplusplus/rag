@@ -213,4 +213,22 @@ export class CacheService {
       throw error;
     }
   }
+
+  /**
+   * Delete a specific cache key
+   */
+  static async deleteKey(key: string): Promise<boolean> {
+    try {
+      const deleted = await redis.del(key);
+      if (deleted > 0) {
+        logger.debug('Cache key deleted', { key });
+        return true;
+      }
+      logger.debug('Cache key not found', { key });
+      return false;
+    } catch (error) {
+      logger.error('Cache key deletion error', { key, error });
+      return false; // Fail gracefully
+    }
+  }
 }

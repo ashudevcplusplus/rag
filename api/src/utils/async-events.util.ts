@@ -1,5 +1,5 @@
 import { asyncTasksQueue } from '../queue/async-tasks.queue';
-import { logger } from './logger';
+import { logger } from '../utils/logger';
 import type {
   ApiLoggingJobData,
   FileCleanupJobData,
@@ -21,9 +21,13 @@ const DEFAULT_OPTS = {
 };
 
 // Utility function to publish events with error handling
-async function publishEvent(taskType: string, data: unknown, opts = DEFAULT_OPTS): Promise<void> {
+async function publishEvent<T extends object>(
+  taskType: string,
+  data: T,
+  opts = DEFAULT_OPTS
+): Promise<void> {
   try {
-    await asyncTasksQueue.add(taskType, { taskType, ...(data as object) }, opts);
+    await asyncTasksQueue.add(taskType, { taskType, ...data }, opts);
   } catch (err) {
     logger.error('Failed to publish event', {
       taskType,

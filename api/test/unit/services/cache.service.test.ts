@@ -231,4 +231,31 @@ describe('CacheService', () => {
       });
     });
   });
+
+  describe('deleteKey', () => {
+    it('should delete a specific cache key', async () => {
+      mockRedis.del.mockResolvedValue(1 as any);
+
+      const result = await CacheService.deleteKey('test-key');
+
+      expect(result).toBe(true);
+      expect(mockRedis.del).toHaveBeenCalledWith('test-key');
+    });
+
+    it('should return false if key does not exist', async () => {
+      mockRedis.del.mockResolvedValue(0 as any);
+
+      const result = await CacheService.deleteKey('nonexistent-key');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false on Redis error', async () => {
+      mockRedis.del.mockRejectedValue(new Error('Redis error'));
+
+      const result = await CacheService.deleteKey('test-key');
+
+      expect(result).toBe(false);
+    });
+  });
 });
