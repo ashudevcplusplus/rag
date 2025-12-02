@@ -3,8 +3,8 @@ import {
   CreateFileMetadataDTO,
   UpdateFileMetadataDTO,
   IFileMetadata,
-  ProcessingStatus,
 } from '../schemas/file-metadata.schema';
+import { ProcessingStatus } from '../types/enums';
 import { FilterQuery, UpdateQuery, Types, Model } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
 

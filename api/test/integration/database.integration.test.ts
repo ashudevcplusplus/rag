@@ -2,9 +2,7 @@ import { database } from '../../src/config/database';
 import { companyRepository } from '../../src/repositories/company.repository';
 import { userRepository } from '../../src/repositories/user.repository';
 import { projectRepository } from '../../src/repositories/project.repository';
-import { SubscriptionTier, CompanyStatus } from '../../src/schemas/company.schema';
-import { UserRole } from '../../src/schemas/user.schema';
-import { Visibility } from '../../src/schemas/project.schema';
+import { SubscriptionTier, CompanyStatus, UserRole, Visibility } from '../../src/types/enums';
 
 describe('Database Integration Tests with Seed Data', () => {
   let testCompanyId: string;

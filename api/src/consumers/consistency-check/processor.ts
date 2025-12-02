@@ -5,9 +5,9 @@ import {
   CleanupOrphanedJobData,
   CheckAndFixJobData,
 } from '../../types/job.types';
+import { ChangeType, ChangeStatus } from '../../types/enums';
 import { ConsistencyCheckService } from '../../services/consistency-check.service';
 import { consumerChangeRepository } from '../../repositories/consumer-change.repository';
-import { ChangeType, ChangeStatus } from '../../models/consumer-change.model';
 import { logger } from '../../utils/logger';
 
 export type ConsumerJobData = ConsistencyCheckJobData | CleanupOrphanedJobData | CheckAndFixJobData;

@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
-import { IProjectMember, ProjectRole } from '../schemas/project-member.schema';
+import { IProjectMember } from '../schemas/project-member.schema';
+import { ProjectRole } from '../types/enums';
 
 export interface IProjectMemberDocument
   extends Omit<IProjectMember, '_id' | 'projectId' | 'userId' | 'addedBy'>,

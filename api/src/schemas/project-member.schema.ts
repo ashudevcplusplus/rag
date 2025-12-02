@@ -1,11 +1,5 @@
 import { z } from 'zod';
-
-// Enums
-export enum ProjectRole {
-  ADMIN = 'ADMIN',
-  EDITOR = 'EDITOR',
-  VIEWER = 'VIEWER',
-}
+import { ProjectRole } from '../types/enums';
 
 // TypeScript Interface
 export interface IProjectMember {

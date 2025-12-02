@@ -1,20 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { z } from 'zod';
-
-// Enums
-export enum ChangeType {
-  CONSISTENCY_CHECK = 'CONSISTENCY_CHECK',
-  CLEANUP_ORPHANED = 'CLEANUP_ORPHANED',
-  VECTOR_DELETED = 'VECTOR_DELETED',
-  CACHE_CLEARED = 'CACHE_CLEARED',
-}
-
-export enum ChangeStatus {
-  PENDING = 'PENDING',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-}
+import { ChangeType, ChangeStatus } from '../types/enums';
 
 // TypeScript Interface
 export interface IConsumerChange {

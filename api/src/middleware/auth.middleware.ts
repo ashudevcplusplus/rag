@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { companyRepository } from '../repositories/company.repository';
 import { ICompany } from '../schemas/company.schema';
+import { publishApiKeyTracking } from '../utils/async-events.util';
 
 // Extended Request type with authentication context
 export interface AuthenticatedRequest extends Request {
@@ -73,6 +74,9 @@ export const authenticateRequest = async (
       companyId: company._id,
       companyName: company.name,
     });
+
+    // One-line event publishing
+    publishApiKeyTracking({ companyId: company._id });
 
     next();
   } catch (error) {

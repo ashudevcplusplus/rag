@@ -1,17 +1,5 @@
 import { z } from 'zod';
-
-// Enums
-export enum ProjectStatus {
-  ACTIVE = 'ACTIVE',
-  ARCHIVED = 'ARCHIVED',
-  DELETED = 'DELETED',
-}
-
-export enum Visibility {
-  PRIVATE = 'PRIVATE',
-  TEAM = 'TEAM',
-  COMPANY = 'COMPANY',
-}
+import { ProjectStatus, Visibility } from '../types/enums';
 
 // TypeScript Interface
 export interface IProject {

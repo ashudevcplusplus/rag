@@ -1,6 +1,6 @@
 import { projectRepository } from '../../../src/repositories/project.repository';
 import { ProjectModel } from '../../../src/models/project.model';
-import { ProjectStatus, Visibility } from '../../../src/schemas/project.schema';
+import { ProjectStatus, Visibility } from '../../../src/types/enums';
 
 // Mock Mongoose model
 jest.mock('../../../src/models/project.model');

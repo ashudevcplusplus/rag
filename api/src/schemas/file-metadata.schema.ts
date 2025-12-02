@@ -1,19 +1,5 @@
 import { z } from 'zod';
-
-// Enums
-export enum UploadStatus {
-  UPLOADING = 'UPLOADING',
-  UPLOADED = 'UPLOADED',
-  FAILED = 'FAILED',
-}
-
-export enum ProcessingStatus {
-  PENDING = 'PENDING',
-  PROCESSING = 'PROCESSING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  RETRYING = 'RETRYING',
-}
+import { UploadStatus, ProcessingStatus } from '../types/enums';
 
 // TypeScript Interface
 export interface IFileMetadata {

@@ -3,7 +3,7 @@ import { fileMetadataRepository } from '../../src/repositories/file-metadata.rep
 import { projectRepository } from '../../src/repositories/project.repository';
 import { userRepository } from '../../src/repositories/user.repository';
 import { companyRepository } from '../../src/repositories/company.repository';
-import { ProcessingStatus, UploadStatus } from '../../src/schemas/file-metadata.schema';
+import { ProcessingStatus, UploadStatus } from '../../src/types/enums';
 
 describe('File Metadata Repository Integration Tests', () => {
   let testProjectId: string;

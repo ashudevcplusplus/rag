@@ -1,5 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
-import { IProject, ProjectStatus, Visibility } from '../schemas/project.schema';
+import { IProject } from '../schemas/project.schema';
+import { ProjectStatus, Visibility } from '../types/enums';
 
 export interface IProjectDocument
   extends Omit<IProject, '_id' | 'companyId' | 'ownerId'>,

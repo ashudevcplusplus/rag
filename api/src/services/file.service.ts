@@ -2,10 +2,11 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import { generateFileHash } from '../utils/hash.util';
 import { indexingQueue } from '../queue/queue.client';
+import { publishFileCleanup, publishProjectStats } from '../utils/async-events.util';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
 import { projectRepository } from '../repositories/project.repository';
-import { ProcessingStatus } from '../schemas/file-metadata.schema';
+import { ProcessingStatus, FileCleanupReason } from '../types/enums';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 
@@ -37,12 +38,8 @@ export class FileService {
     // Check for duplicates
     const existingFile = await fileMetadataRepository.findByHash(fileHash, projectId);
     if (existingFile) {
-      // Clean up the uploaded file since we won't use it
-      try {
-        fs.unlinkSync(file.path);
-      } catch (err) {
-        logger.warn('Failed to delete duplicate file', { path: file.path, error: err });
-      }
+      // One-line event publishing
+      publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.DUPLICATE });
 
       logger.info('Duplicate file detected', {
         companyId,
@@ -77,11 +74,8 @@ export class FileService {
       tags: [],
     });
 
-    // Update project stats (increment file count and size)
-    await projectRepository.updateStats(projectId, {
-      fileCount: 1,
-      totalSize: file.size,
-    });
+    // One-line event publishing
+    publishProjectStats({ projectId, fileCount: 1, totalSize: file.size });
 
     // Add to Queue
     const job = await indexingQueue.add(

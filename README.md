@@ -1013,3 +1013,192 @@ For issues or questions:
 2. Review logs with `docker-compose logs api`
 3. Verify seed data with `npm run seed`
 4. Check API authentication with provided API keys
+
+---
+
+# Centralized Events and Enums
+
+## Overview
+
+All events and enums are defined in **one centralized location** for consistency and maintainability:
+
+- **`/api/src/types/enums.ts`** - All application enums
+- **`/api/src/types/events.types.ts`** - All event interfaces
+- **`/api/src/types/index.ts`** - Convenient barrel export
+
+## Usage
+
+### Import from Centralized Location
+
+```typescript
+// ✅ Import from centralized files
+import { 
+  AsyncTaskType, 
+  AnalyticsEventType, 
+  FileCleanupReason,
+  UserRole,
+  ProjectStatus 
+} from '../types/enums';
+
+import { 
+  ApiLoggingJobData, 
+  FileCleanupJobData 
+} from '../types/events.types';
+
+// Or use barrel export
+import { AsyncTaskType, ApiLoggingJobData } from '../types';
+```
+
+## Available Enums
+
+### Queue & Job Related
+- **`AsyncTaskType`** - Async task types (API_LOGGING, FILE_CLEANUP, CACHE_INVALIDATION, etc.)
+- **`JobStatus`** - Job execution status (PENDING, IN_PROGRESS, COMPLETED, FAILED)
+
+### Consumer Changes
+- **`ChangeType`** - Consumer change event types (CONSISTENCY_CHECK, CLEANUP_ORPHANED, etc.)
+- **`ChangeStatus`** - Change event status (PENDING, IN_PROGRESS, COMPLETED, FAILED)
+
+### Analytics
+- **`AnalyticsEventType`** - Analytics events (SEARCH, UPLOAD, PROJECT_CREATE, etc.)
+
+### File Related
+- **`UploadStatus`** - File upload status (UPLOADING, UPLOADED, FAILED)
+- **`ProcessingStatus`** - File processing status (PENDING, PROCESSING, COMPLETED, FAILED, RETRYING)
+- **`FileCleanupReason`** - File cleanup reasons (DUPLICATE, ERROR, CLEANUP)
+
+### Project Related
+- **`ProjectStatus`** - Project lifecycle (ACTIVE, ARCHIVED, DELETED)
+- **`Visibility`** - Project visibility (PRIVATE, TEAM, COMPANY)
+- **`ProjectRole`** - Project member roles (ADMIN, EDITOR, VIEWER)
+
+### Company Related
+- **`SubscriptionTier`** - Subscription levels (FREE, STARTER, PROFESSIONAL, ENTERPRISE)
+- **`CompanyStatus`** - Company status (ACTIVE, SUSPENDED, TRIAL, CANCELLED)
+
+### User Related
+- **`UserRole`** - User roles (OWNER, ADMIN, MEMBER, VIEWER)
+
+## Event Types
+
+All event interfaces are defined in `/api/src/types/events.types.ts`:
+
+### Async Task Events
+- `ApiLoggingJobData` - API request logging
+- `FileCleanupJobData` - File cleanup operations
+- `CacheInvalidationJobData` - Cache invalidation
+- `ErrorLoggingJobData` - Error logging
+- `SearchCachingJobData` - Search result caching
+- `ApiKeyTrackingJobData` - API key usage tracking
+- `AnalyticsJobData` - Analytics events
+- `ProjectStatsJobData` - Project statistics updates
+- `WebhooksJobData` - Webhook notifications
+- `StorageUpdatesJobData` - Storage usage updates
+
+### Consumer Events
+- `ConsistencyCheckEvent` - Consistency check events
+- `CleanupOrphanedEvent` - Orphaned data cleanup
+
+### Indexing Events
+- `IndexingJobData` - File indexing jobs
+- `JobResult` - Job completion results
+- `ConsistencyCheckResult` - Consistency check results
+
+## Usage Examples
+
+### Publishing Events
+
+```typescript
+import { publishAnalytics, publishFileCleanup } from '../utils/async-events.util';
+import { AnalyticsEventType, FileCleanupReason } from '../types/enums';
+
+// Publish analytics event
+publishAnalytics({
+  eventType: AnalyticsEventType.UPLOAD,
+  companyId,
+  metadata: { fileId, filename, size }
+});
+
+// Publish file cleanup
+publishFileCleanup({
+  filePath: '/path/to/file',
+  reason: FileCleanupReason.DUPLICATE
+});
+```
+
+### Using Enums in Switch Statements
+
+```typescript
+import { AsyncTaskType } from '../types/enums';
+
+switch (taskType) {
+  case AsyncTaskType.API_LOGGING:
+    // Handle API logging
+    break;
+  case AsyncTaskType.FILE_CLEANUP:
+    // Handle file cleanup
+    break;
+  // TypeScript ensures all cases are handled
+}
+```
+
+### Type-Safe Event Data
+
+```typescript
+import { ApiLoggingJobData } from '../types/events.types';
+
+const logData: ApiLoggingJobData = {
+  method: 'GET',
+  endpoint: '/api/search',
+  statusCode: 200,
+  responseTime: 150,
+  ipAddress: '127.0.0.1',
+};
+```
+
+## Benefits
+
+1. **Single Source of Truth** - All enums and events in one place
+2. **Type Safety** - No magic strings, TypeScript catches errors
+3. **Better IDE Support** - Autocomplete for all enum values
+4. **Easy Maintenance** - Update in one place, reflected everywhere
+5. **Consistent Naming** - Clear conventions across codebase
+
+## Adding New Enums
+
+To add a new enum:
+
+1. Open `/api/src/types/enums.ts`
+2. Add your enum with JSDoc comments:
+
+```typescript
+/**
+ * Order status for e-commerce
+ */
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+}
+```
+
+## Adding New Events
+
+To add a new event type:
+
+1. Open `/api/src/types/events.types.ts`
+2. Import required enums
+3. Define your interface:
+
+```typescript
+import { OrderStatus } from './enums';
+
+/**
+ * Order created event
+ */
+export interface OrderCreatedEvent {
+  orderId: string;
+  status: OrderStatus;
+  total: number;
+}
+```

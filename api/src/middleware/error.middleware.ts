@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError, ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
+import { publishErrorLog } from '../utils/async-events.util';
+import { AuthenticatedRequest } from './auth.middleware';
 
 export const errorHandler = (
   err: Error,
@@ -55,9 +57,24 @@ export const errorHandler = (
     method: req.method,
   });
 
-  res.status(500).json({
+  const authReq = req as AuthenticatedRequest;
+  const statusCode = 500;
+
+  // One-line event publishing
+  publishErrorLog({
+    companyId: authReq.context?.companyId,
+    method: req.method,
+    endpoint: req.path,
+    statusCode,
+    errorMessage: err.message,
+    stack: err.stack,
+    ipAddress: req.ip || 'unknown',
+    userAgent: req.get('user-agent'),
+  });
+
+  res.status(statusCode).json({
     error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-    statusCode: 500,
+    statusCode,
   });
 };
 

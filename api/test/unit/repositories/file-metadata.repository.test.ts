@@ -1,7 +1,7 @@
 import { fileMetadataRepository } from '../../../src/repositories/file-metadata.repository';
 import { FileMetadataModel } from '../../../src/models/file-metadata.model';
 import { projectRepository } from '../../../src/repositories/project.repository';
-import { ProcessingStatus, UploadStatus } from '../../../src/schemas/file-metadata.schema';
+import { ProcessingStatus, UploadStatus } from '../../../src/types/enums';
 import { Types } from 'mongoose';
 
 // Mock Mongoose model and Types

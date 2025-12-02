@@ -2,8 +2,8 @@ import {
   ConsumerChangeModel,
   CreateConsumerChangeDTO,
   IConsumerChange,
-  ChangeStatus,
 } from '../models/consumer-change.model';
+import { ChangeStatus } from '../types/enums';
 import { toStringId } from './helpers';
 
 export class ConsumerChangeRepository {

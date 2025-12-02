@@ -1,6 +1,6 @@
 import { userRepository } from '../../../src/repositories/user.repository';
 import { UserModel } from '../../../src/models/user.model';
-import { UserRole } from '../../../src/schemas/user.schema';
+import { UserRole } from '../../../src/types/enums';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 

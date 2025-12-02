@@ -1,5 +1,6 @@
 import { Schema, model, Document } from 'mongoose';
-import { ICompany, SubscriptionTier, CompanyStatus } from '../schemas/company.schema';
+import { ICompany } from '../schemas/company.schema';
+import { SubscriptionTier, CompanyStatus } from '../types/enums';
 
 export interface ICompanyDocument extends Omit<ICompany, '_id'>, Document {}
 

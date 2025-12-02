@@ -1,12 +1,5 @@
 import { z } from 'zod';
-
-// Enums
-export enum UserRole {
-  OWNER = 'OWNER',
-  ADMIN = 'ADMIN',
-  MEMBER = 'MEMBER',
-  VIEWER = 'VIEWER',
-}
+import { UserRole } from '../types/enums';
 
 // TypeScript Interface
 export interface IUser {

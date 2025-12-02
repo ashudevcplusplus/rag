@@ -2,10 +2,8 @@ import { database } from '../config/database';
 import { companyRepository } from '../repositories/company.repository';
 import { userRepository } from '../repositories/user.repository';
 import { projectRepository } from '../repositories/project.repository';
+import { SubscriptionTier, UserRole, Visibility } from '../types/enums';
 import { logger } from '../utils/logger';
-import { SubscriptionTier } from '../schemas/company.schema';
-import { UserRole } from '../schemas/user.schema';
-import { Visibility } from '../schemas/project.schema';
 
 async function seed(): Promise<void> {
   try {

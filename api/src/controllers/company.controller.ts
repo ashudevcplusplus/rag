@@ -1,9 +1,15 @@
 import { Request, Response } from 'express';
 import { indexingQueue } from '../queue/queue.client';
 import { consistencyCheckQueue } from '../queue/consistency-check.queue';
+import {
+  publishCacheInvalidation,
+  publishSearchCache,
+  publishAnalytics,
+} from '../utils/async-events.util';
 import { VectorService } from '../services/vector.service';
 import { CacheService } from '../services/cache.service';
 import { fileService } from '../services/file.service';
+import { AnalyticsEventType } from '../types/enums';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import {
@@ -56,6 +62,20 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await fileService.uploadFile(companyId, req.file as any, projectId, uploadedBy);
+
+  // One-line event publishing
+  publishCacheInvalidation({ companyId });
+  publishAnalytics({
+    eventType: AnalyticsEventType.UPLOAD,
+    companyId,
+    projectId,
+    metadata: {
+      fileId: result.fileId,
+      filename: req.file?.originalname,
+      size: req.file?.size,
+      mimetype: req.file?.mimetype,
+    },
+  });
 
   res.status(202).json({
     message: 'File queued for indexing',
@@ -243,8 +263,19 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
     }
   }
 
-  // 4. Cache the results
-  await CacheService.set(cacheKey, results, 3600); // Cache for 1 hour
+  // 4. One-line event publishing
+  publishSearchCache({ cacheKey, results, ttl: 3600 });
+  publishAnalytics({
+    eventType: AnalyticsEventType.SEARCH,
+    companyId,
+    metadata: {
+      queryLength: query.length,
+      limit,
+      hasFilter: !!filter,
+      rerank,
+      resultsCount: results.length,
+    },
+  });
 
   logger.info('Search completed', {
     companyId,

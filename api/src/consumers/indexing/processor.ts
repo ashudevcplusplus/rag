@@ -5,12 +5,13 @@ import { extractText, chunkText } from '../../utils/text-processor';
 import { VectorService } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
+import { FileCleanupReason, ProcessingStatus } from '../../types/enums';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
 import { companyRepository } from '../../repositories/company.repository';
 import { projectRepository } from '../../repositories/project.repository';
 import { embeddingRepository } from '../../repositories/embedding.repository';
-import { ProcessingStatus } from '../../schemas/file-metadata.schema';
+import { publishStorageUpdate, publishFileCleanup } from '../../utils/async-events.util';
 
 export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): Promise<JobResult> {
   const { companyId, fileId, filePath, mimetype, fileSizeMB } = job.data;
@@ -152,10 +153,10 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     await fileMetadataRepository.updateVectorIndexed(fileId, true, collection, chunks.length);
     await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.COMPLETED);
 
-    // Update company storage used
+    // One-line event publishing for storage update
     const meta = await fileMetadataRepository.findById(fileId);
     if (meta) {
-      await companyRepository.updateStorageUsed(companyId, meta.size);
+      publishStorageUpdate({ companyId, fileSize: meta.size });
     }
 
     // Update project stats (increment vector count)
@@ -163,13 +164,8 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       vectorCount: chunks.length,
     });
 
-    // Cleanup uploaded file to save disk space
-    try {
-      fs.unlinkSync(filePath);
-      logger.debug('Uploaded file cleaned up', { jobId: job.id, filePath });
-    } catch (e) {
-      logger.warn('Failed to cleanup file', { jobId: job.id, filePath, error: e });
-    }
+    // One-line event publishing for file cleanup
+    publishFileCleanup({ filePath, reason: FileCleanupReason.CLEANUP });
 
     logger.info('Job completed successfully', {
       jobId: job.id,

@@ -1,6 +1,6 @@
 import { projectMemberRepository } from '../../../src/repositories/project-member.repository';
 import { ProjectMemberModel } from '../../../src/models/project-member.model';
-import { ProjectRole } from '../../../src/schemas/project-member.schema';
+import { ProjectRole } from '../../../src/types/enums';
 
 // Mock Mongoose model
 jest.mock('../../../src/models/project-member.model');

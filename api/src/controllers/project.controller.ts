@@ -8,6 +8,8 @@ import {
   projectIdSchema,
 } from '../schemas/project.schema';
 import { logger } from '../utils/logger';
+import { publishAnalytics } from '../utils/async-events.util';
+import { AnalyticsEventType } from '../types/enums';
 import {
   sendConflictResponse,
   sendNotFoundResponse,
@@ -46,6 +48,14 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
   const project = await projectRepository.create(data);
 
   logger.info('Project created', { projectId: project._id, companyId, slug: project.slug });
+
+  // One-line event publishing
+  publishAnalytics({
+    eventType: AnalyticsEventType.PROJECT_CREATE,
+    companyId,
+    projectId: project._id,
+    metadata: { slug: project.slug, name: project.name },
+  });
 
   res.status(201).json({ project });
 });
@@ -105,6 +115,17 @@ export const updateProject = asyncHandler(async (req: Request, res: Response): P
 
   logger.info('Project updated', { projectId, updates: Object.keys(data) });
 
+  // One-line event publishing
+  const companyId = getCompanyId(req);
+  if (companyId) {
+    publishAnalytics({
+      eventType: AnalyticsEventType.PROJECT_UPDATE,
+      companyId,
+      projectId,
+      metadata: { updatedFields: Object.keys(data) },
+    });
+  }
+
   res.json({ project });
 });
 
@@ -121,6 +142,12 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response): P
   }
 
   logger.info('Project deleted', { projectId });
+
+  // One-line event publishing
+  const companyId = getCompanyId(req);
+  if (companyId) {
+    publishAnalytics({ eventType: AnalyticsEventType.PROJECT_DELETE, companyId, projectId });
+  }
 
   res.json({ message: 'Project deleted successfully' });
 });

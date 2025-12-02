@@ -1,6 +1,6 @@
 import { companyRepository } from '../../../src/repositories/company.repository';
 import { CompanyModel } from '../../../src/models/company.model';
-import { SubscriptionTier, CompanyStatus } from '../../../src/schemas/company.schema';
+import { SubscriptionTier, CompanyStatus } from '../../../src/types/enums';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 

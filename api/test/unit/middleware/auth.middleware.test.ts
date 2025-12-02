@@ -5,7 +5,8 @@ import {
   AuthenticatedRequest,
 } from '../../../src/middleware/auth.middleware';
 import { companyRepository } from '../../../src/repositories/company.repository';
-import { ICompany, CompanyStatus, SubscriptionTier } from '../../../src/schemas/company.schema';
+import { CompanyStatus, SubscriptionTier } from '../../../src/types/enums';
+import { ICompany } from '../../../src/schemas/company.schema';
 
 // Mock logger
 jest.mock('../../../src/utils/logger', () => ({
