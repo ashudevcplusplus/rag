@@ -50,7 +50,7 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
   logger.info('Project created', { projectId: project._id, companyId, slug: project.slug });
 
   // One-line event publishing
-  publishAnalytics({
+  void publishAnalytics({
     eventType: AnalyticsEventType.PROJECT_CREATE,
     companyId,
     projectId: project._id,
@@ -118,7 +118,7 @@ export const updateProject = asyncHandler(async (req: Request, res: Response): P
   // One-line event publishing
   const companyId = getCompanyId(req);
   if (companyId) {
-    publishAnalytics({
+    void publishAnalytics({
       eventType: AnalyticsEventType.PROJECT_UPDATE,
       companyId,
       projectId,
@@ -146,7 +146,7 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response): P
   // One-line event publishing
   const companyId = getCompanyId(req);
   if (companyId) {
-    publishAnalytics({ eventType: AnalyticsEventType.PROJECT_DELETE, companyId, projectId });
+    void publishAnalytics({ eventType: AnalyticsEventType.PROJECT_DELETE, companyId, projectId });
   }
 
   res.json({ message: 'Project deleted successfully' });

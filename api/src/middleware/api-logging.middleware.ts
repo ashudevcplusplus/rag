@@ -13,7 +13,7 @@ export const apiLoggingMiddleware = (req: Request, res: Response, next: NextFunc
     const responseSize = data ? Buffer.byteLength(JSON.stringify(data)) : 0;
 
     // One-line event publishing
-    publishApiLog({
+    void publishApiLog({
       companyId: authReq.context?.companyId,
       method: req.method,
       endpoint: req.path,

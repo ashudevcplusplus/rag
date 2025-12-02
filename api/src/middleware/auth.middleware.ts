@@ -76,7 +76,7 @@ export const authenticateRequest = async (
     });
 
     // One-line event publishing
-    publishApiKeyTracking({ companyId: company._id });
+    void publishApiKeyTracking({ companyId: company._id });
 
     next();
   } catch (error) {

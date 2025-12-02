@@ -5,7 +5,6 @@ import { indexingQueue } from '../queue/queue.client';
 import { publishFileCleanup, publishProjectStats } from '../utils/async-events.util';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
-import { projectRepository } from '../repositories/project.repository';
 import { ProcessingStatus, FileCleanupReason } from '../types/enums';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
@@ -39,7 +38,7 @@ export class FileService {
     const existingFile = await fileMetadataRepository.findByHash(fileHash, projectId);
     if (existingFile) {
       // One-line event publishing
-      publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.DUPLICATE });
+      void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.DUPLICATE });
 
       logger.info('Duplicate file detected', {
         companyId,
@@ -75,7 +74,7 @@ export class FileService {
     });
 
     // One-line event publishing
-    publishProjectStats({ projectId, fileCount: 1, totalSize: file.size });
+    void publishProjectStats({ projectId, fileCount: 1, totalSize: file.size });
 
     // Add to Queue
     const job = await indexingQueue.add(

@@ -64,8 +64,8 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
   const result = await fileService.uploadFile(companyId, req.file as any, projectId, uploadedBy);
 
   // One-line event publishing
-  publishCacheInvalidation({ companyId });
-  publishAnalytics({
+  void publishCacheInvalidation({ companyId });
+  void publishAnalytics({
     eventType: AnalyticsEventType.UPLOAD,
     companyId,
     projectId,
@@ -264,8 +264,8 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
   }
 
   // 4. One-line event publishing
-  publishSearchCache({ cacheKey, results, ttl: 3600 });
-  publishAnalytics({
+  void publishSearchCache({ cacheKey, results, ttl: 3600 });
+  void publishAnalytics({
     eventType: AnalyticsEventType.SEARCH,
     companyId,
     metadata: {

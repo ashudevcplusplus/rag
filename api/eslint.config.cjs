@@ -20,6 +20,8 @@ const commonGlobals = {
   module: 'readonly',
   exports: 'readonly',
   NodeJS: 'readonly',
+  URL: 'readonly',
+  AbortController: 'readonly',
 };
 
 const commonRules = {

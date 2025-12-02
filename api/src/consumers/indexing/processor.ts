@@ -1,5 +1,4 @@
 import { Job } from 'bullmq';
-import fs from 'fs';
 import { generateContentHash, generatePointId } from '../../utils/hash.util';
 import { extractText, chunkText } from '../../utils/text-processor';
 import { VectorService } from '../../services/vector.service';
@@ -8,7 +7,6 @@ import { VectorPoint } from '../../types/vector.types';
 import { FileCleanupReason, ProcessingStatus } from '../../types/enums';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
-import { companyRepository } from '../../repositories/company.repository';
 import { projectRepository } from '../../repositories/project.repository';
 import { embeddingRepository } from '../../repositories/embedding.repository';
 import { publishStorageUpdate, publishFileCleanup } from '../../utils/async-events.util';
@@ -156,7 +154,7 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     // One-line event publishing for storage update
     const meta = await fileMetadataRepository.findById(fileId);
     if (meta) {
-      publishStorageUpdate({ companyId, fileSize: meta.size });
+      void publishStorageUpdate({ companyId, fileSize: meta.size });
     }
 
     // Update project stats (increment vector count)
@@ -165,7 +163,7 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     });
 
     // One-line event publishing for file cleanup
-    publishFileCleanup({ filePath, reason: FileCleanupReason.CLEANUP });
+    void publishFileCleanup({ filePath, reason: FileCleanupReason.CLEANUP });
 
     logger.info('Job completed successfully', {
       jobId: job.id,

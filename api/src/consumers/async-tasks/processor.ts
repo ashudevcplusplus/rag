@@ -381,6 +381,9 @@ async function processWebhooks(job: Job): Promise<{ status: 'completed' | 'faile
     }
 
     // Make HTTP POST request to webhook URL
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -392,8 +395,10 @@ async function processWebhooks(job: Job): Promise<{ status: 'completed' | 'faile
         payload,
         timestamp: new Date().toISOString(),
       }),
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');

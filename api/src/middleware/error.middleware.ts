@@ -61,7 +61,7 @@ export const errorHandler = (
   const statusCode = 500;
 
   // One-line event publishing
-  publishErrorLog({
+  void publishErrorLog({
     companyId: authReq.context?.companyId,
     method: req.method,
     endpoint: req.path,
