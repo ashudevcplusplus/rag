@@ -15,6 +15,10 @@ export const projectIdBodySchema = z.object({
     .string()
     .min(1, { message: 'Project ID is required' })
     .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Invalid project ID format' }),
+  embeddingProvider: z
+    .enum(['inhouse', 'openai', 'gemini'], { message: 'Invalid embedding provider' })
+    .optional(),
+  embeddingModel: z.string().optional(),
 });
 
 // File upload validation
@@ -38,6 +42,9 @@ export const searchQuerySchema = z.object({
   limit: z.number().int().min(1).max(100).optional().default(10),
   filter: z.record(z.string(), z.unknown()).optional(),
   rerank: z.boolean().optional().default(false),
+  embeddingProvider: z
+    .enum(['inhouse', 'openai', 'gemini'], { message: 'Invalid embedding provider' })
+    .optional(),
 });
 
 // Job ID validation

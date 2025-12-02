@@ -10,6 +10,7 @@ jest.mock('../../../src/config', () => ({
     QDRANT_URL: 'http://localhost:6333',
     EMBED_URL: 'http://localhost:5001/embed',
     RERANK_URL: 'http://localhost:5001/rerank',
+    INHOUSE_EMBEDDINGS: true, // Use in-house Python service for tests
   },
 }));
 jest.mock('../../../src/utils/logger', () => ({

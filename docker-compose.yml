@@ -57,6 +57,22 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/rag_db?authSource=admin
+      # Embeddings Configuration
+      # Provider options: 'inhouse' (default), 'openai', or 'gemini'
+      - EMBEDDING_PROVIDER=inhouse
+      # Legacy: Set INHOUSE_EMBEDDINGS=false to use OpenAI (deprecated, use EMBEDDING_PROVIDER instead)
+      - INHOUSE_EMBEDDINGS=true
+      
+      # OpenAI Embeddings Configuration (optional)
+      # - OPENAI_API_KEY=your-openai-api-key-here
+      # - OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+      
+      # Gemini Embeddings Configuration (optional)
+      # - GEMINI_API_KEY=your-google-api-key-here
+      # - GEMINI_EMBEDDING_MODEL=text-embedding-004
+      # Available models: text-embedding-004, text-embedding-005, gemini-embedding-001, multimodalembedding@001
+      # For gemini-embedding-001, you can specify output dimensionality (768, 1536, 3072)
+      # - GEMINI_EMBEDDING_DIMENSIONS=768
     volumes:
       - ./data:/app/data
       - ./api:/app

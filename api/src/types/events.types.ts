@@ -44,6 +44,8 @@ export interface IndexingJobData {
   filePath: string;
   mimetype: string;
   fileSizeMB: number;
+  embeddingProvider?: 'inhouse' | 'openai' | 'gemini';
+  embeddingModel?: string;
 }
 
 export interface JobResult {

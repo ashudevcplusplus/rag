@@ -33,6 +33,19 @@ const embeddingSchema = new Schema<IEmbeddingDocument>(
       type: [[Number]],
       required: true,
     },
+    provider: {
+      type: String,
+      enum: ['inhouse', 'openai', 'gemini'],
+      required: true,
+    },
+    modelName: {
+      type: String,
+      required: true,
+    },
+    vectorDimensions: {
+      type: Number,
+      required: true,
+    },
     metadata: {
       type: Schema.Types.Mixed,
     },

@@ -11,4 +11,22 @@ export const CONFIG = {
   MONGODB_URI:
     process.env.MONGODB_URI || 'mongodb://admin:admin123@localhost:27017/rag_db?authSource=admin',
   PORT: parseInt(process.env.PORT || '8000', 10),
+  // Embeddings Configuration
+  // Embedding provider: 'inhouse' | 'openai' | 'gemini'
+  EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER || 'inhouse',
+
+  // In-house Python Embeddings (default)
+  INHOUSE_EMBEDDINGS: process.env.INHOUSE_EMBEDDINGS !== 'false', // Deprecated: use EMBEDDING_PROVIDER instead
+
+  // OpenAI Embeddings Configuration
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+
+  // Gemini Embeddings Configuration
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_EMBEDDING_MODEL: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+  // For gemini-embedding-001, you can specify output dimensionality (768, 1536, 3072)
+  GEMINI_EMBEDDING_DIMENSIONS: process.env.GEMINI_EMBEDDING_DIMENSIONS
+    ? parseInt(process.env.GEMINI_EMBEDDING_DIMENSIONS, 10)
+    : undefined,
 };

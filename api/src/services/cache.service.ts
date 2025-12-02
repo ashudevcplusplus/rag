@@ -31,11 +31,13 @@ export class CacheService {
     query: string,
     limit: number,
     filter?: Record<string, unknown>,
-    rerank: boolean = false
+    rerank: boolean = false,
+    embeddingProvider?: 'inhouse' | 'openai' | 'gemini'
   ): string {
     const normalizedQuery = query.trim().toLowerCase();
     const filterStr = filter ? JSON.stringify(filter) : '';
-    const combined = `${normalizedQuery}:${limit}:${filterStr}:${rerank}`;
+    const providerStr = embeddingProvider || '';
+    const combined = `${normalizedQuery}:${limit}:${filterStr}:${rerank}:${providerStr}`;
     const hash = crypto.createHash('sha256').update(combined).digest('hex').substring(0, 16);
     return `${companyId}:${hash}`;
   }

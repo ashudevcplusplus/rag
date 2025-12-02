@@ -36,8 +36,8 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
     throw new ValidationError('No files uploaded');
   }
 
-  // Validate projectId is required
-  const { projectId } = projectIdBodySchema.parse(req.body);
+  // Validate projectId and optional embedding provider
+  const { projectId, embeddingProvider, embeddingModel } = projectIdBodySchema.parse(req.body);
 
   // Verify project exists and belongs to the company
   const project = await projectRepository.findById(projectId);
@@ -71,8 +71,15 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
 
   for (const file of files) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await fileService.uploadFile(companyId, file as any, projectId, uploadedBy);
+      const result = await fileService.uploadFile(
+        companyId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        file as any,
+        projectId,
+        uploadedBy,
+        embeddingProvider,
+        embeddingModel
+      );
       results.push({
         fileId: result.fileId,
         jobId: result.jobId,
@@ -171,7 +178,7 @@ export const getJobStatus = asyncHandler(async (req: Request, res: Response): Pr
 
 export const searchCompany = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { companyId } = companyIdSchema.parse(req.params);
-  const { query, limit, filter, rerank } = searchQuerySchema.parse(req.body);
+  const { query, limit, filter, rerank, embeddingProvider } = searchQuerySchema.parse(req.body);
 
   logger.info('Search requested', {
     companyId,
@@ -179,10 +186,18 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
     limit,
     hasFilter: !!filter,
     rerank,
+    embeddingProvider,
   });
 
-  // 1. Check Cache (include filter and rerank in cache key!)
-  const cacheKey = CacheService.generateKey(companyId, query, limit, filter, rerank);
+  // 1. Check Cache (include filter, rerank, and provider in cache key!)
+  const cacheKey = CacheService.generateKey(
+    companyId,
+    query,
+    limit,
+    filter,
+    rerank,
+    embeddingProvider
+  );
   const cachedResults = await CacheService.get(cacheKey);
 
   if (cachedResults) {
@@ -233,10 +248,17 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
   let results: SearchResult[];
 
   if (rerank) {
-    results = await VectorService.searchWithReranking(collection, query, limit, qdrantFilter);
+    results = await VectorService.searchWithReranking(
+      collection,
+      query,
+      limit,
+      qdrantFilter,
+      20,
+      embeddingProvider
+    );
   } else {
-    // Get embedding for the query
-    const [queryVector] = await VectorService.getEmbeddings([query]);
+    // Get embedding for the query (use 'query' task type for better search quality)
+    const [queryVector] = await VectorService.getEmbeddings([query], 'query', embeddingProvider);
     results = await VectorService.search(collection, queryVector, limit, qdrantFilter);
   }
 

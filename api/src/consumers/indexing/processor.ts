@@ -1,7 +1,7 @@
 import { Job } from 'bullmq';
 import { generateContentHash, generatePointId } from '../../utils/hash.util';
 import { extractText, chunkText } from '../../utils/text-processor';
-import { VectorService } from '../../services/vector.service';
+import { VectorService, EmbeddingProvider } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
 import { FileCleanupReason, ProcessingStatus } from '../../types/enums';
@@ -11,9 +11,11 @@ import { projectRepository } from '../../repositories/project.repository';
 import { embeddingRepository } from '../../repositories/embedding.repository';
 import { publishStorageUpdate, publishFileCleanup } from '../../utils/async-events.util';
 import { getErrorMessage } from '../../types/error.types';
+import { CONFIG } from '../../config';
 
 export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): Promise<JobResult> {
-  const { companyId, fileId, filePath, mimetype, fileSizeMB } = job.data;
+  const { companyId, fileId, filePath, mimetype, fileSizeMB, embeddingProvider, embeddingModel } =
+    job.data;
 
   logger.info('Processing job started', {
     jobId: job.id,
@@ -100,8 +102,8 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
         batchSize: batchChunks.length,
       });
 
-      // Embed the batch
-      const vectors = await VectorService.getEmbeddings(batchChunks);
+      // Embed the batch using specified provider or default
+      const vectors = await VectorService.getEmbeddings(batchChunks, 'document', embeddingProvider);
 
       // Collect for MongoDB
       allVectors.push(...vectors);
@@ -129,13 +131,21 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
 
       // Upsert Batch
       const collection = `company_${companyId}`;
-      await VectorService.ensureCollection(collection);
+      await VectorService.ensureCollection(collection, embeddingProvider);
       await VectorService.upsertBatch(collection, points);
 
       // Update job progress
       const progress = 30 + Math.floor(((i + 1) / totalBatches) * 70);
       await job.updateProgress(progress);
     }
+
+    // Determine provider and model name
+    const effectiveProvider: EmbeddingProvider =
+      (embeddingProvider as EmbeddingProvider) ||
+      (CONFIG.EMBEDDING_PROVIDER as EmbeddingProvider) ||
+      (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+    const effectiveModelName = embeddingModel || VectorService.getModelName(effectiveProvider);
+    const vectorDimensions = VectorService.getEmbeddingDimensions(effectiveProvider);
 
     // Save embeddings to MongoDB (Single Document per File)
     await embeddingRepository.create({
@@ -144,6 +154,9 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       chunkCount: chunks.length,
       contents: allContents,
       vectors: allVectors,
+      provider: effectiveProvider,
+      modelName: effectiveModelName,
+      vectorDimensions,
       metadata: {
         characterCount: rawText.length,
       },

@@ -11,6 +11,8 @@ import {
 import { ExternalServiceError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import { embeddingRepository } from '../repositories/embedding.repository';
+import { EmbeddingService } from './embedding.service';
+import { GeminiEmbeddingService } from './gemini-embedding.service';
 
 const qdrant = new QdrantClient({ url: CONFIG.QDRANT_URL });
 
@@ -18,13 +20,88 @@ interface QdrantError extends Error {
   status?: number;
 }
 
+export type EmbeddingProvider = 'inhouse' | 'openai' | 'gemini';
+
 export class VectorService {
   /**
-   * Get embeddings from the embed service
+   * Get embeddings from the specified or configured provider
+   * Supports: inhouse (Python service), openai, or gemini
+   * @param texts - Array of texts to embed
+   * @param taskType - 'document' or 'query' (affects Gemini embeddings)
+   * @param provider - Optional provider override. If not provided, uses CONFIG.EMBEDDING_PROVIDER
    */
-  static async getEmbeddings(texts: string[]): Promise<number[][]> {
+  static async getEmbeddings(
+    texts: string[],
+    taskType: 'document' | 'query' = 'document',
+    provider?: EmbeddingProvider
+  ): Promise<number[][]> {
+    // Determine provider: use provided, then CONFIG.EMBEDDING_PROVIDER, otherwise fall back to INHOUSE_EMBEDDINGS
+    const effectiveProvider =
+      provider || CONFIG.EMBEDDING_PROVIDER || (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+
+    // Route to appropriate embedding service based on configuration
+    switch (effectiveProvider) {
+      case 'gemini':
+        // Use Gemini embedding service
+        return GeminiEmbeddingService.getEmbeddings(texts, {
+          taskType: taskType === 'query' ? 'retrieval_query' : 'retrieval_document',
+        });
+      case 'openai':
+        // Use OpenAI embedding service
+        return EmbeddingService.getEmbeddings(texts);
+      case 'inhouse':
+      default:
+        // Use in-house Python embedding service
+        return this.getInhouseEmbeddings(texts);
+    }
+  }
+
+  /**
+   * Get embedding dimensions for a given provider
+   */
+  static getEmbeddingDimensions(provider?: EmbeddingProvider): number {
+    const effectiveProvider =
+      provider || CONFIG.EMBEDDING_PROVIDER || (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+
+    switch (effectiveProvider) {
+      case 'gemini':
+        return GeminiEmbeddingService.getEmbeddingDimensions();
+      case 'openai':
+        // OpenAI text-embedding-3-small = 1536, text-embedding-3-large = 3072
+        return CONFIG.OPENAI_EMBEDDING_MODEL.includes('large') ? 3072 : 1536;
+      case 'inhouse':
+      default:
+        return 384; // all-MiniLM-L6-v2
+    }
+  }
+
+  /**
+   * Get model name for a given provider
+   */
+  static getModelName(provider?: EmbeddingProvider): string {
+    const effectiveProvider =
+      provider || CONFIG.EMBEDDING_PROVIDER || (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+
+    switch (effectiveProvider) {
+      case 'gemini':
+        return CONFIG.GEMINI_EMBEDDING_MODEL;
+      case 'openai':
+        return CONFIG.OPENAI_EMBEDDING_MODEL;
+      case 'inhouse':
+      default:
+        return 'all-MiniLM-L6-v2';
+    }
+  }
+
+  /**
+   * Get embeddings from in-house Python embed service
+   */
+  private static async getInhouseEmbeddings(texts: string[]): Promise<number[][]> {
     try {
-      logger.debug('Requesting embeddings', { count: texts.length, url: CONFIG.EMBED_URL });
+      logger.debug('Requesting in-house embeddings', {
+        count: texts.length,
+        url: CONFIG.EMBED_URL,
+      });
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -56,7 +133,7 @@ export class VectorService {
         const data = (await response.json()) as EmbeddingResponse;
         const embeddings = data.embeddings || data.vectors || [];
 
-        logger.debug('Embeddings received', { count: embeddings.length });
+        logger.debug('In-house embeddings received', { count: embeddings.length });
         return embeddings;
       } catch (fetchError) {
         clearTimeout(timeoutId);
@@ -71,30 +148,63 @@ export class VectorService {
         url: CONFIG.EMBED_URL,
         textsCount: texts.length,
       };
-      logger.error('Failed to get embeddings', errorDetails);
+      logger.error('Failed to get in-house embeddings', errorDetails);
       throw error;
     }
   }
 
   /**
    * Ensure a collection exists with proper configuration and payload indexes
+   * @param collectionName - Name of the collection
+   * @param provider - Optional provider to determine vector dimensions. If not provided, uses CONFIG.EMBEDDING_PROVIDER
    */
-  static async ensureCollection(collectionName: string): Promise<void> {
+  static async ensureCollection(
+    collectionName: string,
+    provider?: EmbeddingProvider
+  ): Promise<void> {
     try {
-      await qdrant.getCollection(collectionName);
-      logger.debug('Collection exists', { collection: collectionName });
+      const collectionInfo = await qdrant.getCollection(collectionName);
+      logger.debug('Collection exists', {
+        collection: collectionName,
+        vectorSize: collectionInfo.config?.params?.vectors?.size,
+      });
+
+      // Verify collection dimensions match expected dimensions
+      const expectedDimensions = this.getEmbeddingDimensions(provider);
+      const currentDimensions = (collectionInfo.config?.params?.vectors as { size?: number })?.size;
+
+      if (currentDimensions && currentDimensions !== expectedDimensions) {
+        logger.warn('Collection dimensions mismatch', {
+          collection: collectionName,
+          currentDimensions,
+          expectedDimensions,
+          provider: provider || CONFIG.EMBEDDING_PROVIDER,
+        });
+        throw new ExternalServiceError(
+          'Qdrant',
+          `Collection ${collectionName} has dimension ${currentDimensions} but expected ${expectedDimensions} for provider ${provider || CONFIG.EMBEDDING_PROVIDER || 'inhouse'}. Please recreate the collection or use a different provider.`
+        );
+      }
     } catch (error) {
       const qdrantError = error as QdrantError;
       if (qdrantError.status === 404) {
-        logger.info('Creating collection', { collection: collectionName });
-        // Collection doesn't exist, create it
+        const vectorSize = this.getEmbeddingDimensions(provider);
+        logger.info('Creating collection', {
+          collection: collectionName,
+          vectorSize,
+          provider: provider || CONFIG.EMBEDDING_PROVIDER || 'inhouse',
+        });
+        // Collection doesn't exist, create it with correct dimensions
         await qdrant.createCollection(collectionName, {
           vectors: {
-            size: 384, // Adjust based on your embed model
+            size: vectorSize,
             distance: 'Cosine',
           },
         });
-        logger.info('Collection created', { collection: collectionName });
+        logger.info('Collection created', {
+          collection: collectionName,
+          vectorSize,
+        });
 
         // Create Payload Indexes for fast filtering
         logger.info('Creating payload indexes', { collection: collectionName });
@@ -260,16 +370,18 @@ export class VectorService {
 
   /**
    * Search with hybrid reranking (Vector + Cross-Encoder)
+   * @param provider - Optional provider override for generating query embeddings
    */
   static async searchWithReranking(
     collectionName: string,
     query: string,
     limit: number = 10,
     filter?: QdrantFilter,
-    rerankLimit: number = 20
+    rerankLimit: number = 20,
+    provider?: EmbeddingProvider
   ): Promise<SearchResult[]> {
-    // 1. Get query embedding
-    const embeddings = await this.getEmbeddings([query]);
+    // 1. Get query embedding (use 'query' task type for better search quality)
+    const embeddings = await this.getEmbeddings([query], 'query', provider);
     const queryVector = embeddings[0];
 
     // 2. Initial vector search with higher limit

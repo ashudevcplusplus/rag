@@ -12,13 +12,17 @@ import { logger } from '../utils/logger';
 export class FileService {
   /**
    * Upload and queue file for indexing
+   * @param embeddingProvider - Optional embedding provider override
+   * @param embeddingModel - Optional embedding model override
    */
   async uploadFile(
     companyId: string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     file: any,
     projectId: string,
-    uploadedBy: string
+    uploadedBy: string,
+    embeddingProvider?: 'inhouse' | 'openai' | 'gemini',
+    embeddingModel?: string
   ): Promise<{ fileId: string; jobId: string }> {
     // Check storage limit
     const hasReachedLimit = await companyRepository.hasReachedStorageLimit(companyId);
@@ -92,6 +96,8 @@ export class FileService {
         filePath: file.path,
         mimetype: file.mimetype,
         fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+        embeddingProvider,
+        embeddingModel,
       },
       {
         attempts: 3, // Retry failed jobs 3 times
