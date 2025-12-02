@@ -1,0 +1,12 @@
+cd api
+
+echo "🔍 Running linter..."
+npm run lint || exit 1
+
+echo "✨ Checking code formatting..."
+npm run format:check || exit 1
+
+echo "🧪 Running unit tests..."
+npm run test:unit || exit 1
+
+echo "✅ All pre-commit checks passed!"

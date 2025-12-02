@@ -8,7 +8,10 @@
     "test": "cd api && npm test",
     "build": "cd api && npm run build",
     "start": "cd api && npm start",
-    "dev": "cd api && npm run dev"
+    "dev": "cd api && npm run dev",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
-
