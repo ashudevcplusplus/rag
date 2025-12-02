@@ -12,6 +12,148 @@ describe('Database Integration Tests with Seed Data', () => {
   beforeAll(async () => {
     // Connect to test database
     await database.connect();
+
+    // Seed the database with test data
+    // Clean up existing data first
+    await companyRepository.model.deleteMany({});
+    await userRepository.model.deleteMany({});
+    await projectRepository.model.deleteMany({});
+
+    // Create companies
+    const company1 = await companyRepository.create({
+      _id: '507f1f77bcf86cd799439011',
+      name: 'Acme Corporation',
+      slug: 'acme-corp',
+      email: 'admin@acme-corp.com',
+      apiKey: 'dev-key-123',
+      subscriptionTier: SubscriptionTier.PROFESSIONAL,
+      storageLimit: 10737418240, // 10GB
+      maxUsers: 50,
+      maxProjects: 100,
+      settings: {
+        notifications: {
+          email: true,
+          slack: false,
+        },
+        features: {
+          advancedSearch: true,
+          apiAccess: true,
+        },
+      },
+    } as any);
+
+    // Create users
+    const passwordHash = await userRepository.hashPassword('password123');
+
+    await userRepository.create({
+      _id: '507f1f77bcf86cd799439020',
+      companyId: company1._id,
+      email: 'john.doe@acme-corp.com',
+      passwordHash,
+      firstName: 'John',
+      lastName: 'Doe',
+      role: UserRole.OWNER,
+      permissions: {
+        canUpload: true,
+        canDelete: true,
+        canShare: true,
+        canManageUsers: true,
+      },
+    } as any);
+
+    await userRepository.create({
+      _id: '507f1f77bcf86cd799439021',
+      companyId: company1._id,
+      email: 'jane.smith@acme-corp.com',
+      passwordHash,
+      firstName: 'Jane',
+      lastName: 'Smith',
+      role: UserRole.ADMIN,
+      permissions: {
+        canUpload: true,
+        canDelete: true,
+        canShare: true,
+        canManageUsers: false,
+      },
+    } as any);
+
+    await userRepository.create({
+      _id: '507f1f77bcf86cd799439022',
+      companyId: company1._id,
+      email: 'bob.johnson@acme-corp.com',
+      passwordHash,
+      firstName: 'Bob',
+      lastName: 'Johnson',
+      role: UserRole.MEMBER,
+      permissions: {
+        canUpload: true,
+        canDelete: false,
+        canShare: true,
+        canManageUsers: false,
+      },
+    } as any);
+
+    // Create projects
+    await projectRepository.create({
+      _id: '507f1f77bcf86cd799439030',
+      companyId: company1._id,
+      ownerId: '507f1f77bcf86cd799439020',
+      name: 'Product Documentation',
+      slug: 'product-docs',
+      description: 'Centralized product documentation and user guides',
+      color: '#3B82F6',
+      icon: '📚',
+      tags: ['documentation', 'product', 'guides'],
+      visibility: Visibility.COMPANY,
+      settings: {
+        autoIndex: true,
+        chunkSize: 1000,
+        chunkOverlap: 200,
+      },
+      metadata: {
+        department: 'Product',
+        category: 'Documentation',
+      },
+    } as any);
+
+    await projectRepository.create({
+      _id: '507f1f77bcf86cd799439031',
+      companyId: company1._id,
+      ownerId: '507f1f77bcf86cd799439021',
+      name: 'Customer Support KB',
+      slug: 'support-kb',
+      description: 'Customer support knowledge base and FAQs',
+      color: '#10B981',
+      icon: '💬',
+      tags: ['support', 'kb', 'customer-service'],
+      visibility: Visibility.TEAM,
+      settings: {
+        autoIndex: true,
+        chunkSize: 800,
+        chunkOverlap: 150,
+      },
+      metadata: {
+        department: 'Support',
+        category: 'Knowledge Base',
+      },
+    } as any);
+
+    await projectRepository.create({
+      _id: '507f1f77bcf86cd799439032',
+      companyId: company1._id,
+      ownerId: '507f1f77bcf86cd799439020',
+      name: 'Legal Documents',
+      slug: 'legal-docs',
+      description: 'Company legal documents and contracts',
+      color: '#EF4444',
+      icon: '⚖️',
+      tags: ['legal', 'contracts', 'confidential'],
+      visibility: Visibility.PRIVATE,
+      metadata: {
+        department: 'Legal',
+        category: 'Confidential',
+      },
+    } as any);
   });
 
   afterAll(async () => {
