@@ -21,31 +21,47 @@ class DatabaseConnection {
       return;
     }
 
-    try {
-      await mongoose.connect(CONFIG.MONGODB_URI);
-      this.isConnected = true;
-      logger.info('MongoDB connected successfully', {
-        host: mongoose.connection.host,
-        database: mongoose.connection.name,
-      });
+    const maxRetries = 5;
+    const retryDelay = 2000; // 2 seconds
 
-      // Handle connection events
-      mongoose.connection.on('error', (error) => {
-        logger.error('MongoDB connection error', { error });
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        logger.warn('MongoDB disconnected');
-        this.isConnected = false;
-      });
-
-      mongoose.connection.on('reconnected', () => {
-        logger.info('MongoDB reconnected');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await mongoose.connect(CONFIG.MONGODB_URI, {
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 45000,
+        });
         this.isConnected = true;
-      });
-    } catch (error) {
-      logger.error('MongoDB connection failed', { error });
-      throw error;
+        logger.info('MongoDB connected successfully', {
+          host: mongoose.connection.host,
+          database: mongoose.connection.name,
+        });
+
+        // Handle connection events
+        mongoose.connection.on('error', (error) => {
+          logger.error('MongoDB connection error', { error });
+        });
+
+        mongoose.connection.on('disconnected', () => {
+          logger.warn('MongoDB disconnected');
+          this.isConnected = false;
+        });
+
+        mongoose.connection.on('reconnected', () => {
+          logger.info('MongoDB reconnected');
+          this.isConnected = true;
+        });
+        return;
+      } catch (error) {
+        logger.warn(`MongoDB connection attempt ${attempt}/${maxRetries} failed`, {
+          error: error instanceof Error ? error.message : error,
+        });
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        } else {
+          logger.error('MongoDB connection failed after all retries', { error });
+          throw error;
+        }
+      }
     }
   }
 

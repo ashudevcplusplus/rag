@@ -10,8 +10,13 @@ describe('Database Integration Tests with Seed Data', () => {
   let testProjectId: string;
 
   beforeAll(async () => {
-    // Connect to test database
+    // Connect to test database (with retry logic built-in)
     await database.connect();
+
+    // Verify connection is active
+    if (!database.isConnectionActive()) {
+      throw new Error('MongoDB connection is not active');
+    }
 
     // Seed the database with test data
     // Clean up existing data first
