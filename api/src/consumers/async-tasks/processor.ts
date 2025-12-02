@@ -60,7 +60,9 @@ export async function processAsyncTask(job: Job): Promise<unknown> {
 /**
  * Process API logging task
  */
-async function processApiLogging(job: Job): Promise<{ status: 'completed' | 'failed'; logged: boolean }> {
+async function processApiLogging(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; logged: boolean }> {
   const data = job.data as ApiLoggingJobData;
 
   try {
@@ -104,7 +106,9 @@ async function processApiLogging(job: Job): Promise<{ status: 'completed' | 'fai
 /**
  * Process file cleanup task
  */
-async function processFileCleanup(job: Job): Promise<{ status: 'completed' | 'failed'; deleted: boolean }> {
+async function processFileCleanup(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; deleted: boolean }> {
   const { filePath, reason } = job.data as FileCleanupJobData;
 
   try {
@@ -179,7 +183,9 @@ async function processCacheInvalidation(
 /**
  * Process error logging task
  */
-async function processErrorLogging(job: Job): Promise<{ status: 'completed' | 'failed'; logged: boolean }> {
+async function processErrorLogging(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; logged: boolean }> {
   const data = job.data as ErrorLoggingJobData;
 
   try {
@@ -220,7 +226,9 @@ async function processErrorLogging(job: Job): Promise<{ status: 'completed' | 'f
 /**
  * Process search caching task
  */
-async function processSearchCaching(job: Job): Promise<{ status: 'completed' | 'failed'; cached: boolean }> {
+async function processSearchCaching(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; cached: boolean }> {
   const { cacheKey, results, ttl } = job.data as SearchCachingJobData;
 
   try {
@@ -276,7 +284,9 @@ async function processApiKeyTracking(
 /**
  * Process analytics task
  */
-async function processAnalytics(job: Job): Promise<{ status: 'completed' | 'failed'; processed: boolean }> {
+async function processAnalytics(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; processed: boolean }> {
   const data = job.data as AnalyticsJobData;
 
   try {
@@ -322,7 +332,9 @@ async function processAnalytics(job: Job): Promise<{ status: 'completed' | 'fail
 /**
  * Process project stats update task
  */
-async function processProjectStats(job: Job): Promise<{ status: 'completed' | 'failed'; updated: boolean }> {
+async function processProjectStats(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; updated: boolean }> {
   const data = job.data as ProjectStatsJobData;
 
   try {
@@ -366,7 +378,9 @@ async function processProjectStats(job: Job): Promise<{ status: 'completed' | 'f
 /**
  * Process webhooks task
  */
-async function processWebhooks(job: Job): Promise<{ status: 'completed' | 'failed'; sent: boolean }> {
+async function processWebhooks(
+  job: Job
+): Promise<{ status: 'completed' | 'failed'; sent: boolean }> {
   const { webhookUrl, eventType, payload, retryCount = 0 } = job.data as WebhooksJobData;
 
   try {

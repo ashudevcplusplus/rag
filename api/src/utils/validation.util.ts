@@ -22,9 +22,13 @@ export function validateFilePath(filePath: string): boolean {
 
   // Normalize the path and check for traversal attempts
   const normalized = path.normalize(filePath);
-  
+
   // Check for path traversal patterns
-  if (normalized.includes('..') || normalized.startsWith('/etc/') || normalized.startsWith('/root/')) {
+  if (
+    normalized.includes('..') ||
+    normalized.startsWith('/etc/') ||
+    normalized.startsWith('/root/')
+  ) {
     logger.warn('Path traversal attempt detected', { filePath, normalized });
     return false;
   }
@@ -42,7 +46,7 @@ export function validateWebhookUrl(url: string): boolean {
 
   try {
     const parsed = new URL(url);
-    
+
     // Only allow HTTP/HTTPS
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       logger.warn('Invalid webhook protocol', { url, protocol: parsed.protocol });
@@ -83,7 +87,7 @@ export function validateWebhookPayloadSize(payload: unknown, maxSizeBytes = 1024
   try {
     const payloadString = JSON.stringify(payload);
     const sizeBytes = Buffer.byteLength(payloadString, 'utf8');
-    
+
     if (sizeBytes > maxSizeBytes) {
       logger.warn('Webhook payload exceeds size limit', {
         sizeBytes,
@@ -92,7 +96,7 @@ export function validateWebhookPayloadSize(payload: unknown, maxSizeBytes = 1024
       });
       return false;
     }
-    
+
     return true;
   } catch (error) {
     logger.error('Error validating webhook payload size', { error });
@@ -110,13 +114,13 @@ export function sanitizeFilePath(filePath: string): string {
 
   // Remove null bytes
   let sanitized = filePath.replace(/\0/g, '');
-  
+
   // Normalize the path
   sanitized = path.normalize(sanitized);
-  
+
   // Remove any remaining path traversal attempts
   sanitized = sanitized.replace(/\.\./g, '');
-  
+
   return sanitized;
 }
 
@@ -130,7 +134,7 @@ export function validateCompanyId(companyId: string): boolean {
 
   // MongoDB ObjectId format (24 hex characters)
   const objectIdPattern = /^[0-9a-fA-F]{24}$/;
-  
+
   if (!objectIdPattern.test(companyId)) {
     logger.warn('Invalid company ID format', { companyId });
     return false;
@@ -149,7 +153,7 @@ export function validateProjectId(projectId: string): boolean {
 
   // MongoDB ObjectId format (24 hex characters)
   const objectIdPattern = /^[0-9a-fA-F]{24}$/;
-  
+
   if (!objectIdPattern.test(projectId)) {
     logger.warn('Invalid project ID format', { projectId });
     return false;
@@ -179,4 +183,3 @@ export function validateNumberInRange(
 
   return true;
 }
-

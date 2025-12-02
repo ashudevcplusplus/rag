@@ -12,4 +12,3 @@ export const asyncTasksQueue = new Queue('async-tasks-queue', {
 // Export for backward compatibility
 export { indexingQueue } from './queue.client';
 export { consistencyCheckQueue } from './consistency-check.queue';
-

@@ -28,4 +28,3 @@ worker.on('error', (err) => {
 logger.info('Async tasks worker started', { concurrency: 10, queue: 'async-tasks-queue' });
 
 export default worker;
-

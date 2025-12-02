@@ -45,14 +45,10 @@ describe('ConsistencyCheckService', () => {
     });
 
     // Mock countByFileIds - returns a Map with file counts
-    (VectorService.countByFileIds as jest.Mock).mockResolvedValue(
-      new Map([[mockFileId, 5]])
-    );
+    (VectorService.countByFileIds as jest.Mock).mockResolvedValue(new Map([[mockFileId, 5]]));
 
     // Mock getUniqueFileIds - returns a Set of file IDs in Qdrant
-    (VectorService.getUniqueFileIds as jest.Mock).mockResolvedValue(
-      new Set([mockFileId])
-    );
+    (VectorService.getUniqueFileIds as jest.Mock).mockResolvedValue(new Set([mockFileId]));
 
     // Mock countByFileId - for counting individual file vectors
     (VectorService.countByFileId as jest.Mock).mockResolvedValue(1);
@@ -78,9 +74,7 @@ describe('ConsistencyCheckService', () => {
       });
 
       // Mock Qdrant having 5 vectors for this file
-      (VectorService.countByFileIds as jest.Mock).mockResolvedValue(
-        new Map([[mockFileId, 5]])
-      );
+      (VectorService.countByFileIds as jest.Mock).mockResolvedValue(new Map([[mockFileId, 5]]));
 
       const report = await ConsistencyCheckService.checkCompany(mockCompanyId);
 
@@ -101,9 +95,7 @@ describe('ConsistencyCheckService', () => {
       (VectorService.getCollectionInfo as jest.Mock).mockResolvedValue({
         pointsCount: 10,
       });
-      (VectorService.countByFileIds as jest.Mock).mockResolvedValue(
-        new Map([[mockFileId, 10]])
-      );
+      (VectorService.countByFileIds as jest.Mock).mockResolvedValue(new Map([[mockFileId, 10]]));
 
       const report = await ConsistencyCheckService.checkCompany(mockCompanyId);
 

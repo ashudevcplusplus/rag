@@ -52,4 +52,3 @@ analyticsSchema.index({ companyId: 1, eventType: 1, timestamp: -1 });
 analyticsSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7776000 }); // 90 days
 
 export const AnalyticsModel = mongoose.model<IAnalytics>('Analytics', analyticsSchema);
-

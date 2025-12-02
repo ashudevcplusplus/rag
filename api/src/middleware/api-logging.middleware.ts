@@ -22,7 +22,9 @@ export const apiLoggingMiddleware = (req: Request, res: Response, next: NextFunc
       ipAddress: req.ip || 'unknown',
       userAgent: req.get('user-agent'),
       apiKey: req.headers['x-api-key'] as string | undefined,
-      requestSize: req.get('content-length') ? parseInt(req.get('content-length') || '0', 10) : undefined,
+      requestSize: req.get('content-length')
+        ? parseInt(req.get('content-length') || '0', 10)
+        : undefined,
       responseSize,
     });
 

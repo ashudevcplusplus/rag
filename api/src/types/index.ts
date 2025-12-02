@@ -15,4 +15,3 @@ export * from './vector.types';
 
 // Re-export job types (deprecated, but kept for backward compatibility)
 export * from './job.types';
-

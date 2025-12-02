@@ -214,4 +214,3 @@ export interface StorageUpdatesJobData {
   companyId: string;
   fileSize: number; // Size in bytes to add to storageUsed
 }
-
