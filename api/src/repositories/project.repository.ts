@@ -1,6 +1,8 @@
 import { ProjectModel, IProjectDocument } from '../models/project.model';
+import { FileMetadataModel } from '../models/file-metadata.model';
+import { EmbeddingModel } from '../models/embedding.model';
 import { CreateProjectDTO, UpdateProjectDTO, IProject } from '../schemas/project.schema';
-import { FilterQuery, Model } from 'mongoose';
+import { FilterQuery, Model, Types } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
 
 export class ProjectRepository {
@@ -104,7 +106,8 @@ export class ProjectRepository {
   }
 
   /**
-   * Soft delete project
+   * Soft delete project (data access only - use DeletionService for full cascade delete)
+   * @deprecated Use DeletionService.deleteProject() for cascading deletes with cleanup
    */
   async delete(id: string): Promise<boolean> {
     const result = await ProjectModel.findByIdAndUpdate(
@@ -139,7 +142,12 @@ export class ProjectRepository {
     const skip = (page - 1) * limit;
 
     const [projects, total] = await Promise.all([
-      ProjectModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      ProjectModel.find(query)
+        .select('name description status fileCount totalSize vectorCount createdAt updatedAt tags') // Only fetch needed fields
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       ProjectModel.countDocuments(query),
     ]);
 
@@ -165,23 +173,16 @@ export class ProjectRepository {
     fileCount: number;
     totalSize: number;
     vectorCount: number;
-    memberCount: number;
   } | null> {
     const project = await this.findById(id);
     if (!project) {
       return null;
     }
 
-    // Import ProjectMemberModel inline to avoid circular dependencies
-    const { ProjectMemberModel } = await import('../models/project-member.model');
-
-    const memberCount = await ProjectMemberModel.countDocuments({ projectId: id });
-
     return {
       fileCount: project.fileCount,
       totalSize: project.totalSize,
       vectorCount: project.vectorCount,
-      memberCount,
     };
   }
 
@@ -193,11 +194,6 @@ export class ProjectRepository {
     if (!project) {
       return false;
     }
-
-    // Import FileMetadataModel and EmbeddingModel inline to avoid circular dependencies
-    const { FileMetadataModel } = await import('../models/file-metadata.model');
-    const { EmbeddingModel } = await import('../models/embedding.model');
-    const { Types } = await import('mongoose');
 
     // Calculate actual file count and total size from file metadata
     const fileStats = await FileMetadataModel.aggregate([
@@ -260,7 +256,12 @@ export class ProjectRepository {
     const skip = (page - 1) * limit;
 
     const [projects, total] = await Promise.all([
-      ProjectModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      ProjectModel.find(query)
+        .select('name description status fileCount totalSize vectorCount createdAt updatedAt tags') // Only fetch needed fields
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       ProjectModel.countDocuments(query),
     ]);
 

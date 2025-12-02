@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { asyncHandler } from '../middleware/error.middleware';
-import { getJobStatus } from '../controllers/company.controller';
+import { getJobStatus, getConsistencyCheckJobStatus } from '../controllers/company.controller';
 
 const router = Router();
 
-router.get('/:jobId', asyncHandler(getJobStatus));
+router.get('/:jobId', getJobStatus);
+router.get('/consistency/:jobId', getConsistencyCheckJobStatus);
 
 export default router;

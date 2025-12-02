@@ -299,7 +299,8 @@ describe('Database Integration Tests with Seed Data', () => {
 
       expect(stats).toBeDefined();
       expect(stats?.fileCount).toBeGreaterThanOrEqual(0);
-      expect(stats?.memberCount).toBeGreaterThanOrEqual(0);
+      expect(stats?.totalSize).toBeGreaterThanOrEqual(0);
+      expect(stats?.vectorCount).toBeGreaterThanOrEqual(0);
     });
   });
 

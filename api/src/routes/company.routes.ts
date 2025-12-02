@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import { RequestHandler } from 'express';
-import { asyncHandler } from '../middleware/error.middleware';
-import { uploadFile, searchCompany } from '../controllers/company.controller';
+import {
+  uploadFile,
+  searchCompany,
+  triggerConsistencyCheck,
+  clearCache,
+  getCompanyVectors,
+} from '../controllers/company.controller';
 import { companyRateLimiter } from '../middleware/company-rate-limiter.middleware';
 import { uploadLimiter, searchLimiter } from '../middleware/rate-limiter.middleware';
 import { upload } from '../middleware/upload.middleware';
@@ -18,8 +23,17 @@ router.use('/:companyId/projects', projectRoutes);
 router.use('/:companyId/users', userRoutes);
 
 // Company specific routes
-router.post('/:companyId/uploads', uploadLimiter, upload.single('file'), asyncHandler(uploadFile));
+router.post('/:companyId/uploads', uploadLimiter, upload.single('file'), uploadFile);
+router.get('/:companyId/vectors', getCompanyVectors);
 
-router.post('/:companyId/search', searchLimiter, asyncHandler(searchCompany));
+router.post('/:companyId/search', searchLimiter, searchCompany);
+
+// Consistency check routes
+router.post('/:companyId/consistency-check', triggerConsistencyCheck);
+router.post('/consistency-check', triggerConsistencyCheck); // Check all companies
+
+// Cache management routes
+router.delete('/:companyId/cache', clearCache);
+router.delete('/cache', clearCache); // Clear all cache
 
 export default router;

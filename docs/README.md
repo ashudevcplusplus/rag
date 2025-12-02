@@ -13,23 +13,29 @@ All comprehensive documentation has been consolidated into the main [README.md](
 
 The consolidated README covers:
 - ✅ Architecture overview & component details
-- ✅ Quick start guide
-- ✅ API reference & authentication
+- ✅ Quick start guide with MongoDB seeding
+- ✅ Complete API reference & authentication
 - ✅ Performance metrics & benchmarks
-- ✅ Configuration options
-- ✅ Testing strategies (unit & E2E)
+- ✅ Configuration options (including MongoDB)
+- ✅ Testing strategies (unit, integration & E2E)
 - ✅ Production deployment guidelines
 - ✅ Monitoring & observability
-- ✅ Troubleshooting guide
+- ✅ Troubleshooting guide (including MongoDB)
 - ✅ Project structure
+- ✅ MongoDB database schema & repository pattern
 
 ## Historical Context
 
 This system evolved from a basic MVP to a production-ready application with:
-- Async processing with BullMQ
+- Async processing with BullMQ (indexing & consistency checks)
+- MongoDB database with repository pattern
 - Intelligent text chunking (recursive splitter)
 - Redis caching (12x search speedup)
-- Real-time queue monitoring
+- Real-time queue monitoring (Bull Board)
+- Database-backed API key authentication
+- Company, User, and Project management
+- Consistency checking between MongoDB and Qdrant
 - Comprehensive error handling & retry logic
+- Soft delete for data preservation
 
 For detailed implementation notes, refer to the main README's "Key Implementation Details" section.

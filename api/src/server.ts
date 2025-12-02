@@ -5,8 +5,10 @@ import compression from 'compression';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import worker from './queue/worker'; // Import worker for graceful shutdown
+import worker from './consumers/indexing'; // Import worker for graceful shutdown
+import consistencyCheckWorker from './consumers/consistency-check'; // Import consistency check worker
 import { indexingQueue } from './queue/queue.client';
+import { consistencyCheckQueue } from './queue/consistency-check.queue';
 import { CONFIG } from './config';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/error.middleware';
@@ -21,7 +23,7 @@ const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
 
 createBullBoard({
-  queues: [new BullMQAdapter(indexingQueue)],
+  queues: [new BullMQAdapter(indexingQueue), new BullMQAdapter(consistencyCheckQueue)],
   serverAdapter: serverAdapter,
 });
 
@@ -101,14 +103,16 @@ async function startServer(): Promise<void> {
       });
 
       try {
-        // 2. Close BullMQ worker (waits for current jobs to finish)
-        logger.info('Closing BullMQ worker...');
+        // 2. Close BullMQ workers (waits for current jobs to finish)
+        logger.info('Closing BullMQ workers...');
         await worker.close();
-        logger.info('Worker closed successfully');
+        await consistencyCheckWorker.close();
+        logger.info('Workers closed successfully');
 
         // 3. Close queue connections
         logger.info('Closing queue connections...');
         await indexingQueue.close();
+        await consistencyCheckQueue.close();
         logger.info('Queue connections closed');
 
         // 4. Close MongoDB connection

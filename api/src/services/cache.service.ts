@@ -88,7 +88,8 @@ export class CacheService {
         if (keys.length > 0) {
           // Remove the prefix since ioredis adds it automatically
           const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
-          void redis.del(...keysWithoutPrefix).then(() => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          redis.del(...keysWithoutPrefix).then(() => {
             logger.info('Cache invalidated for company', {
               companyId,
               keysDeleted: keys.length,
@@ -115,6 +116,101 @@ export class CacheService {
     } catch (error) {
       logger.error('Cache stats error', { error });
       return { keys: 0, memory: 'unknown' };
+    }
+  }
+
+  /**
+   * Clear all cache entries
+   */
+  static async clearAll(): Promise<number> {
+    try {
+      const pattern = 'rag_cache:*';
+      const stream = redis.scanStream({ match: pattern, count: 100 });
+      const keys: string[] = [];
+
+      stream.on('data', (resultKeys) => {
+        keys.push(...resultKeys);
+      });
+
+      return new Promise((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        stream.on('end', async () => {
+          try {
+            if (keys.length > 0) {
+              // Remove the prefix since ioredis adds it automatically
+              const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
+              const deleted = await redis.del(...keysWithoutPrefix);
+              logger.info('All cache cleared', {
+                keysDeleted: deleted,
+                totalKeys: keys.length,
+              });
+              resolve(deleted);
+            } else {
+              logger.info('No cache keys found to clear');
+              resolve(0);
+            }
+          } catch (error) {
+            logger.error('Cache clear error', { error });
+            reject(error);
+          }
+        });
+
+        stream.on('error', (error) => {
+          logger.error('Cache clear stream error', { error });
+          reject(error);
+        });
+      });
+    } catch (error) {
+      logger.error('Cache clear error', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * Clear cache for a specific company
+   */
+  static async clearCompany(companyId: string): Promise<number> {
+    try {
+      const pattern = `rag_cache:${companyId}:*`;
+      const stream = redis.scanStream({ match: pattern, count: 100 });
+      const keys: string[] = [];
+
+      stream.on('data', (resultKeys) => {
+        keys.push(...resultKeys);
+      });
+
+      return new Promise((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        stream.on('end', async () => {
+          try {
+            if (keys.length > 0) {
+              // Remove the prefix since ioredis adds it automatically
+              const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
+              const deleted = await redis.del(...keysWithoutPrefix);
+              logger.info('Cache cleared for company', {
+                companyId,
+                keysDeleted: deleted,
+                totalKeys: keys.length,
+              });
+              resolve(deleted);
+            } else {
+              logger.info('No cache keys found for company', { companyId });
+              resolve(0);
+            }
+          } catch (error) {
+            logger.error('Cache clear error', { companyId, error });
+            reject(error);
+          }
+        });
+
+        stream.on('error', (error) => {
+          logger.error('Cache clear stream error', { companyId, error });
+          reject(error);
+        });
+      });
+    } catch (error) {
+      logger.error('Cache clear error', { companyId, error });
+      throw error;
     }
   }
 }

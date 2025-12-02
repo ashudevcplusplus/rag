@@ -1,6 +1,9 @@
 // ============================================================================
 // CONSTANTS
 // ============================================================================
+// TODO: This should be configurable or fetched from the authenticated user context
+const HARDCODED_OWNER_ID = '507f1f77bcf86cd799439011';
+
 const DEFAULT_ACCOUNTS = [
     {
         id: 'acme-corp',
@@ -65,6 +68,8 @@ const apiKeyInput = document.getElementById('apiKey');
 const companyIdInput = document.getElementById('companyId');
 const saveConfigBtn = document.getElementById('saveConfig');
 const testConnectionBtn = document.getElementById('testConnection');
+const clearCacheBtn = document.getElementById('clearCacheBtn');
+const clearCacheSearchBtn = document.getElementById('clearCacheSearchBtn');
 const configStatus = document.getElementById('configStatus');
 
 // Upload elements
@@ -148,6 +153,12 @@ function init() {
     // Configuration
     saveConfigBtn.addEventListener('click', saveConfig);
     testConnectionBtn.addEventListener('click', testConnection);
+    if (clearCacheBtn) {
+        clearCacheBtn.addEventListener('click', clearCache);
+    }
+    if (clearCacheSearchBtn) {
+        clearCacheSearchBtn.addEventListener('click', clearCache);
+    }
     
     // Upload
     uploadArea.addEventListener('click', () => {
@@ -182,6 +193,12 @@ function init() {
     // Projects
     createProjectBtn.addEventListener('click', showCreateProjectModal);
     
+    // Vector DB
+    const refreshVectorsBtn = document.getElementById('refreshVectorsBtn');
+    if (refreshVectorsBtn) {
+        refreshVectorsBtn.addEventListener('click', () => loadVectors(1));
+    }
+
     // Account switcher
     accountSelect.addEventListener('change', handleAccountSwitch);
     addAccountBtn.addEventListener('click', showAddAccountModal);
@@ -251,7 +268,8 @@ function switchTab(tabName) {
         upload: 'Upload Documents',
         projects: 'Projects',
         search: 'Search Documents',
-        settings: 'Settings'
+        settings: 'Settings',
+        vectordb: 'Vector DB'
     };
     pageTitle.textContent = titles[tabName] || 'Dashboard';
     
@@ -263,6 +281,8 @@ function switchTab(tabName) {
         loadOverview();
     } else if (tabName === 'projects' && config.apiKey && config.companyId) {
         loadProjects();
+    } else if (tabName === 'vectordb' && config.apiKey && config.companyId) {
+        loadVectors();
     }
     
     // Focus management for accessibility
@@ -484,6 +504,58 @@ async function testConnection() {
             updateConnectionStatus(false);
     } finally {
         testConnectionBtn.disabled = false;
+    }
+}
+
+async function clearCache() {
+    if (!validateConfig()) {
+        return;
+    }
+
+    if (!confirm('Are you sure you want to clear the cache? This will remove all cached search results for this company.')) {
+        return;
+    }
+
+    if (clearCacheBtn) {
+        clearCacheBtn.disabled = true;
+        clearCacheBtn.textContent = '⏳ Clearing...';
+    }
+    if (clearCacheSearchBtn) {
+        clearCacheSearchBtn.disabled = true;
+        clearCacheSearchBtn.textContent = '⏳ Clearing...';
+    }
+
+    try {
+        const response = await fetch(
+            `${config.apiUrl}/v1/companies/${config.companyId}/cache`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'x-api-key': config.apiKey
+                }
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || `Failed to clear cache: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        showToast(`Cache cleared successfully! ${data.keysDeleted || 0} keys deleted.`, 'success');
+        addActivity(`Cleared cache (${data.keysDeleted || 0} keys deleted)`);
+    } catch (error) {
+        showToast(`Failed to clear cache: ${error.message}`, 'error');
+        console.error('Clear cache error:', error);
+    } finally {
+        if (clearCacheBtn) {
+            clearCacheBtn.disabled = false;
+            clearCacheBtn.textContent = '🗑️ Clear Cache';
+        }
+        if (clearCacheSearchBtn) {
+            clearCacheSearchBtn.disabled = false;
+            clearCacheSearchBtn.textContent = '🗑️ Clear Cache';
+        }
     }
 }
 
@@ -779,6 +851,9 @@ async function createProject(name, slug, description) {
     if (!validateConfig()) return;
 
     try {
+        const requestBody = { name, slug, description, ownerId: HARDCODED_OWNER_ID };
+        console.log('Creating project with body:', requestBody);
+        
         const response = await fetch(
             `${config.apiUrl}/v1/companies/${config.companyId}/projects`,
             {
@@ -787,7 +862,7 @@ async function createProject(name, slug, description) {
                     'Content-Type': 'application/json',
                     'x-api-key': config.apiKey
                 },
-                body: JSON.stringify({ name, slug, description })
+                body: JSON.stringify(requestBody)
             }
         );
 
@@ -1088,27 +1163,76 @@ function displayResults(results) {
         resultItem.setAttribute('role', 'article');
         resultItem.setAttribute('aria-label', `Search result ${index + 1}`);
         
-        const score = result.score ? (result.score * 100).toFixed(2) : 'N/A';
-        const content = result.payload?.text || result.payload?.content || 'No content available';
+        // Extract all metadata
+        // Scores are already normalized to 0-100 range in the backend
+        const scoreValue = result.score !== undefined ? result.score : 0;
+        const score = scoreValue.toFixed(1);
+        // Prefer full content, then text, then text_preview as fallback
+        const content = result.payload?.content || result.payload?.text || result.payload?.text_preview || '';
+        const hasContent = content && content.trim().length > 0;
+        
+        // File info
         const fileId = result.payload?.fileId || 'Unknown';
+        const fileName = result.payload?.fileName || result.payload?.originalFilename || 'Unknown';
+        
+        // Project info
+        const projectId = result.payload?.projectId || 'N/A';
+        const projectName = result.payload?.projectName || 'N/A';
+        
+        // Chunk info
         const chunkIndex = result.payload?.chunkIndex !== undefined ? result.payload.chunkIndex : 'N/A';
-        const fileName = result.payload?.fileName || result.payload?.originalFilename || 'Unknown file';
+        const totalChunks = result.payload?.totalChunks !== undefined ? result.payload.totalChunks : 'N/A';
+        
+        // Determine score class
+        let scoreClass = 'low';
+        if (scoreValue >= 70) scoreClass = 'high';
+        else if (scoreValue >= 40) scoreClass = 'medium';
+        
+        // Truncate long values
+        const truncateId = (id, len = 8) => {
+            if (!id || id === 'Unknown' || id === 'N/A') return id;
+            return id.length > len ? id.substring(0, len) + '...' : id;
+        };
+        
+        const truncateName = (name, len = 25) => {
+            if (!name || name === 'Unknown' || name === 'N/A') return name;
+            return name.length > len ? name.substring(0, len) + '...' : name;
+        };
 
         resultItem.innerHTML = `
             <div class="result-header">
-            <h4>Result #${index + 1}</h4>
+                <div class="result-title">
+                    <h4>#${index + 1}</h4>
+                    <span class="score ${scoreClass}">${score}%</span>
+                </div>
                 <div class="result-actions">
-            <span class="score">Score: ${score}%</span>
-                    <button class="btn-copy" onclick="copyResultToClipboard(${index})" title="Copy content" aria-label="Copy result ${index + 1} to clipboard">
+                    <button class="btn-copy" onclick="copyResultToClipboard(${index})" title="Copy content">
                         📋 Copy
                     </button>
                 </div>
             </div>
-            <div class="content" style="max-height: 300px; overflow-y: auto; white-space: pre-wrap;">${escapeHtml(content)}</div>
-            <div class="metadata">
-                <span>📄 ${escapeHtml(fileName)}</span>
-                <span>📍 Chunk: ${chunkIndex}</span>
-                <span>🆔 ${escapeHtml(fileId.substring(0, 8))}...</span>
+            <div class="content ${hasContent ? '' : 'empty'}">${hasContent ? escapeHtml(content) : 'No content available'}</div>
+            <div class="metadata-grid">
+                <div class="meta-item">
+                    <span class="meta-label">Project</span>
+                    <span class="meta-value truncate" title="${escapeHtml(projectName)}">${escapeHtml(truncateName(projectName))}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Project ID</span>
+                    <span class="meta-value id" title="${escapeHtml(projectId)}">${escapeHtml(truncateId(projectId))}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">File</span>
+                    <span class="meta-value truncate" title="${escapeHtml(fileName)}">${escapeHtml(truncateName(fileName))}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">File ID</span>
+                    <span class="meta-value id" title="${escapeHtml(fileId)}">${escapeHtml(truncateId(fileId))}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Chunk</span>
+                    <span class="meta-value">${chunkIndex}${totalChunks !== 'N/A' ? ' / ' + totalChunks : ''}</span>
+                </div>
             </div>
         `;
 
@@ -1159,11 +1283,14 @@ window.exportSearchResults = function() {
         resultsCount: window.currentSearchResults.length,
         results: window.currentSearchResults.map((result, index) => ({
             index: index + 1,
-            score: result.score ? (result.score * 100).toFixed(2) : 'N/A',
+            score: result.score !== undefined ? result.score.toFixed(2) : 'N/A',
             content: result.payload?.text || result.payload?.content || '',
+            projectName: result.payload?.projectName || 'N/A',
+            projectId: result.payload?.projectId || 'N/A',
             fileName: result.payload?.fileName || result.payload?.originalFilename || 'Unknown',
             fileId: result.payload?.fileId || 'Unknown',
-            chunkIndex: result.payload?.chunkIndex !== undefined ? result.payload.chunkIndex : 'N/A'
+            chunkIndex: result.payload?.chunkIndex !== undefined ? result.payload.chunkIndex : 'N/A',
+            totalChunks: result.payload?.totalChunks !== undefined ? result.payload.totalChunks : 'N/A'
         }))
     };
     
@@ -1260,6 +1387,114 @@ function formatTime(isoString) {
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
 }
+
+// Vector DB functions
+let currentVectorsPage = 1;
+const VECTORS_PER_PAGE = 20;
+
+async function loadVectors(page = 1) {
+    if (!validateConfig()) {
+        return;
+    }
+    
+    const vectorsList = document.getElementById('vectorsList');
+    const vectorsStatus = document.getElementById('vectorsStatus');
+    const vectorsPagination = document.getElementById('vectorsPagination');
+    
+    if (vectorsStatus) showStatus(vectorsStatus, 'Loading vectors...', 'info');
+    currentVectorsPage = page;
+    
+    let data;
+    
+    // Fetch data
+    try {
+        const response = await fetch(
+            `${config.apiUrl}/v1/companies/${config.companyId}/vectors?page=${page}&limit=${VECTORS_PER_PAGE}`,
+            {
+                headers: { 'x-api-key': config.apiKey }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Failed to load vectors');
+        }
+
+        data = await response.json();
+    } catch (error) {
+        if (vectorsStatus) showStatus(vectorsStatus, `Error: ${error.message}`, 'error');
+        if (vectorsList) vectorsList.innerHTML = '<tr><td colspan="5" class="empty-state">Failed to load vectors</td></tr>';
+        return;
+    }
+    
+    // Render data (separate error boundary for render errors)
+    try {
+        displayVectors(data.embeddings || []);
+        if (vectorsPagination) setupPagination(data.page, data.totalPages, vectorsPagination, loadVectors);
+        if (vectorsStatus) showStatus(vectorsStatus, '', 'info');
+    } catch (renderError) {
+        console.error('Render error in loadVectors:', renderError);
+        if (vectorsStatus) showStatus(vectorsStatus, 'Error displaying vectors', 'error');
+        if (vectorsList) vectorsList.innerHTML = '<tr><td colspan="5" class="empty-state">Error rendering vectors</td></tr>';
+    }
+}
+
+function displayVectors(vectors) {
+    const vectorsList = document.getElementById('vectorsList');
+    if (!vectorsList) return;
+    
+    if (vectors.length === 0) {
+        vectorsList.innerHTML = '<tr><td colspan="5" class="empty-state">No vectors found. Upload files to generate vectors.</td></tr>';
+        return;
+    }
+
+    vectorsList.innerHTML = vectors.map(vector => `
+        <tr>
+            <td style="padding: 10px;">${escapeHtml(vector.projectId?.name || 'Unknown')}</td>
+            <td style="padding: 10px;">${escapeHtml(vector.fileId?.originalFilename || 'Unknown')}</td>
+            <td style="padding: 10px;">${vector.chunkCount}</td>
+            <td style="padding: 10px;">${new Date(vector.createdAt).toLocaleDateString()}</td>
+            <td style="padding: 10px;">
+                <button class="btn btn-secondary btn-sm" onclick="viewVectorDetails('${vector._id}')">View</button>
+            </td>
+        </tr>
+    `).join('');
+    
+    // Store vectors for details view
+    window.currentVectors = vectors;
+}
+
+function setupPagination(currentPage, totalPages, container, loadFunction) {
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    
+    if (currentPage > 1) {
+        html += `<button class="btn btn-secondary btn-sm" onclick="window.changeVectorPage(${currentPage - 1})">Previous</button>`;
+    }
+    
+    html += `<span style="align-self: center;">Page ${currentPage} of ${totalPages}</span>`;
+    
+    if (currentPage < totalPages) {
+        html += `<button class="btn btn-secondary btn-sm" onclick="window.changeVectorPage(${currentPage + 1})">Next</button>`;
+    }
+    
+    container.innerHTML = html;
+    
+    // Expose change page function globally
+    window.changeVectorPage = (page) => loadFunction(page);
+}
+
+window.viewVectorDetails = function(vectorId) {
+    const vector = window.currentVectors.find(v => v._id === vectorId);
+    if (!vector) return;
+    
+    // Simple alert for now, or a modal could be better
+    const contentPreview = vector.contents ? vector.contents.slice(0, 3).join('\n---\n') : 'No content';
+    alert(`Vector Details:\n\nFile: ${vector.fileId?.originalFilename}\nChunks: ${vector.chunkCount}\n\nContent Preview:\n${contentPreview.substring(0, 500)}...`);
+};
 
 // Initialize app
 init();

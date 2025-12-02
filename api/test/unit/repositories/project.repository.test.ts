@@ -11,6 +11,49 @@ jest.mock('../../../src/repositories/helpers', () => ({
   ),
 }));
 
+jest.mock('../../../src/repositories/file-metadata.repository', () => ({
+  fileMetadataRepository: {
+    findByProjectId: jest.fn().mockResolvedValue([]),
+  },
+}));
+
+jest.mock('../../../src/services/vector.service', () => ({
+  VectorService: {
+    deleteByProjectId: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/repositories/embedding.repository', () => ({
+  embeddingRepository: {
+    deleteByFileId: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/models/file-metadata.model', () => ({
+  FileMetadataModel: {
+    updateMany: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/services/cache.service', () => ({
+  CacheService: {
+    clearCompany: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/services/consistency-check.service', () => ({
+  ConsistencyCheckService: {
+    publishConsistencyCheck: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('../../../src/utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 describe('ProjectRepository', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -165,6 +208,13 @@ describe('ProjectRepository', () => {
 
   describe('delete', () => {
     it('should soft delete project', async () => {
+      (ProjectModel.findById as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: 'project-123',
+          companyId: 'company-123',
+        }),
+      });
+
       (ProjectModel.findByIdAndUpdate as jest.Mock) = jest
         .fn()
         .mockResolvedValue({ _id: 'project-123' });
@@ -209,10 +259,12 @@ describe('ProjectRepository', () => {
       ];
 
       (ProjectModel.find as jest.Mock) = jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              lean: jest.fn().mockResolvedValue(mockProjects),
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockProjects),
+              }),
             }),
           }),
         }),
@@ -253,10 +305,12 @@ describe('ProjectRepository', () => {
       ];
 
       (ProjectModel.find as jest.Mock) = jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              lean: jest.fn().mockResolvedValue(mockProjects),
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockProjects),
+              }),
             }),
           }),
         }),

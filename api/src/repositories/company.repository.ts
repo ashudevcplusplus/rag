@@ -1,4 +1,7 @@
 import { CompanyModel, ICompanyDocument } from '../models/company.model';
+import { UserModel } from '../models/user.model';
+import { ProjectModel } from '../models/project.model';
+import { FileMetadataModel } from '../models/file-metadata.model';
 import { CreateCompanyDTO, UpdateCompanyDTO, ICompany } from '../schemas/company.schema';
 import { FilterQuery, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
@@ -165,6 +168,44 @@ export class CompanyRepository {
   }
 
   /**
+   * Async generator to iterate over all companies in batches
+   * This avoids loading all companies into memory at once
+   */
+  async *iterateAll(
+    batchSize: number = 100,
+    filters?: { status?: string; subscriptionTier?: string }
+  ): AsyncGenerator<ICompany[], void, unknown> {
+    const query: FilterQuery<ICompanyDocument> = { deletedAt: null };
+
+    if (filters?.status) {
+      query.status = filters.status;
+    }
+    if (filters?.subscriptionTier) {
+      query.subscriptionTier = filters.subscriptionTier;
+    }
+
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const skip = (page - 1) * batchSize;
+      const companies = await CompanyModel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(batchSize)
+        .lean();
+
+      if (companies.length === 0) {
+        hasMore = false;
+      } else {
+        yield toStringIds(companies) as unknown as ICompany[];
+        page++;
+        hasMore = companies.length === batchSize;
+      }
+    }
+  }
+
+  /**
    * Get company stats
    */
   async getStats(id: string): Promise<{
@@ -178,11 +219,6 @@ export class CompanyRepository {
     if (!company) {
       return null;
     }
-
-    // Import models inline to avoid circular dependencies
-    const { UserModel } = await import('../models/user.model');
-    const { ProjectModel } = await import('../models/project.model');
-    const { FileMetadataModel } = await import('../models/file-metadata.model');
 
     const [userCount, projectCount, fileCount] = await Promise.all([
       UserModel.countDocuments({ companyId: id, deletedAt: null }),

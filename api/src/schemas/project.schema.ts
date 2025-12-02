@@ -80,7 +80,7 @@ export const projectMetadataSchema = z
 // Zod Validation Schemas
 export const createProjectSchema = z.object({
   companyId: z.string().min(1),
-  ownerId: z.string().min(1),
+  ownerId: z.string().min(1).optional(), // Optional - will default to companyId if not provided
   name: z.string().min(1).max(100).trim(),
   slug: z
     .string()

@@ -24,25 +24,55 @@ export class VectorService {
    */
   static async getEmbeddings(texts: string[]): Promise<number[][]> {
     try {
-      logger.debug('Requesting embeddings', { count: texts.length });
+      logger.debug('Requesting embeddings', { count: texts.length, url: CONFIG.EMBED_URL });
 
-      const response = await fetch(CONFIG.EMBED_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texts }),
-      });
+      // eslint-disable-next-line no-undef
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      if (!response.ok) {
-        throw new ExternalServiceError('Embedding service', response.statusText);
+      try {
+        const response = await fetch(CONFIG.EMBED_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texts }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error('Embedding service returned error', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+            url: CONFIG.EMBED_URL,
+          });
+          throw new ExternalServiceError(
+            'Embedding service',
+            `${response.status}: ${response.statusText}`
+          );
+        }
+
+        const data = (await response.json()) as EmbeddingResponse;
+        const embeddings = data.embeddings || data.vectors || [];
+
+        logger.debug('Embeddings received', { count: embeddings.length });
+        return embeddings;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
-
-      const data = (await response.json()) as EmbeddingResponse;
-      const embeddings = data.embeddings || data.vectors || [];
-
-      logger.debug('Embeddings received', { count: embeddings.length });
-      return embeddings;
     } catch (error) {
-      logger.error('Failed to get embeddings', { error, textsCount: texts.length });
+      const errorDetails = {
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined,
+        cause: error instanceof Error && 'cause' in error ? error.cause : undefined,
+        url: CONFIG.EMBED_URL,
+        textsCount: texts.length,
+      };
+      logger.error('Failed to get embeddings', errorDetails);
       throw error;
     }
   }
@@ -152,8 +182,11 @@ export class VectorService {
         resultsCount: result.length,
       });
 
-      // Fetch full text content
-      const searchResults = result as SearchResult[];
+      // Normalize cosine similarity scores (0-1) to 0-100 range
+      const searchResults = (result as SearchResult[]).map((r) => ({
+        ...r,
+        score: Math.max(0, Math.min(100, r.score * 100)), // Clamp to 0-100
+      }));
       const chunksToFetch = searchResults
         .map((r) => {
           const payload = r.payload as SearchResultPayload;
@@ -234,7 +267,7 @@ export class VectorService {
     query: string,
     limit: number = 10,
     filter?: QdrantFilter,
-    rerankLimit: number = 50
+    rerankLimit: number = 20
   ): Promise<SearchResult[]> {
     // 1. Get query embedding
     const embeddings = await this.getEmbeddings([query]);
@@ -257,7 +290,15 @@ export class VectorService {
 
     let fullTextsMap: Record<string, string> = {};
     try {
+      // PROFILING START: DB Fetch
+      const dbStart = Date.now();
       const embeddings = await embeddingRepository.findChunks(chunksToFetch);
+      logger.debug('DB Fetch time:', {
+        duration: Date.now() - dbStart,
+        count: chunksToFetch.length,
+      });
+      // PROFILING END: DB Fetch
+
       fullTextsMap = embeddings.reduce(
         (acc, curr) => {
           const key = `${curr.fileId}:${curr.chunkIndex}`;
@@ -283,9 +324,25 @@ export class VectorService {
     });
 
     // 5. Rerank
+    // PROFILING START: Rerank Call
+    const rerankStart = Date.now();
     const scores = await this.rerank(query, documents);
+    logger.debug('Rerank Service time:', {
+      duration: Date.now() - rerankStart,
+      count: documents.length,
+    });
+    // PROFILING END: Rerank Call
 
-    // 6. Update scores, attach full text, and sort
+    // 6. Normalize rerank scores to 0-100 range using min-max normalization
+    const minScore = Math.min(...scores);
+    const maxScore = Math.max(...scores);
+    const scoreRange = maxScore - minScore;
+    const normalizedScores =
+      scoreRange > 0
+        ? scores.map((s) => ((s - minScore) / scoreRange) * 100)
+        : scores.map(() => 50); // If all scores are the same, set to 50
+
+    // 7. Update scores, attach full text, and sort
     const rerankedResults = initialResults.map((result, index) => {
       const payload = result.payload as SearchResultPayload;
       const key = `${payload.fileId}:${payload.chunkIndex}`;
@@ -293,10 +350,11 @@ export class VectorService {
 
       return {
         ...result,
-        score: scores[index],
+        score: normalizedScores[index],
         payload: {
           ...payload,
           original_score: result.score, // Keep original vector score for reference
+          original_rerank_score: scores[index], // Keep original rerank score for reference
           content: content || payload.text_preview, // Attach full text
         } as SearchResultPayload,
       };
@@ -305,5 +363,348 @@ export class VectorService {
     rerankedResults.sort((a, b) => b.score - a.score);
 
     return rerankedResults.slice(0, limit);
+  }
+
+  /**
+   * Delete vectors from Qdrant by fileId
+   */
+  static async deleteByFileId(collectionName: string, fileId: string): Promise<number> {
+    try {
+      logger.debug('Deleting vectors by fileId', {
+        collection: collectionName,
+        fileId,
+      });
+
+      const result = await qdrant.delete(collectionName, {
+        wait: true,
+        filter: {
+          must: [
+            {
+              key: 'fileId',
+              match: { value: fileId },
+            },
+          ],
+        },
+      });
+
+      const deletedCount = result.operation_id ? 1 : 0; // Qdrant doesn't return exact count, but we know it succeeded
+      logger.info('Vectors deleted from Qdrant', {
+        collection: collectionName,
+        fileId,
+        operationId: result.operation_id,
+      });
+
+      // Try to get the actual count by searching first (optional, for logging)
+      try {
+        const searchResult = await qdrant.scroll(collectionName, {
+          filter: {
+            must: [
+              {
+                key: 'fileId',
+                match: { value: fileId },
+              },
+            ],
+          },
+          limit: 1,
+        });
+        // If we get results, deletion didn't work (shouldn't happen)
+        if (searchResult.points.length > 0) {
+          logger.warn('Vectors still exist after deletion attempt', {
+            collection: collectionName,
+            fileId,
+          });
+        }
+      } catch (_scrollError) {
+        // Ignore scroll errors, deletion likely succeeded
+        logger.debug('Scroll check skipped (expected after deletion)', {
+          collection: collectionName,
+        });
+      }
+
+      return deletedCount;
+    } catch (error) {
+      logger.error('Failed to delete vectors from Qdrant', {
+        collection: collectionName,
+        fileId,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete vectors from Qdrant by projectId (all files in project)
+   */
+  static async deleteByProjectId(
+    collectionName: string,
+    projectId: string,
+    fileIds: string[]
+  ): Promise<number> {
+    if (fileIds.length === 0) {
+      logger.debug('No files to delete vectors for', { projectId });
+      return 0;
+    }
+
+    try {
+      logger.debug('Deleting vectors by projectId', {
+        collection: collectionName,
+        projectId,
+        fileCount: fileIds.length,
+      });
+
+      // Delete all vectors for all files in the project
+      const result = await qdrant.delete(collectionName, {
+        wait: true,
+        filter: {
+          must: [
+            {
+              key: 'fileId',
+              match: { any: fileIds },
+            },
+          ],
+        },
+      });
+
+      logger.info('Vectors deleted from Qdrant for project', {
+        collection: collectionName,
+        projectId,
+        fileCount: fileIds.length,
+        operationId: result.operation_id,
+      });
+
+      return fileIds.length; // Return number of files processed
+    } catch (error) {
+      logger.error('Failed to delete vectors from Qdrant for project', {
+        collection: collectionName,
+        projectId,
+        fileCount: fileIds.length,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Count vectors by fileId using Qdrant's count API with filter (leverages fileId index)
+   * Much more efficient than scrolling for known file IDs
+   */
+  static async countByFileId(collectionName: string, fileId: string): Promise<number> {
+    try {
+      const result = await qdrant.count(collectionName, {
+        filter: {
+          must: [
+            {
+              key: 'fileId',
+              match: { value: fileId },
+            },
+          ],
+        },
+        exact: true,
+      });
+
+      return result.count;
+    } catch (error) {
+      const qdrantError = error as QdrantError;
+      if (qdrantError.status === 404) {
+        return 0; // Collection doesn't exist
+      }
+      logger.error('Failed to count vectors by fileId', {
+        collection: collectionName,
+        fileId,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Count vectors for multiple file IDs efficiently using batch count queries
+   * Returns a Map of fileId -> count
+   */
+  static async countByFileIds(
+    collectionName: string,
+    fileIds: string[]
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+
+    // Process in batches to avoid overwhelming Qdrant
+    const batchSize = 50;
+    for (let i = 0; i < fileIds.length; i += batchSize) {
+      const batch = fileIds.slice(i, i + batchSize);
+
+      // Run count queries in parallel for the batch
+      const results = await Promise.all(
+        batch.map(async (fileId) => ({
+          fileId,
+          count: await this.countByFileId(collectionName, fileId),
+        }))
+      );
+
+      for (const { fileId, count } of results) {
+        counts.set(fileId, count);
+      }
+    }
+
+    return counts;
+  }
+
+  /**
+   * Get unique file IDs from a Qdrant collection
+   * Scrolls through points but only extracts fileIds for orphan detection
+   */
+  static async getUniqueFileIds(collectionName: string): Promise<Set<string>> {
+    const fileIds = new Set<string>();
+
+    try {
+      let offset: string | number | Record<string, unknown> | undefined = undefined;
+      const limit = 1000; // Larger batch for efficiency since we only need fileId
+
+      while (true) {
+        const result = await qdrant.scroll(collectionName, {
+          limit,
+          offset,
+          with_payload: ['fileId'], // Only fetch fileId payload field
+          with_vector: false,
+        });
+
+        if (result.points.length === 0) {
+          break;
+        }
+
+        for (const point of result.points) {
+          const payload = point.payload as { fileId?: string };
+          if (payload?.fileId) {
+            fileIds.add(payload.fileId);
+          }
+        }
+
+        if (!result.next_page_offset) {
+          break;
+        }
+
+        offset = result.next_page_offset;
+      }
+
+      logger.debug('Retrieved unique file IDs from collection', {
+        collection: collectionName,
+        uniqueFileCount: fileIds.size,
+      });
+
+      return fileIds;
+    } catch (error) {
+      const qdrantError = error as QdrantError;
+      if (qdrantError.status === 404) {
+        return fileIds; // Collection doesn't exist
+      }
+      logger.error('Failed to get unique file IDs', {
+        collection: collectionName,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get all points from a Qdrant collection using scroll (generator version)
+   * Yields batches of points to avoid loading everything into memory
+   * @param collectionName - The collection to scroll
+   * @param filter - Optional filter to limit points (uses indexed fields for efficiency)
+   */
+  static async *getAllPoints(
+    collectionName: string,
+    filter?: QdrantFilter
+  ): AsyncGenerator<VectorPoint[]> {
+    try {
+      logger.debug('Getting all points from collection (generator)', {
+        collection: collectionName,
+        hasFilter: !!filter,
+      });
+
+      let offset: string | number | Record<string, unknown> | undefined = undefined;
+      const limit = 100; // Scroll in batches of 100
+
+      while (true) {
+        const result = await qdrant.scroll(collectionName, {
+          limit,
+          offset,
+          filter,
+          with_payload: true,
+          with_vector: false, // We don't need the vectors for consistency checks
+        });
+
+        if (result.points.length === 0) {
+          break;
+        }
+
+        // Map Qdrant points to VectorPoint format
+        const points: VectorPoint[] = result.points.map((point) => {
+          const payload = point.payload as {
+            fileId: string;
+            companyId: string;
+            text_preview?: string;
+            chunkIndex: number;
+          };
+
+          return {
+            id: typeof point.id === 'string' ? point.id : String(point.id),
+            vector: [], // Empty since we're not fetching vectors
+            payload: {
+              fileId: payload.fileId,
+              companyId: payload.companyId,
+              text_preview: payload.text_preview || '',
+              chunkIndex: payload.chunkIndex,
+            },
+          };
+        });
+
+        yield points;
+
+        // Check if there are more points
+        if (!result.next_page_offset) {
+          break;
+        }
+
+        offset = result.next_page_offset;
+      }
+
+      logger.debug('Finished retrieving points from collection', {
+        collection: collectionName,
+      });
+    } catch (error) {
+      const qdrantError = error as QdrantError;
+      if (qdrantError.status === 404) {
+        // Collection doesn't exist, yield nothing
+        logger.debug('Collection does not exist', { collection: collectionName });
+        return;
+      }
+
+      logger.error('Failed to get all points from Qdrant', {
+        collection: collectionName,
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get collection info (point count)
+   */
+  static async getCollectionInfo(collectionName: string): Promise<{ pointsCount: number } | null> {
+    try {
+      const info = await qdrant.getCollection(collectionName);
+      return {
+        pointsCount: info.points_count || 0,
+      };
+    } catch (error) {
+      const qdrantError = error as QdrantError;
+      if (qdrantError.status === 404) {
+        return null; // Collection doesn't exist
+      }
+      logger.error('Failed to get collection info', {
+        collection: collectionName,
+        error,
+      });
+      throw error;
+    }
   }
 }

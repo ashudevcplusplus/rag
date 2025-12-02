@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { asyncHandler } from '../middleware/error.middleware';
 import {
   createUser,
   getUser,
@@ -11,11 +10,11 @@ import {
 
 const router = Router({ mergeParams: true });
 
-router.post('/', asyncHandler(createUser));
-router.get('/', asyncHandler(listUsers));
-router.get('/:userId', asyncHandler(getUser));
-router.patch('/:userId', asyncHandler(updateUser));
-router.delete('/:userId', asyncHandler(deleteUser));
-router.post('/:userId/active', asyncHandler(setUserActive));
+router.post('/', createUser);
+router.get('/', listUsers);
+router.get('/:userId', getUser);
+router.patch('/:userId', updateUser);
+router.delete('/:userId', deleteUser);
+router.post('/:userId/active', setUserActive);
 
 export default router;

@@ -64,3 +64,23 @@ The E2E tests are split into levels:
 - **03-production**: Production-grade features (metadata filtering, rate limiting)
 - **04-large-data**: Large data tests
 - **05-scale**: Extreme scale tests
+
+## Integration Tests
+
+```bash
+# Run all integration tests
+npm run test:integration
+
+# Run database integration tests
+npm run test:db
+
+# Run file metadata integration tests
+npm run test:file
+```
+
+Integration tests validate:
+- Repository pattern CRUD operations
+- MongoDB schema validation
+- Data integrity and relationships
+- Soft delete functionality
+- Business logic (API key validation, storage limits, etc.)

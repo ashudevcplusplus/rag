@@ -9,6 +9,10 @@ jest.mock('../../../src/models/file-metadata.model');
 jest.mock('../../../src/repositories/project.repository', () => ({
   projectRepository: {
     updateStats: jest.fn(),
+    findById: jest.fn().mockResolvedValue({
+      _id: 'project-123',
+      companyId: 'company-123',
+    }),
   },
 }));
 jest.mock('mongoose', () => ({
@@ -22,6 +26,38 @@ jest.mock('../../../src/repositories/helpers', () => ({
   toStringIds: jest.fn((docs: any[]) =>
     docs.map((doc) => ({ ...doc, _id: doc._id?.toString() || doc._id }))
   ),
+}));
+
+jest.mock('../../../src/services/vector.service', () => ({
+  VectorService: {
+    deleteByFileId: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/repositories/embedding.repository', () => ({
+  embeddingRepository: {
+    deleteByFileId: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/services/cache.service', () => ({
+  CacheService: {
+    clearCompany: jest.fn(),
+  },
+}));
+
+jest.mock('../../../src/services/consistency-check.service', () => ({
+  ConsistencyCheckService: {
+    publishConsistencyCheck: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+
+jest.mock('../../../src/utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  },
 }));
 
 describe('FileMetadataRepository', () => {
@@ -272,10 +308,12 @@ describe('FileMetadataRepository', () => {
       ];
 
       (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockReturnValue({
-              lean: jest.fn().mockResolvedValue(mockFiles),
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockFiles),
+              }),
             }),
           }),
         }),

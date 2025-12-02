@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { indexingQueue } from '../queue/queue.client';
+import { consistencyCheckQueue } from '../queue/consistency-check.queue';
 import { VectorService } from '../services/vector.service';
 import { CacheService } from '../services/cache.service';
 import { fileService } from '../services/file.service';
@@ -13,8 +14,9 @@ import {
   projectIdBodySchema,
 } from '../validators/upload.validator';
 import { projectRepository } from '../repositories/project.repository';
+import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { sendNotFoundResponse } from '../utils/response.util';
-import { QdrantFilter } from '../types/vector.types';
+import { QdrantFilter, SearchResult, SearchResultPayload } from '../types/vector.types';
 import { asyncHandler } from '../middleware/error.middleware';
 
 export const uploadFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -144,7 +146,7 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
 
   // Search in company collection
   const collection = `company_${companyId}`;
-  let results;
+  let results: SearchResult[];
 
   if (rerank) {
     results = await VectorService.searchWithReranking(collection, query, limit, qdrantFilter);
@@ -154,7 +156,94 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
     results = await VectorService.search(collection, queryVector, limit, qdrantFilter);
   }
 
-  // 3. Cache the results
+  // 3. Enrich results with file and project metadata
+  if (results.length > 0) {
+    try {
+      // Collect unique file IDs
+      const fileIds = [
+        ...new Set(
+          results
+            .map((r) => {
+              const payload = r.payload as SearchResultPayload | null;
+              return payload?.fileId;
+            })
+            .filter((id): id is string => !!id)
+        ),
+      ];
+
+      if (fileIds.length > 0) {
+        // Fetch file metadata for all files
+        const files = await fileMetadataRepository.findByIds(fileIds);
+        const fileMap = new Map(files.map((f) => [f._id, f]));
+
+        // Collect unique project IDs
+        const projectIds = [
+          ...new Set(files.map((f) => f.projectId).filter((id): id is string => !!id)),
+        ];
+
+        // Fetch project metadata for all projects
+        const projects = await Promise.all(projectIds.map((id) => projectRepository.findById(id)));
+        const projectMap = new Map(
+          projects.filter((p): p is NonNullable<typeof p> => !!p).map((p) => [p._id, p])
+        );
+
+        // Enrich each result with metadata and filter out orphaned vectors
+        // (vectors that exist in Qdrant but don't have file metadata in DB)
+        const enrichedResults: SearchResult[] = [];
+
+        for (const result of results) {
+          const payload = result.payload as SearchResultPayload | null;
+          if (!payload?.fileId) {
+            // Skip results without fileId
+            continue;
+          }
+
+          const file = fileMap.get(payload.fileId);
+          if (!file) {
+            // Log orphaned vector for cleanup tracking
+            logger.debug('Orphaned vector found in search results', {
+              companyId,
+              fileId: payload.fileId,
+              chunkIndex: payload.chunkIndex,
+            });
+            // Skip orphaned vectors (no file metadata in DB)
+            continue;
+          }
+
+          const project = file.projectId ? projectMap.get(file.projectId) : null;
+
+          // Create enriched payload
+          // Add 'text' as alias for 'content' for frontend compatibility
+          const enrichedPayload: SearchResultPayload = {
+            ...payload,
+            projectId: file.projectId || undefined,
+            projectName: project?.name || undefined,
+            fileName: file.filename || undefined,
+            originalFilename: file.originalFilename || undefined,
+            totalChunks: file.chunkCount || undefined,
+            // Add text alias for content if content exists
+            ...(payload.content ? { text: payload.content } : {}),
+          };
+
+          enrichedResults.push({
+            ...result,
+            payload: enrichedPayload,
+          });
+        }
+
+        results = enrichedResults;
+      }
+    } catch (error) {
+      logger.warn('Failed to enrich search results with metadata', {
+        error,
+        companyId,
+        resultsCount: results.length,
+      });
+      // Continue without enrichment rather than failing the request
+    }
+  }
+
+  // 4. Cache the results
   await CacheService.set(cacheKey, results, 3600); // Cache for 1 hour
 
   logger.info('Search completed', {
@@ -166,3 +255,214 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
 
   res.json({ results });
 });
+
+export const triggerConsistencyCheck = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { companyId } = req.params;
+
+    // If companyId is provided, validate it exists
+    if (companyId) {
+      const { companyRepository } = await import('../repositories/company.repository');
+      const company = await companyRepository.findById(companyId);
+      if (!company) {
+        logger.warn('Company not found for consistency check', { companyId });
+        sendNotFoundResponse(res, 'Company');
+        return;
+      }
+    }
+
+    // Publish event
+    const { ConsistencyCheckService } = await import('../services/consistency-check.service');
+    const jobId = await ConsistencyCheckService.publishConsistencyCheck(companyId || undefined);
+
+    logger.info('Consistency check event published', {
+      jobId,
+      companyId: companyId || 'all',
+    });
+
+    res.status(202).json({
+      message: 'Consistency check event published',
+      jobId,
+      companyId: companyId || 'all',
+      statusUrl: `/v1/jobs/consistency/${jobId}`,
+    });
+  }
+);
+
+export const getConsistencyCheckJobStatus = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { jobId } = jobIdSchema.parse(req.params);
+
+    const job = await consistencyCheckQueue.getJob(jobId);
+    if (!job) {
+      logger.warn('Consistency check job not found', { jobId });
+      sendNotFoundResponse(res, 'Job');
+      return;
+    }
+
+    const state = await job.getState();
+    const progress = await job.progress;
+    const result = job.returnvalue;
+    const reason = job.failedReason;
+
+    logger.debug('Consistency check job status retrieved', { jobId, state, progress });
+
+    res.json({ id: job.id, state, progress, result, reason });
+  }
+);
+
+export const clearCache = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { companyId } = req.params;
+
+  if (companyId) {
+    // Clear cache for specific company
+    const keysDeleted = await CacheService.clearCompany(companyId);
+    logger.info('Cache cleared for company', { companyId, keysDeleted });
+    res.json({
+      message: 'Cache cleared for company',
+      companyId,
+      keysDeleted,
+    });
+  } else {
+    // Clear all cache
+    const keysDeleted = await CacheService.clearAll();
+    logger.info('All cache cleared', { keysDeleted });
+    res.json({
+      message: 'All cache cleared',
+      keysDeleted,
+    });
+  }
+});
+
+export const cleanupOrphanedVectors = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { companyId } = req.params;
+
+    // If companyId is provided, validate it exists
+    if (companyId) {
+      const { companyRepository } = await import('../repositories/company.repository');
+      const company = await companyRepository.findById(companyId);
+      if (!company) {
+        logger.warn('Company not found for cleanup', { companyId });
+        sendNotFoundResponse(res, 'Company');
+        return;
+      }
+    }
+
+    // Publish event
+    const { ConsistencyCheckService } = await import('../services/consistency-check.service');
+    const jobId = await ConsistencyCheckService.publishCleanupOrphaned(companyId || undefined);
+
+    logger.info('Cleanup orphaned vectors event published', {
+      jobId,
+      companyId: companyId || 'all',
+    });
+
+    res.status(202).json({
+      message: 'Cleanup orphaned vectors event published',
+      jobId,
+      companyId: companyId || 'all',
+      statusUrl: `/v1/jobs/consistency/${jobId}`,
+    });
+  }
+);
+
+export const checkAndFix = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { companyId } = req.params;
+
+  // If companyId is provided, validate it exists
+  if (companyId) {
+    const { companyRepository } = await import('../repositories/company.repository');
+    const company = await companyRepository.findById(companyId);
+    if (!company) {
+      logger.warn('Company not found for check and fix', { companyId });
+      sendNotFoundResponse(res, 'Company');
+      return;
+    }
+  }
+
+  // Publish event
+  const { ConsistencyCheckService } = await import('../services/consistency-check.service');
+  const jobId = await ConsistencyCheckService.publishCheckAndFix(companyId || undefined);
+
+  logger.info('Check and fix event published', {
+    jobId,
+    companyId: companyId || 'all',
+  });
+
+  res.status(202).json({
+    message: 'Check and fix event published',
+    jobId,
+    companyId: companyId || 'all',
+    statusUrl: `/v1/jobs/consistency/${jobId}`,
+  });
+});
+
+export const getConsumerChanges = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { companyId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    const { consumerChangeRepository } = await import('../repositories/consumer-change.repository');
+
+    const filters: {
+      eventType?: string;
+      status?: string;
+      companyId?: string;
+    } = {};
+
+    if (req.query.eventType) {
+      filters.eventType = req.query.eventType as string;
+    }
+    if (req.query.status) {
+      filters.status = req.query.status as string;
+    }
+    if (companyId) {
+      filters.companyId = companyId;
+    }
+
+    const result = await consumerChangeRepository.list(page, limit, filters);
+
+    res.json(result);
+  }
+);
+
+export const getConsumerChangeStats = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { companyId } = req.params;
+
+    const { consumerChangeRepository } = await import('../repositories/consumer-change.repository');
+
+    const stats = await consumerChangeRepository.getStats(companyId);
+
+    res.json(stats);
+  }
+);
+
+export const getCompanyVectors = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { companyId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    // Get all projects for the company
+    const projects = await projectRepository.findByCompanyId(companyId);
+    const projectIds = projects.map((p) => p._id);
+
+    if (projectIds.length === 0) {
+      res.json({
+        embeddings: [],
+        total: 0,
+        page,
+        totalPages: 0,
+      });
+      return;
+    }
+
+    const { embeddingRepository } = await import('../repositories/embedding.repository');
+    const result = await embeddingRepository.findByProjectIds(projectIds, page, limit);
+
+    res.json(result);
+  }
+);

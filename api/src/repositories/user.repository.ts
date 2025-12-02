@@ -172,7 +172,12 @@ export class UserRepository {
     const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
-      UserModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      UserModel.find(query)
+        .select('email firstName lastName role isActive lastLoginAt createdAt') // Only fetch needed fields
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       UserModel.countDocuments(query),
     ]);
 

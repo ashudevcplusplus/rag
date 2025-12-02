@@ -2,10 +2,11 @@ import { Schema, model, Document, Types } from 'mongoose';
 import { IEmbedding } from '../schemas/embedding.schema';
 
 export interface IEmbeddingDocument
-  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId'>,
+  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId' | 'deletedAt'>,
     Document {
   fileId: Types.ObjectId;
   projectId: Types.ObjectId;
+  deletedAt?: Date;
 }
 
 const embeddingSchema = new Schema<IEmbeddingDocument>(
@@ -39,6 +40,10 @@ const embeddingSchema = new Schema<IEmbeddingDocument>(
       type: Date,
       default: Date.now,
       expires: '7d', // TTL index: documents expire 7 days after creation
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

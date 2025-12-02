@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { projectRepository } from '../repositories/project.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
+import { DeletionService } from '../services/deletion.service';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -26,7 +27,14 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
     return;
   }
 
-  const data = createProjectSchema.parse({ ...req.body, companyId });
+  // Parse and validate input
+  const parsedData = createProjectSchema.parse({ ...req.body, companyId });
+
+  // Set ownerId to companyId if not provided (fallback for API key based auth)
+  const data = {
+    ...parsedData,
+    ownerId: parsedData.ownerId || companyId,
+  };
 
   // Check if slug already exists within this company
   const existing = await projectRepository.findBySlug(companyId, data.slug);
@@ -101,12 +109,12 @@ export const updateProject = asyncHandler(async (req: Request, res: Response): P
 });
 
 /**
- * Delete project (soft delete)
+ * Delete project (soft delete with cascade cleanup)
  */
 export const deleteProject = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { projectId } = projectIdSchema.parse(req.params);
 
-  const success = await projectRepository.delete(projectId);
+  const success = await DeletionService.deleteProject(projectId);
   if (!success) {
     sendNotFoundResponse(res, 'Project');
     return;

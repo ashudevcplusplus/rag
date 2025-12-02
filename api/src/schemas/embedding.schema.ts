@@ -18,6 +18,7 @@ export interface IEmbedding {
 
   // Timestamps
   createdAt: Date; // TTL index
+  deletedAt?: Date;
 }
 
 // Zod Validation Schemas

@@ -5,15 +5,18 @@ This document describes the professional, organized structure of the MVP reposit
 ## Root Directory
 
 ```
-mvp/
+rag-main/
 ├── api/              # Main API service (Node.js/TypeScript)
 ├── embed/            # Embedding service (Python/FastAPI)
+├── frontend/          # Simple web UI
 ├── docs/             # Project documentation
 ├── scripts/          # Root-level utility scripts
+├── data/             # Runtime data (uploads)
 ├── docker-compose.yml
 ├── README.md
-├── clean.sh
-└── STRUCTURE.md
+├── STRUCTURE.md
+├── POSTMAN_SETUP.md
+└── clean.sh
 ```
 
 ## API Service (`api/`)
@@ -21,28 +24,40 @@ mvp/
 ```
 api/
 ├── src/              # Source code
-│   ├── config.ts
-│   ├── server.ts
-│   ├── controllers/
-│   ├── middleware/
-│   ├── queue/
-│   ├── services/
-│   ├── types/
-│   ├── utils/
-│   └── validators/
+│   ├── config/       # Configuration files
+│   │   └── database.ts
+│   ├── config.ts     # Main configuration
+│   ├── server.ts     # Application entry point
+│   ├── consumers/    # BullMQ workers
+│   │   ├── indexing/
+│   │   └── consistency-check/
+│   ├── controllers/  # Route handlers
+│   ├── middleware/   # Express middleware
+│   ├── models/       # Mongoose models
+│   ├── queue/        # BullMQ queue clients
+│   ├── repositories/ # Data access layer
+│   ├── routes/       # Express route definitions
+│   ├── schemas/      # TypeScript interfaces & Zod schemas
+│   ├── scripts/      # Utility scripts (seed, clean-data)
+│   ├── services/     # Business logic
+│   ├── types/        # TypeScript type definitions
+│   ├── utils/        # Utility functions
+│   └── validators/   # Input validation
 ├── test/             # All test-related files
 │   ├── unit/         # Unit tests
+│   ├── integration/  # Integration tests
+│   ├── e2e/          # End-to-end tests
 │   ├── lib/          # Test utilities
 │   ├── data/         # Test data files
-│   ├── docs/         # Test documentation
-│   └── test-unified.ts
+│   └── docs/         # Test documentation
 ├── reports/          # Test reports and metrics
 ├── data/             # Runtime data (uploads, etc.)
 ├── logs/             # Application logs
 ├── dist/             # Compiled JavaScript (build output)
 ├── package.json
 ├── tsconfig.json
-└── jest.config.js
+├── jest.config.js
+└── jest.e2e.config.js
 ```
 
 ## Test Structure

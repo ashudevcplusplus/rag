@@ -34,6 +34,19 @@ export class FileMetadataRepository {
   }
 
   /**
+   * Find multiple files by IDs (excludes soft-deleted files)
+   */
+  async findByIds(ids: string[]): Promise<IFileMetadata[]> {
+    if (ids.length === 0) return [];
+    const objectIds = ids.map((id) => new Types.ObjectId(id));
+    const files = await FileMetadataModel.find({
+      _id: { $in: objectIds },
+      deletedAt: null,
+    }).lean();
+    return toStringIds(files) as unknown as IFileMetadata[];
+  }
+
+  /**
    * Find file by hash (for deduplication)
    */
   async findByHash(hash: string, projectId: string): Promise<IFileMetadata | null> {
@@ -161,37 +174,15 @@ export class FileMetadataRepository {
   }
 
   /**
-   * Soft delete file
+   * Soft delete file (data access only - use DeletionService for full cascade delete)
+   * @deprecated Use DeletionService.deleteFile() for cascading deletes with cleanup
    */
   async delete(id: string): Promise<boolean> {
-    // Get file info before deleting to update project stats
-    const file = await FileMetadataModel.findById(id).lean();
-    if (!file) {
-      return false;
-    }
-
     const result = await FileMetadataModel.findByIdAndUpdate(
       id,
       { $set: { deletedAt: new Date() } },
       { new: true }
     );
-
-    // Update project stats (decrement file count, total size, and vector count)
-    if (result) {
-      const { projectRepository } = await import('./project.repository');
-      const statsUpdate: { fileCount: number; totalSize: number; vectorCount?: number } = {
-        fileCount: -1,
-        totalSize: -file.size,
-      };
-
-      // Decrement vector count if file was indexed
-      if (file.chunkCount && file.chunkCount > 0) {
-        statsUpdate.vectorCount = -file.chunkCount;
-      }
-
-      await projectRepository.updateStats(file.projectId.toString(), statsUpdate);
-    }
-
     return !!result;
   }
 
@@ -223,7 +214,14 @@ export class FileMetadataRepository {
     const skip = (page - 1) * limit;
 
     const [files, total] = await Promise.all([
-      FileMetadataModel.find(query).sort({ uploadedAt: -1 }).skip(skip).limit(limit).lean(),
+      FileMetadataModel.find(query)
+        .select(
+          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags'
+        ) // Only fetch needed fields
+        .sort({ uploadedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       FileMetadataModel.countDocuments(query),
     ]);
 
@@ -275,7 +273,14 @@ export class FileMetadataRepository {
     const skip = (page - 1) * limit;
 
     const [files, total] = await Promise.all([
-      FileMetadataModel.find(query).sort({ uploadedAt: -1 }).skip(skip).limit(limit).lean(),
+      FileMetadataModel.find(query)
+        .select(
+          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags'
+        ) // Only fetch needed fields
+        .sort({ uploadedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       FileMetadataModel.countDocuments(query),
     ]);
 

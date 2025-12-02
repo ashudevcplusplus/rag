@@ -83,6 +83,7 @@ describe('VectorService', () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: false,
         statusText: 'Service Unavailable',
+        text: async () => 'Error detail',
       });
 
       await expect(VectorService.getEmbeddings(['text1'])).rejects.toThrow(ExternalServiceError);
@@ -233,11 +234,15 @@ describe('VectorService', () => {
         { id: '1', score: 0.9, payload: { text: 'result1' } },
         { id: '2', score: 0.8, payload: { text: 'result2' } },
       ];
+      const expectedResults = [
+        { id: '1', score: 90, payload: { text: 'result1' } },
+        { id: '2', score: 80, payload: { text: 'result2' } },
+      ];
       mockQdrant.search.mockResolvedValue(mockResults as any);
 
       const result = await VectorService.search('test-collection', [0.1, 0.2, 0.3], 10);
 
-      expect(result).toEqual(mockResults);
+      expect(result).toEqual(expectedResults);
       expect(mockQdrant.search).toHaveBeenCalledWith('test-collection', {
         vector: [0.1, 0.2, 0.3],
         limit: 10,

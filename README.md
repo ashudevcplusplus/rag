@@ -55,16 +55,23 @@ This system provides document indexing and semantic search capabilities with:
 - ✅ Intelligent text chunking (recursive splitter, context-aware)
 - ✅ Batch embedding generation (50 chunks/batch)
 - ✅ Semantic vector search with metadata filtering
+- ✅ Hybrid search with reranking support
 - ✅ Idempotent operations (deterministic IDs)
+- ✅ MongoDB database with repository pattern
+- ✅ Company, User, and Project management
+- ✅ Consistency checking between MongoDB and Qdrant
 
 ### Production Features
 - ✅ Redis caching (12x faster repeat searches)
-- ✅ API key authentication
-- ✅ Rate limiting (upload, search, global)
+- ✅ Database-backed API key authentication
+- ✅ Multi-tier rate limiting (per-IP, per-company, global)
 - ✅ Retry logic with exponential backoff
-- ✅ Real-time queue monitoring
+- ✅ Real-time queue monitoring (Bull Board)
 - ✅ Comprehensive error handling
 - ✅ Structured logging with Winston
+- ✅ Soft delete for data preservation
+- ✅ Storage limit enforcement
+- ✅ File deduplication by hash
 
 ## 🚀 Quick Start
 
@@ -82,21 +89,37 @@ cd rag-main
 docker-compose up -d
 ```
 
-2. **Verify Services**
+2. **Seed Database (Optional)**
+```bash
+cd api
+npm install
+npm run seed
+```
+This creates sample companies, users, and projects with API keys for testing.
+
+3. **Verify Services**
 ```bash
 # Check all services are running
 docker-compose ps
 
 # Health check
 curl http://localhost:8000/health
+
+# Check MongoDB connection
+docker exec -it rag-main-mongodb-1 mongosh -u admin -p admin123 --authenticationDatabase admin
 ```
 
 ### Basic Usage
 
+**Note:** After seeding, use the API keys from the seed output. Example keys:
+- Acme Corporation: `ck_f3ea0b87ab164aa582fa33863f438b03`
+- TechStart Inc: `ck_3c3689a9b5964ef286ea84180c86a085`
+
 **Upload a Document**
 ```bash
-curl -X POST http://localhost:8000/v1/companies/company-123/uploads \
-  -H "x-api-key: dev-key-123" \
+# Replace companyId and api-key with values from seed output
+curl -X POST http://localhost:8000/v1/companies/{companyId}/uploads \
+  -H "x-api-key: {api-key}" \
   -F "file=@document.pdf"
 ```
 
@@ -118,12 +141,25 @@ curl http://localhost:8000/v1/jobs/123 \
 
 **Search Documents**
 ```bash
-curl -X POST http://localhost:8000/v1/companies/company-123/search \
+curl -X POST http://localhost:8000/v1/companies/{companyId}/search \
   -H "Content-Type: application/json" \
-  -H "x-api-key: dev-key-123" \
+  -H "x-api-key: {api-key}" \
   -d '{
     "query": "machine learning algorithms",
-    "limit": 5
+    "limit": 5,
+    "rerank": false
+  }'
+```
+
+**Create a Project**
+```bash
+curl -X POST http://localhost:8000/v1/companies/{companyId}/projects \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: {api-key}" \
+  -d '{
+    "name": "My Project",
+    "description": "Project description",
+    "tags": ["important"]
   }'
 ```
 
@@ -149,24 +185,28 @@ Open: http://localhost:8000/admin/queues
 ```yaml
 # docker-compose.yml
 QDRANT_URL=http://qdrant:6333
-EMBED_URL=http://embed:5001
+EMBED_URL=http://embed:5001/embed
+RERANK_URL=http://embed:5001/rerank  # Optional, defaults to embed URL
 REDIS_HOST=redis
 REDIS_PORT=6379
+MONGODB_URI=mongodb://admin:admin123@mongodb:27017/rag_db?authSource=admin
+PORT=8000
 NODE_ENV=production
 ```
 
 ### Limits
 ```typescript
 // Configurable in source code
-FILE_SIZE_LIMIT: 50MB
-CACHE_TTL: 3600s (1 hour)
-CHUNK_SIZE: 500 tokens
-CHUNK_OVERLAP: 50 tokens
-BATCH_SIZE: 50 chunks
+FILE_SIZE_LIMIT: No explicit limit (handled by multer)
+CACHE_TTL: 3600s (1 hour) - configurable in cache service
+CHUNK_SIZE: 1000 characters (default)
+CHUNK_OVERLAP: 200 characters (default)
+BATCH_SIZE: 50 chunks (embedding batch processing)
 RATE_LIMITS:
-  - Upload: 10/minute
-  - Search: 30/minute
-  - Global: 100/15min
+  - Upload: 100/minute per IP
+  - Search: 100/minute per IP
+  - Company: 100/minute per company
+  - Global: 1000/minute per IP
 ```
 
 ## 🧪 Testing
@@ -186,7 +226,11 @@ docker-compose up -d
 
 # Run E2E tests
 cd api
-npm run test:unified
+npm run test:e2e              # Run all E2E tests (~15-20 min)
+npm run test:e2e:basic        # Run basic tests only (~1 min)
+npm run test:e2e:fast         # Run fast tests (~2-3 min)
+npm run test:e2e:quality     # Run search quality tests (~5-8 min)
+npm run test:e2e:large        # Run large data tests (~10-15 min)
 ```
 
 Tests validate:
@@ -200,42 +244,114 @@ Tests validate:
 
 ```
 rag-main/
-├── api/                        # Express API
+├── api/                        # Express API (TypeScript)
 │   ├── src/
-│   │   ├── controllers/       # Route handlers
-│   │   ├── middleware/        # Auth, rate limiting, errors
-│   │   ├── services/          # Business logic (cache, vector)
-│   │   ├── queue/            # BullMQ worker
-│   │   ├── utils/            # Logger, text processor
+│   │   ├── config/           # Configuration (database, app config)
+│   │   ├── consumers/        # BullMQ workers (indexing, consistency-check)
+│   │   ├── controllers/      # Route handlers (company, project, user)
+│   │   ├── middleware/       # Auth, rate limiting, errors, upload
+│   │   ├── models/           # Mongoose models (Company, User, Project, etc.)
+│   │   ├── queue/            # BullMQ queue clients
+│   │   ├── repositories/     # Data access layer (repository pattern)
+│   │   ├── routes/           # Express route definitions
+│   │   ├── schemas/          # TypeScript interfaces & Zod validation
+│   │   ├── scripts/          # Utility scripts (seed, clean-data)
+│   │   ├── services/         # Business logic (cache, vector, file, consistency)
+│   │   ├── types/            # TypeScript type definitions
+│   │   ├── utils/            # Utilities (logger, text processor, hash, etc.)
 │   │   ├── validators/       # Input validation
 │   │   └── server.ts         # App entry point
-│   ├── test/                 # Unit & E2E tests
+│   ├── test/                 # Test suite
+│   │   ├── unit/             # Unit tests
+│   │   ├── integration/      # Integration tests
+│   │   ├── e2e/              # End-to-end tests
+│   │   ├── lib/              # Test utilities
+│   │   └── data/             # Test data files
+│   ├── data/                 # Runtime data (uploads)
+│   ├── logs/                 # Application logs
+│   ├── dist/                 # Compiled JavaScript
 │   └── package.json
-├── embed/                    # FastAPI embedding service
-│   ├── app.py               # Embedding endpoint
+├── embed/                    # FastAPI embedding service (Python)
+│   ├── app.py               # Embedding & reranking endpoints
 │   ├── requirements.txt
 │   └── Dockerfile
-├── docker-compose.yml       # Service orchestration
-└── README.md               # This file
+├── frontend/                 # Simple web UI
+│   ├── index.html
+│   ├── app.js
+│   └── styles.css
+├── docs/                     # Documentation
+├── scripts/                  # Utility scripts
+├── docker-compose.yml        # Service orchestration
+├── README.md                 # This file
+└── STRUCTURE.md              # Project structure details
 ```
 
 ## 🔌 API Reference
 
 ### Endpoints
 
+#### Health & Monitoring
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `GET` | `/health` | Service health check | ❌ |
+| `GET` | `/` | API information | ❌ |
+| `GET` | `/admin/queues` | Queue monitoring dashboard (Bull Board) | ❌ |
+
+#### File Operations
 | Method | Path | Description | Auth Required |
 |--------|------|-------------|---------------|
 | `POST` | `/v1/companies/:companyId/uploads` | Upload file for indexing | ✅ |
-| `GET` | `/v1/jobs/:jobId` | Check job status | ✅ |
+| `GET` | `/v1/jobs/:jobId` | Check indexing job status | ✅ |
+| `GET` | `/v1/jobs/consistency/:jobId` | Check consistency check job status | ✅ |
+
+#### Search & Vectors
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
 | `POST` | `/v1/companies/:companyId/search` | Semantic search | ✅ |
-| `GET` | `/health` | Service health check | ❌ |
-| `GET` | `/admin/queues` | Queue monitoring dashboard | ❌ |
+| `GET` | `/v1/companies/:companyId/vectors` | Get company vectors | ✅ |
+
+#### Projects
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `POST` | `/v1/companies/:companyId/projects` | Create project | ✅ |
+| `GET` | `/v1/companies/:companyId/projects` | List projects | ✅ |
+| `GET` | `/v1/companies/:companyId/projects/search` | Search projects | ✅ |
+| `GET` | `/v1/companies/:companyId/projects/:projectId` | Get project | ✅ |
+| `GET` | `/v1/companies/:companyId/projects/:projectId/files` | List project files | ✅ |
+| `GET` | `/v1/companies/:companyId/projects/:projectId/stats` | Get project stats | ✅ |
+| `PATCH` | `/v1/companies/:companyId/projects/:projectId` | Update project | ✅ |
+| `POST` | `/v1/companies/:companyId/projects/:projectId/archive` | Archive/unarchive project | ✅ |
+| `DELETE` | `/v1/companies/:companyId/projects/:projectId` | Delete project (soft delete) | ✅ |
+
+#### Users
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `POST` | `/v1/companies/:companyId/users` | Create user | ✅ |
+| `GET` | `/v1/companies/:companyId/users` | List users | ✅ |
+| `GET` | `/v1/companies/:companyId/users/:userId` | Get user | ✅ |
+| `PATCH` | `/v1/companies/:companyId/users/:userId` | Update user | ✅ |
+| `POST` | `/v1/companies/:companyId/users/:userId/active` | Activate/deactivate user | ✅ |
+| `DELETE` | `/v1/companies/:companyId/users/:userId` | Delete user (soft delete) | ✅ |
+
+#### Cache & Consistency
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| `POST` | `/v1/companies/:companyId/consistency-check` | Trigger consistency check for company | ✅ |
+| `POST` | `/v1/companies/consistency-check` | Trigger consistency check for all companies | ✅ |
+| `DELETE` | `/v1/companies/:companyId/cache` | Clear cache for company | ✅ |
+| `DELETE` | `/v1/companies/cache` | Clear all cache | ✅ |
 
 ### Authentication
-All endpoints (except `/health` and `/admin`) require:
+All endpoints (except `/health`, `/`, and `/admin`) require:
 ```
-Header: x-api-key: dev-key-123
+Header: x-api-key: {your-api-key}
 ```
+
+**API Keys:**
+- API keys are stored in MongoDB and prefixed with `ck_`
+- Keys are hashed with bcrypt for security
+- Get your API key from the seed script output or create a company via the API
+- Example format: `ck_f3ea0b87ab164aa582fa33863f438b03`
 
 ### Response Codes
 - `200` - Success
@@ -292,15 +408,37 @@ docker-compose restart
 docker-compose exec redis redis-cli FLUSHDB
 ```
 
+### MongoDB Issues
+```bash
+# Check MongoDB is running
+docker ps | grep mongo
+
+# Connect to MongoDB
+docker exec -it rag-main-mongodb-1 mongosh -u admin -p admin123 --authenticationDatabase admin
+
+# View collections
+use rag_db
+show collections
+
+# Re-seed database if needed
+cd api
+npm run seed
+```
+
 ## 📈 Production Deployment
 
 ### Recommendations
-1. **Environment**: Use production-grade Redis & Qdrant clusters
-2. **Secrets**: Store API keys in secure vault (e.g., AWS Secrets Manager)
+1. **Environment**: Use production-grade Redis, Qdrant, and MongoDB clusters
+2. **Secrets**: Store API keys and MongoDB credentials in secure vault (e.g., AWS Secrets Manager)
 3. **Scaling**: Increase worker concurrency for higher throughput
 4. **Monitoring**: Add Prometheus/Grafana for metrics
-5. **Backup**: Regular Qdrant snapshots
+5. **Backup**: 
+   - Regular Qdrant snapshots
+   - MongoDB backups (mongodump) with retention policy
+   - Redis persistence enabled
 6. **CDN**: Cache static assets (Bull Board UI)
+7. **Database**: Use MongoDB replica sets for high availability
+8. **Security**: Enable MongoDB authentication and network encryption
 
 ### Docker Production Build
 ```bash
@@ -340,14 +478,23 @@ Uses recursive character text splitter to:
 
 ### Caching Strategy
 - **Key**: `search:${companyId}:${hash(query)}`
-- **TTL**: 1 hour
-- **Invalidation**: Manual or time-based
-- **Storage**: JSON-serialized results
+- **TTL**: 1 hour (configurable)
+- **Invalidation**: Manual via API or time-based
+- **Storage**: JSON-serialized results in Redis
+- **Cache Headers**: Responses include `X-Cache: HIT` or `X-Cache: MISS`
 
 ### Idempotency
 - Point IDs: `${companyId}-${fileId}-chunk-${index}`
 - Re-uploads overwrite previous data
 - No duplicate vectors in database
+- File deduplication by hash (same file in same project = error)
+
+### Consistency Checking
+- Automated consistency checks between MongoDB and Qdrant
+- Detects orphaned vectors (in Qdrant but not in MongoDB)
+- Detects missing vectors (in MongoDB but not in Qdrant)
+- Can be triggered manually via API or scheduled
+- Uses BullMQ for async processing
 
 ## 🔮 Future Enhancements
 
@@ -356,6 +503,8 @@ Uses recursive character text splitter to:
 - [ ] Document update tracking
 - [ ] Batch search endpoint
 - [ ] PDF table extraction
+- [ ] Scheduled consistency checks
+- [ ] User authentication (login/logout)
 
 ### Long-term
 - [ ] Multi-modal embeddings (text + images)

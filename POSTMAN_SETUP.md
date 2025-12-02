@@ -31,37 +31,56 @@
 
 ## Available Endpoints
 
-### 1. Health Check
-- **Method:** GET
-- **URL:** `{{base_url}}/health`
-- **Auth:** None required
-- **Description:** Check if API is running
+### Health & Monitoring
+- **Health Check** - `GET {{base_url}}/health` (No auth)
+- **API Info** - `GET {{base_url}}/` (No auth)
+- **Queue Dashboard** - `GET {{base_url}}/admin/queues` (No auth, browser only)
 
-### 2. Upload File
-- **Method:** POST
-- **URL:** `{{base_url}}/v1/companies/{{company_id}}/uploads`
-- **Auth:** Required (x-api-key header)
-- **Body:** Form-data with `file` field
-- **Response:** Returns `jobId` and `fileId`
+### File Operations
+- **Upload File** - `POST {{base_url}}/v1/companies/{{company_id}}/uploads`
+  - Auth: Required (x-api-key header)
+  - Body: Form-data with `file` field
+  - Response: Returns `jobId` and `fileId`
+- **Get Job Status** - `GET {{base_url}}/v1/jobs/{{job_id}}`
+  - Auth: Required
+  - Description: Check indexing progress
+- **Get Consistency Check Job** - `GET {{base_url}}/v1/jobs/consistency/{{job_id}}`
+  - Auth: Required
+  - Description: Check consistency check job status
 
-### 3. Get Job Status
-- **Method:** GET
-- **URL:** `{{base_url}}/v1/jobs/{{job_id}}`
-- **Auth:** Required (x-api-key header)
-- **Description:** Check indexing progress
+### Search & Vectors
+- **Search Documents** - `POST {{base_url}}/v1/companies/{{company_id}}/search`
+  - Auth: Required
+  - Body: JSON with `query`, `limit`, optional `filter`, optional `rerank`
+  - Response: Search results with scores
+- **Get Company Vectors** - `GET {{base_url}}/v1/companies/{{company_id}}/vectors`
+  - Auth: Required
+  - Description: Get all vectors for a company
 
-### 4. Search Documents
-- **Method:** POST
-- **URL:** `{{base_url}}/v1/companies/{{company_id}}/search`
-- **Auth:** Required (x-api-key header)
-- **Body:** JSON with `query`, `limit`, and optional `filter`
-- **Response:** Search results with scores
+### Projects
+- **Create Project** - `POST {{base_url}}/v1/companies/{{company_id}}/projects`
+- **List Projects** - `GET {{base_url}}/v1/companies/{{company_id}}/projects`
+- **Search Projects** - `GET {{base_url}}/v1/companies/{{company_id}}/projects/search?q=term`
+- **Get Project** - `GET {{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}`
+- **List Project Files** - `GET {{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}/files`
+- **Get Project Stats** - `GET {{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}/stats`
+- **Update Project** - `PATCH {{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}`
+- **Archive Project** - `POST {{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}/archive`
+- **Delete Project** - `DELETE {{base_url}}/v1/companies/{{company_id}}/projects/{{project_id}}`
 
-### 5. Queue Dashboard
-- **Method:** GET
-- **URL:** `{{base_url}}/admin/queues`
-- **Auth:** None required (for development)
-- **Description:** Open in browser to view queue status
+### Users
+- **Create User** - `POST {{base_url}}/v1/companies/{{company_id}}/users`
+- **List Users** - `GET {{base_url}}/v1/companies/{{company_id}}/users`
+- **Get User** - `GET {{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}`
+- **Update User** - `PATCH {{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}`
+- **Activate/Deactivate User** - `POST {{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}/active`
+- **Delete User** - `DELETE {{base_url}}/v1/companies/{{company_id}}/users/{{user_id}}`
+
+### Cache & Consistency
+- **Trigger Consistency Check** - `POST {{base_url}}/v1/companies/{{company_id}}/consistency-check`
+- **Trigger All Consistency Check** - `POST {{base_url}}/v1/companies/consistency-check`
+- **Clear Company Cache** - `DELETE {{base_url}}/v1/companies/{{company_id}}/cache`
+- **Clear All Cache** - `DELETE {{base_url}}/v1/companies/cache`
 
 ## Usage Flow
 

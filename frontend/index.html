@@ -30,6 +30,10 @@
                     <span class="nav-icon">🔍</span>
                     <span class="nav-text">Search</span>
                 </button>
+                <button class="nav-item" data-tab="vectordb">
+                    <span class="nav-icon">💾</span>
+                    <span class="nav-text">Vector DB</span>
+                </button>
                 <button class="nav-item" data-tab="settings">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-text">Settings</span>
@@ -202,7 +206,10 @@
                 <!-- Search Tab -->
                 <div class="tab-pane" id="search-tab">
                     <div class="card">
-                        <h3>Search Documents</h3>
+                        <div class="card-header">
+                            <h3>Search Documents</h3>
+                            <button id="clearCacheSearchBtn" class="btn btn-secondary btn-sm">🗑️ Clear Cache</button>
+                        </div>
                         <div class="search-form">
                             <div class="form-group">
                                 <label for="searchQuery">Search Query:</label>
@@ -236,6 +243,36 @@
                     </div>
                 </div>
 
+                <!-- Vector DB Tab -->
+                <div class="tab-pane" id="vectordb-tab">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Vector Database</h3>
+                            <button id="refreshVectorsBtn" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+                        </div>
+                        <div id="vectorsStatus" class="status-message"></div>
+                        <div class="table-container">
+                            <table class="data-table" id="vectorsTable" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="text-align: left; border-bottom: 1px solid #eee;">
+                                        <th style="padding: 10px;">Project</th>
+                                        <th style="padding: 10px;">File</th>
+                                        <th style="padding: 10px;">Chunks</th>
+                                        <th style="padding: 10px;">Created</th>
+                                        <th style="padding: 10px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vectorsList">
+                                    <!-- Vectors will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="vectorsPagination" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+                            <!-- Pagination controls -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Settings Tab -->
                 <div class="tab-pane" id="settings-tab">
                     <div class="card">
@@ -260,6 +297,7 @@
                             <div class="form-actions">
                                 <button id="saveConfig" class="btn btn-primary">Save Configuration</button>
                                 <button id="testConnection" class="btn btn-secondary">Test Connection</button>
+                                <button id="clearCacheBtn" class="btn btn-secondary">🗑️ Clear Cache</button>
                             </div>
                         </div>
                         <div id="configStatus" class="status-message"></div>

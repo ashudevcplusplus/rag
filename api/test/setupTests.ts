@@ -50,9 +50,30 @@ jest.mock('ioredis', () => {
     incr: jest.fn().mockResolvedValue(1),
     expire: jest.fn().mockResolvedValue(1),
     ttl: jest.fn().mockResolvedValue(60),
-    scanStream: jest.fn().mockReturnValue({
-      on: jest.fn(),
-      once: jest.fn(),
+    scanStream: jest.fn().mockImplementation(() => {
+      const handlers: Record<string, any> = {};
+      const stream: any = {
+        once: jest.fn(),
+        pause: jest.fn(),
+        resume: jest.fn(),
+      };
+      stream.on = jest.fn((event: string, handler: any) => {
+        handlers[event] = handler;
+        // Trigger end event asynchronously if it's registered
+        // ensuring data (if any) would have been processed
+        if (event === 'end') {
+          process.nextTick(() => {
+            // Trigger data event with empty array (no keys found)
+            if (handlers['data']) {
+              handlers['data']([]);
+            }
+            // Trigger end event
+            handlers['end']();
+          });
+        }
+        return stream;
+      });
+      return stream;
     }),
     info: jest.fn().mockResolvedValue('redis_version:7.0.0'),
     dbsize: jest.fn().mockResolvedValue(0),

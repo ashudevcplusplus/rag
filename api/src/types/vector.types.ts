@@ -14,6 +14,13 @@ export interface SearchResultPayload {
   companyId: string;
   text_preview: string;
   chunkIndex: number;
+  // Enriched metadata (added after search)
+  content?: string; // Full text content fetched from embedding repository
+  projectId?: string;
+  projectName?: string;
+  fileName?: string;
+  originalFilename?: string;
+  totalChunks?: number;
   [key: string]: unknown; // Allow additional properties
 }
 
