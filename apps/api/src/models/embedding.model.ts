@@ -2,8 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 import { IEmbedding } from '../schemas/embedding.schema';
 
 export interface IEmbeddingDocument
-  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId' | 'deletedAt'>,
-    Document {
+  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId' | 'deletedAt'>, Document {
   fileId: Types.ObjectId;
   projectId: Types.ObjectId;
   deletedAt?: Date;

@@ -3,8 +3,7 @@ import { IFileMetadata } from '../schemas/file-metadata.schema';
 import { UploadStatus, ProcessingStatus } from '../types/enums';
 
 export interface IFileMetadataDocument
-  extends Omit<IFileMetadata, '_id' | 'projectId' | 'uploadedBy'>,
-    Document {
+  extends Omit<IFileMetadata, '_id' | 'projectId' | 'uploadedBy'>, Document {
   projectId: Types.ObjectId;
   uploadedBy: Types.ObjectId;
 }

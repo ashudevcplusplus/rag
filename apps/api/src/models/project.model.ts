@@ -3,8 +3,7 @@ import { IProject } from '../schemas/project.schema';
 import { ProjectStatus, Visibility } from '../types/enums';
 
 export interface IProjectDocument
-  extends Omit<IProject, '_id' | 'companyId' | 'ownerId'>,
-    Document {
+  extends Omit<IProject, '_id' | 'companyId' | 'ownerId'>, Document {
   companyId: Types.ObjectId;
   ownerId: Types.ObjectId;
 }
