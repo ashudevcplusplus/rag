@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -122,15 +122,26 @@ export function UploadPage() {
     },
   });
 
+  // Use ref to track uploading files for polling without causing re-renders
+  const uploadingFilesRef = useRef<UploadingFile[]>([]);
+  uploadingFilesRef.current = uploadingFiles;
+
+  // Get list of job IDs that need polling (only changes when jobs are added/removed)
+  const processingJobIds = uploadingFiles
+    .filter((f) => f.status === 'processing' && f.jobId)
+    .map((f) => f.jobId)
+    .join(',');
+
   // Poll job status for processing files
   useEffect(() => {
-    const processingFiles = uploadingFiles.filter(
-      (f) => f.status === 'processing' && f.jobId
-    );
-
-    if (processingFiles.length === 0) return;
+    if (!processingJobIds) return;
 
     const pollInterval = setInterval(async () => {
+      const currentFiles = uploadingFilesRef.current;
+      const processingFiles = currentFiles.filter(
+        (f) => f.status === 'processing' && f.jobId
+      );
+
       for (const file of processingFiles) {
         if (!file.jobId) continue;
 
@@ -172,7 +183,7 @@ export function UploadPage() {
     }, 2000);
 
     return () => clearInterval(pollInterval);
-  }, [uploadingFiles]);
+  }, [processingJobIds]);
 
   const handleFiles = useCallback(
     (files: File[]) => {

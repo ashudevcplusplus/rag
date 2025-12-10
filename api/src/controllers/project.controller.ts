@@ -248,10 +248,17 @@ export const searchProjects = asyncHandler(async (req: Request, res: Response): 
 export const getFilePreview = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { projectId } = projectIdSchema.parse(req.params);
   const { fileId } = fileIdSchema.parse(req.params);
+  const companyId = getCompanyId(req);
 
   // Verify project exists
   const project = await projectRepository.findById(projectId);
   if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify project belongs to the authenticated company
+  if (project.companyId !== companyId) {
     sendNotFoundResponse(res, 'Project');
     return;
   }
@@ -310,6 +317,12 @@ export const deleteFile = asyncHandler(async (req: Request, res: Response): Prom
   // Verify project exists
   const project = await projectRepository.findById(projectId);
   if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify project belongs to the authenticated company
+  if (project.companyId !== companyId) {
     sendNotFoundResponse(res, 'Project');
     return;
   }
