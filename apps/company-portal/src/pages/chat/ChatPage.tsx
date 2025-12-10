@@ -339,7 +339,7 @@ export function ChatPage() {
                                     {source.fileName || 'Unknown file'}
                                   </span>
                                   <Badge variant="default" className="text-xs">
-                                    {(source.score * 100).toFixed(0)}%
+                                    {source.score.toFixed(0)}%
                                   </Badge>
                                 </div>
                                 <p className="text-gray-600 text-xs line-clamp-2">
