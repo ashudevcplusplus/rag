@@ -1,0 +1,449 @@
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Upload,
+  FileText,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  FolderOpen,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  EmptyState,
+  ProgressBar,
+} from '@rag/ui';
+import { projectsApi, filesApi, jobsApi } from '@rag/api-client';
+import { formatBytes } from '@rag/utils';
+import { useAuthStore } from '../../store/auth.store';
+import { useAppStore } from '../../store/app.store';
+
+interface UploadingFile {
+  id: string;
+  file: File;
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
+  progress: number;
+  jobId?: string;
+  error?: string;
+}
+
+export function UploadPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { companyId } = useAuthStore();
+  const { addActivity } = useAppStore();
+
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    searchParams.get('projectId') || ''
+  );
+  const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Fetch projects
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects', companyId],
+    queryFn: () => projectsApi.list(companyId!),
+    enabled: !!companyId,
+  });
+
+  const projects = projectsData?.projects || [];
+
+  // Upload mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      return filesApi.upload(companyId!, selectedProjectId, files);
+    },
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['files', companyId, selectedProjectId] });
+
+      // Update file statuses based on response
+      if (response.results) {
+        response.results.forEach((result) => {
+          setUploadingFiles((prev) =>
+            prev.map((f) =>
+              f.file.name === result.filename
+                ? {
+                    ...f,
+                    status: 'processing' as const,
+                    jobId: result.jobId,
+                    progress: 50,
+                  }
+                : f
+            )
+          );
+        });
+      }
+
+      addActivity({
+        text: `Uploaded ${response.results?.length || 0} files`,
+        type: 'upload',
+      });
+    },
+    onError: (error) => {
+      toast.error('Failed to upload files');
+      setUploadingFiles((prev) =>
+        prev.map((f) =>
+          f.status === 'uploading'
+            ? { ...f, status: 'error' as const, error: 'Upload failed' }
+            : f
+        )
+      );
+    },
+  });
+
+  // Poll job status for processing files
+  useEffect(() => {
+    const processingFiles = uploadingFiles.filter(
+      (f) => f.status === 'processing' && f.jobId
+    );
+
+    if (processingFiles.length === 0) return;
+
+    const pollInterval = setInterval(async () => {
+      for (const file of processingFiles) {
+        if (!file.jobId) continue;
+
+        try {
+          const job = await jobsApi.get(file.jobId);
+          const progress = job.progress || 50;
+
+          if (job.state === 'completed') {
+            setUploadingFiles((prev) =>
+              prev.map((f) =>
+                f.id === file.id
+                  ? { ...f, status: 'completed' as const, progress: 100 }
+                  : f
+              )
+            );
+          } else if (job.state === 'failed') {
+            setUploadingFiles((prev) =>
+              prev.map((f) =>
+                f.id === file.id
+                  ? {
+                      ...f,
+                      status: 'error' as const,
+                      error: job.error || 'Processing failed',
+                    }
+                  : f
+              )
+            );
+          } else {
+            setUploadingFiles((prev) =>
+              prev.map((f) =>
+                f.id === file.id ? { ...f, progress: Math.min(progress, 95) } : f
+              )
+            );
+          }
+        } catch (error) {
+          console.error('Failed to poll job status:', error);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [uploadingFiles]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+
+      if (!selectedProjectId) {
+        toast.error('Please select a project first');
+        return;
+      }
+
+      const files = Array.from(e.dataTransfer.files);
+      handleFiles(files);
+    },
+    [selectedProjectId]
+  );
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedProjectId) {
+      toast.error('Please select a project first');
+      return;
+    }
+
+    const files = Array.from(e.target.files || []);
+    handleFiles(files);
+    e.target.value = ''; // Reset input
+  };
+
+  const handleFiles = (files: File[]) => {
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const validFiles = files.filter((file) => file.size <= maxSize);
+    const invalidFiles = files.filter((file) => file.size > maxSize);
+
+    if (invalidFiles.length > 0) {
+      toast.error(
+        `${invalidFiles.length} file(s) exceed the 50MB limit and were skipped`
+      );
+    }
+
+    if (validFiles.length === 0) return;
+
+    // Add files to upload queue
+    const newUploadingFiles: UploadingFile[] = validFiles.map((file) => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      file,
+      status: 'uploading' as const,
+      progress: 0,
+    }));
+
+    setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
+
+    // Start upload
+    uploadMutation.mutate(validFiles);
+  };
+
+  const removeFile = (fileId: string) => {
+    setUploadingFiles((prev) => prev.filter((f) => f.id !== fileId));
+  };
+
+  const clearCompleted = () => {
+    setUploadingFiles((prev) =>
+      prev.filter((f) => f.status !== 'completed' && f.status !== 'error')
+    );
+  };
+
+  const getStatusIcon = (status: UploadingFile['status']) => {
+    switch (status) {
+      case 'pending':
+        return <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />;
+      case 'uploading':
+        return <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
+      case 'processing':
+        return <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />;
+      case 'completed':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="w-5 h-5 text-red-500" />;
+    }
+  };
+
+  const getStatusText = (status: UploadingFile['status']) => {
+    switch (status) {
+      case 'pending':
+        return 'Waiting...';
+      case 'uploading':
+        return 'Uploading...';
+      case 'processing':
+        return 'Processing...';
+      case 'completed':
+        return 'Completed';
+      case 'error':
+        return 'Error';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Upload Documents</h1>
+        <p className="text-gray-600 mt-1">
+          Upload files to your projects for AI-powered search
+        </p>
+      </div>
+
+      {/* Project Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Project</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {projectsLoading ? (
+            <div className="animate-pulse h-10 bg-gray-100 rounded-lg" />
+          ) : projects.length === 0 ? (
+            <EmptyState
+              icon={<FolderOpen className="w-8 h-8" />}
+              title="No projects found"
+              description="Create a project first to upload documents"
+              action={
+                <Button onClick={() => navigate('/projects')}>
+                  Create Project
+                </Button>
+              }
+            />
+          ) : (
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            >
+              <option value="">Select a project...</option>
+              {projects.map((project) => (
+                <option key={project._id} value={project._id}>
+                  {project.name} ({project.fileCount || 0} files)
+                </option>
+              ))}
+            </select>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Drop Zone */}
+      <Card>
+        <CardContent className="p-8">
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => {
+              if (selectedProjectId) {
+                document.getElementById('file-input')?.click();
+              } else {
+                toast.error('Please select a project first');
+              }
+            }}
+            className={`
+              border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
+              transition-all duration-200
+              ${
+                !selectedProjectId
+                  ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                  : isDragOver
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50'
+              }
+            `}
+          >
+            <input
+              type="file"
+              id="file-input"
+              multiple
+              onChange={handleFileInput}
+              className="hidden"
+              disabled={!selectedProjectId}
+            />
+
+            <div className="flex flex-col items-center gap-4">
+              <div
+                className={`p-4 rounded-full ${
+                  selectedProjectId ? 'bg-blue-100' : 'bg-gray-100'
+                }`}
+              >
+                <Upload
+                  className={`w-8 h-8 ${
+                    selectedProjectId ? 'text-blue-600' : 'text-gray-400'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <p className="text-lg font-medium text-gray-900">
+                  {selectedProjectId
+                    ? 'Drop files here or click to browse'
+                    : 'Select a project to upload files'}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Supports PDF, TXT, DOC, DOCX, and more (max 50MB per file)
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upload Progress */}
+      {uploadingFiles.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Upload Progress</CardTitle>
+            <Button variant="ghost" size="sm" onClick={clearCompleted}>
+              Clear Completed
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {uploadingFiles.map((uploadFile) => (
+                <div
+                  key={uploadFile.id}
+                  className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50/50"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-5 h-5 text-gray-500" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-gray-900 truncate">
+                        {uploadFile.file.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(uploadFile.status)}
+                        <span
+                          className={`text-sm font-medium ${
+                            uploadFile.status === 'completed'
+                              ? 'text-green-600'
+                              : uploadFile.status === 'error'
+                                ? 'text-red-600'
+                                : 'text-gray-600'
+                          }`}
+                        >
+                          {getStatusText(uploadFile.status)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <ProgressBar
+                          value={uploadFile.progress}
+                          size="sm"
+                          variant={
+                            uploadFile.status === 'completed'
+                              ? 'success'
+                              : uploadFile.status === 'error'
+                                ? 'danger'
+                                : 'default'
+                          }
+                        />
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {formatBytes(uploadFile.file.size)}
+                      </span>
+                    </div>
+
+                    {uploadFile.error && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {uploadFile.error}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => removeFile(uploadFile.id)}
+                    className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

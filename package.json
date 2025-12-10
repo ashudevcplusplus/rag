@@ -7,9 +7,13 @@
     "clean": "./clean.sh",
     "test": "cd api && npm test",
     "build": "cd api && npm run build",
+    "build:portal": "pnpm --filter @rag/company-portal build",
     "start": "cd api && npm start",
     "dev": "cd api && npm run dev",
-    "prepare": "husky"
+    "dev:portal": "pnpm --filter @rag/company-portal dev",
+    "prepare": "husky",
+    "lint:portal": "pnpm --filter @rag/company-portal lint",
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "husky": "^9.1.7"
