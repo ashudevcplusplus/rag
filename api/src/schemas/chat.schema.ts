@@ -87,3 +87,31 @@ export interface ChatResponse {
   model: string;
   provider: 'openai' | 'gemini';
 }
+
+/**
+ * SSE streaming event types
+ */
+export type StreamEventType = 'sources' | 'token' | 'done' | 'error';
+
+/**
+ * SSE streaming event structure
+ */
+export interface StreamEvent {
+  type: StreamEventType;
+  data: StreamEventData;
+}
+
+export type StreamEventData =
+  | { sources: ChatSource[] } // type: 'sources'
+  | { token: string } // type: 'token'
+  | {
+      // type: 'done'
+      usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+      };
+      model: string;
+      provider: 'openai' | 'gemini';
+    }
+  | { message: string }; // type: 'error'

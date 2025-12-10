@@ -1,10 +1,17 @@
 import OpenAI from 'openai';
 import { GoogleGenerativeAI, Content } from '@google/generative-ai';
+import { Response } from 'express';
 import { CONFIG } from '../config';
 import { VectorService, EmbeddingProvider } from './vector.service';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { projectRepository } from '../repositories/project.repository';
-import { ChatRequest, ChatResponse, ChatSource, ChatMessage } from '../schemas/chat.schema';
+import {
+  ChatRequest,
+  ChatResponse,
+  ChatSource,
+  ChatMessage,
+  StreamEvent,
+} from '../schemas/chat.schema';
 import { QdrantFilter, SearchResult, SearchResultPayload } from '../types/vector.types';
 import { ExternalServiceError } from '../types/error.types';
 import { logger } from '../utils/logger';
@@ -103,6 +110,206 @@ export class ChatService {
     });
 
     return response;
+  }
+
+  /**
+   * Process streaming chat request with RAG
+   * Sends SSE events for real-time token streaming
+   */
+  static async chatStream(companyId: string, request: ChatRequest, res: Response): Promise<void> {
+    const startTime = Date.now();
+    const provider = request.llmProvider || CONFIG.LLM_PROVIDER;
+
+    logger.info('Streaming chat request started', {
+      companyId,
+      queryLength: request.query.length,
+      provider,
+      limit: request.limit,
+      rerank: request.rerank,
+    });
+
+    // Setup SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.flushHeaders();
+
+    try {
+      // 1. Retrieve relevant chunks using RAG
+      const sources = await this.retrieveContext(companyId, request);
+
+      logger.debug('RAG context retrieved for streaming', {
+        companyId,
+        sourcesCount: sources.length,
+        duration: Date.now() - startTime,
+      });
+
+      // 2. Send sources event first if requested
+      if (request.includeSources && sources.length > 0) {
+        this.sendSSE(res, { type: 'sources', data: { sources } });
+      }
+
+      // 3. Build the context and messages
+      const context = this.buildContextString(sources);
+      const systemPrompt = request.systemPrompt || this.getDefaultSystemPrompt();
+      const messages = this.buildMessages(systemPrompt, context, request.query, request.messages);
+
+      // 4. Stream from the appropriate LLM
+      if (provider === 'gemini') {
+        await this.streamGemini(messages, request, res);
+      } else {
+        await this.streamOpenAI(messages, request, res);
+      }
+
+      logger.info('Streaming chat request completed', {
+        companyId,
+        provider,
+        sourcesCount: sources.length,
+        totalDuration: Date.now() - startTime,
+      });
+    } catch (error) {
+      logger.error('Streaming chat request failed', {
+        companyId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      // Send error event
+      this.sendSSE(res, {
+        type: 'error',
+        data: { message: error instanceof Error ? error.message : 'Chat request failed' },
+      });
+    } finally {
+      res.end();
+    }
+  }
+
+  /**
+   * Send SSE event to client
+   */
+  private static sendSSE(res: Response, event: StreamEvent): void {
+    res.write(`event: ${event.type}\n`);
+    res.write(`data: ${JSON.stringify(event.data)}\n\n`);
+  }
+
+  /**
+   * Stream response from OpenAI
+   */
+  private static async streamOpenAI(
+    messages: ChatMessage[],
+    request: ChatRequest,
+    res: Response
+  ): Promise<void> {
+    const client = this.getOpenAIClient();
+    const model = CONFIG.OPENAI_CHAT_MODEL;
+
+    const stream = await client.chat.completions.create({
+      model,
+      messages: messages.map((m) => ({
+        role: m.role as 'user' | 'assistant' | 'system',
+        content: m.content,
+      })),
+      max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
+      temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
+      stream: true,
+    });
+
+    let totalTokens = 0;
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content;
+      if (content) {
+        this.sendSSE(res, { type: 'token', data: { token: content } });
+      }
+
+      // Track usage from final chunk
+      if (chunk.usage) {
+        totalTokens = chunk.usage.total_tokens;
+      }
+    }
+
+    // Send done event
+    this.sendSSE(res, {
+      type: 'done',
+      data: {
+        model,
+        provider: 'openai',
+        usage: totalTokens
+          ? {
+              promptTokens: 0, // OpenAI streaming doesn't provide detailed breakdown
+              completionTokens: 0,
+              totalTokens,
+            }
+          : undefined,
+      },
+    });
+  }
+
+  /**
+   * Stream response from Gemini
+   */
+  private static async streamGemini(
+    messages: ChatMessage[],
+    request: ChatRequest,
+    res: Response
+  ): Promise<void> {
+    const client = this.getGeminiClient();
+    const model = CONFIG.GEMINI_CHAT_MODEL;
+    const genModel = client.getGenerativeModel({
+      model,
+      generationConfig: {
+        maxOutputTokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
+        temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
+      },
+    });
+
+    // Extract system instruction and convert messages to Gemini format
+    const systemMessage = messages.find((m) => m.role === 'system');
+    const chatMessages = messages.filter((m) => m.role !== 'system');
+
+    // Build Gemini content format
+    const contents: Content[] = chatMessages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    // Start chat with system instruction
+    const chat = genModel.startChat({
+      history: contents.slice(0, -1),
+      systemInstruction: systemMessage ? systemMessage.content : undefined,
+    });
+
+    // Send the last user message with streaming
+    const lastMessage = contents[contents.length - 1];
+    const result = await chat.sendMessageStream(lastMessage.parts[0].text || '');
+
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (text) {
+        this.sendSSE(res, { type: 'token', data: { token: text } });
+      }
+
+      // Track usage from chunks
+      if (chunk.usageMetadata) {
+        usage = {
+          promptTokens: chunk.usageMetadata.promptTokenCount || 0,
+          completionTokens: chunk.usageMetadata.candidatesTokenCount || 0,
+          totalTokens: chunk.usageMetadata.totalTokenCount || 0,
+        };
+      }
+    }
+
+    // Send done event
+    this.sendSSE(res, {
+      type: 'done',
+      data: {
+        model,
+        provider: 'gemini',
+        usage,
+      },
+    });
   }
 
   /**
