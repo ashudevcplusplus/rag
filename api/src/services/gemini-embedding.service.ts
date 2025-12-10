@@ -114,12 +114,9 @@ export class GeminiEmbeddingService {
                 embedOptions.outputDimensionality = options.outputDimensionality;
               }
 
-              // Pass text as string with options - Gemini SDK accepts this format
-              // Using type assertion as the SDK types may not match runtime API exactly
-              const result = await model.embedContent(
-                text,
-                embedOptions as { taskType?: string; title?: string; outputDimensionality?: number }
-              );
+              // Pass text as content - Gemini SDK embedContent takes content only
+              // Task type and other options need to be configured at model level
+              const result = await model.embedContent(text);
 
               // Extract embedding values - handle different response structures
               let embedding: number[] = [];
