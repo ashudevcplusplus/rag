@@ -35,6 +35,6 @@ jobs:
 
       - name: Run unit tests
         working-directory: ./api
-        run: npm test -- --testPathPattern="test/unit"
+        run: npm run test:unit
         env:
           NODE_ENV: test
