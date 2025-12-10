@@ -365,3 +365,61 @@ export const deleteFile = asyncHandler(async (req: Request, res: Response): Prom
 
   res.json({ message: 'File deleted successfully' });
 });
+
+/**
+ * Download file
+ */
+export const downloadFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = projectIdSchema.parse(req.params);
+  const { fileId } = fileIdSchema.parse(req.params);
+  const companyId = getCompanyId(req);
+
+  if (!companyId) {
+    sendBadRequestResponse(res, 'Company ID is required');
+    return;
+  }
+
+  // Verify project exists
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify project belongs to the authenticated company
+  if (project.companyId !== companyId) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify file exists and belongs to project
+  const file = await fileMetadataRepository.findById(fileId);
+  if (!file || file.projectId !== projectId) {
+    sendNotFoundResponse(res, 'File');
+    return;
+  }
+
+  // Check if file exists on disk
+  const fs = await import('fs/promises');
+  try {
+    await fs.access(file.filepath);
+  } catch {
+    sendNotFoundResponse(res, 'File content');
+    return;
+  }
+
+  // Update last accessed timestamp
+  await fileMetadataRepository.updateLastAccessed(fileId);
+
+  // Send file for download
+  res.setHeader('Content-Type', file.mimetype);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${encodeURIComponent(file.originalFilename)}"`
+  );
+  res.setHeader('Content-Length', file.size);
+
+  const { createReadStream } = await import('fs');
+  const stream = createReadStream(file.filepath);
+  stream.pipe(res);
+});

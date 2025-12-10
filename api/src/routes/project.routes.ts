@@ -11,6 +11,7 @@ import {
   listProjectFiles,
   getFilePreview,
   deleteFile,
+  downloadFile,
 } from '../controllers/project.controller';
 
 const router = Router({ mergeParams: true });
@@ -21,6 +22,7 @@ router.get('/search', searchProjects);
 router.get('/:projectId', getProject);
 router.get('/:projectId/files', listProjectFiles);
 router.get('/:projectId/files/:fileId', getFilePreview);
+router.get('/:projectId/files/:fileId/download', downloadFile);
 router.delete('/:projectId/files/:fileId', deleteFile);
 router.patch('/:projectId', updateProject);
 router.delete('/:projectId', deleteProject);
