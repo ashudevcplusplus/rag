@@ -212,9 +212,10 @@ export class ChatService {
       max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
       temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
       stream: true,
+      stream_options: { include_usage: true }, // Enable usage stats in streaming
     });
 
-    let totalTokens = 0;
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content;
@@ -222,9 +223,13 @@ export class ChatService {
         this.sendSSE(res, { type: 'token', data: { token: content } });
       }
 
-      // Track usage from final chunk
+      // Track usage from final chunk (sent when include_usage is true)
       if (chunk.usage) {
-        totalTokens = chunk.usage.total_tokens;
+        usage = {
+          promptTokens: chunk.usage.prompt_tokens,
+          completionTokens: chunk.usage.completion_tokens,
+          totalTokens: chunk.usage.total_tokens,
+        };
       }
     }
 
@@ -234,13 +239,7 @@ export class ChatService {
       data: {
         model,
         provider: 'openai',
-        usage: totalTokens
-          ? {
-              promptTokens: 0, // OpenAI streaming doesn't provide detailed breakdown
-              completionTokens: 0,
-              totalTokens,
-            }
-          : undefined,
+        usage,
       },
     });
   }
@@ -267,6 +266,11 @@ export class ChatService {
     const systemMessage = messages.find((m) => m.role === 'system');
     const chatMessages = messages.filter((m) => m.role !== 'system');
 
+    // Validate we have at least one message to send
+    if (chatMessages.length === 0) {
+      throw new ExternalServiceError('Gemini', 'No user message provided');
+    }
+
     // Build Gemini content format
     const contents: Content[] = chatMessages.map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
@@ -281,7 +285,11 @@ export class ChatService {
 
     // Send the last user message with streaming
     const lastMessage = contents[contents.length - 1];
-    const result = await chat.sendMessageStream(lastMessage.parts[0].text || '');
+    const lastMessageText = lastMessage?.parts[0]?.text;
+    if (!lastMessageText) {
+      throw new ExternalServiceError('Gemini', 'Empty message content');
+    }
+    const result = await chat.sendMessageStream(lastMessageText);
 
     let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
 
@@ -324,42 +332,90 @@ export class ChatService {
     // Build Qdrant filter from request filter
     let qdrantFilter: QdrantFilter | undefined = undefined;
     if (request.filter) {
-      qdrantFilter = { must: [] };
+      let allowedFileIds: string[] | undefined = undefined;
 
       // Handle projectId filter - fetch all file IDs for the project
       if (request.filter.projectId) {
-        const projectFiles = await fileMetadataRepository.findByProjectId(request.filter.projectId);
-        const projectFileIds = projectFiles.map((f) => f._id);
+        // Verify project belongs to this company
+        const project = await projectRepository.findById(request.filter.projectId);
+        if (!project) {
+          logger.warn('Project not found for chat filter', {
+            projectId: request.filter.projectId,
+            companyId,
+          });
+          return [];
+        }
 
-        if (projectFileIds.length === 0) {
-          // No files in project, return empty results
+        if (String(project.companyId) !== companyId) {
+          logger.warn('Project does not belong to company', {
+            projectId: request.filter.projectId,
+            projectCompanyId: project.companyId,
+            requestedCompanyId: companyId,
+          });
+          return []; // Return empty instead of throwing to avoid leaking info
+        }
+
+        const projectFiles = await fileMetadataRepository.findByProjectId(request.filter.projectId);
+        allowedFileIds = projectFiles.map((f) => f._id);
+
+        if (allowedFileIds.length === 0) {
           logger.debug('No files found for project', { projectId: request.filter.projectId });
           return [];
         }
 
-        qdrantFilter.must!.push({
-          key: 'fileId',
-          match: { any: projectFileIds },
-        });
-
         logger.debug('Filtering by project files', {
           projectId: request.filter.projectId,
-          fileCount: projectFileIds.length,
+          fileCount: allowedFileIds.length,
         });
       }
 
+      // Handle fileId filter - intersect with project files if both specified
       if (request.filter.fileId) {
-        qdrantFilter.must!.push({
-          key: 'fileId',
-          match: { value: request.filter.fileId },
-        });
+        if (allowedFileIds) {
+          // Intersect: only allow if file is in project
+          if (!allowedFileIds.includes(request.filter.fileId)) {
+            logger.debug('FileId not in project, returning empty', {
+              fileId: request.filter.fileId,
+              projectId: request.filter.projectId,
+            });
+            return [];
+          }
+          allowedFileIds = [request.filter.fileId];
+        } else {
+          allowedFileIds = [request.filter.fileId];
+        }
       }
 
+      // Handle fileIds filter - intersect with project files if both specified
       if (request.filter.fileIds && request.filter.fileIds.length > 0) {
-        qdrantFilter.must!.push({
-          key: 'fileId',
-          match: { any: request.filter.fileIds },
-        });
+        if (allowedFileIds) {
+          // Intersect: only keep files that are in both lists
+          const fileIdsSet = new Set(request.filter.fileIds);
+          allowedFileIds = allowedFileIds.filter((id) => fileIdsSet.has(id));
+          if (allowedFileIds.length === 0) {
+            logger.debug('No intersection between fileIds and project files', {
+              projectId: request.filter.projectId,
+            });
+            return [];
+          }
+        } else {
+          allowedFileIds = request.filter.fileIds;
+        }
+      }
+
+      // Build the final filter
+      if (allowedFileIds && allowedFileIds.length > 0) {
+        qdrantFilter = {
+          must: [
+            {
+              key: 'fileId',
+              match:
+                allowedFileIds.length === 1
+                  ? { value: allowedFileIds[0] }
+                  : { any: allowedFileIds },
+            },
+          ],
+        };
       }
     }
 
@@ -499,8 +555,12 @@ export class ChatService {
     return arranged;
   }
 
+  // Maximum context size in characters (roughly 32k tokens for most models)
+  // This leaves room for system prompt and response
+  private static readonly MAX_CONTEXT_CHARS = 100000;
+
   /**
-   * Build context string from sources
+   * Build context string from sources with size limit
    */
   private static buildContextString(sources: ChatSource[]): string {
     if (sources.length === 0) {
@@ -509,18 +569,40 @@ export class ChatService {
 
     const contextParts: string[] = [];
     let currentFile = '';
+    let totalChars = 0;
+    let truncated = false;
 
     for (const source of sources) {
+      // Check if adding this chunk would exceed the limit
+      const chunkSize = source.content.length + 100; // +100 for header overhead
+      if (totalChars + chunkSize > this.MAX_CONTEXT_CHARS) {
+        truncated = true;
+        logger.warn('Context truncated due to size limit', {
+          maxChars: this.MAX_CONTEXT_CHARS,
+          totalChars,
+          sourcesIncluded: contextParts.length,
+          sourcesTotal: sources.length,
+        });
+        break;
+      }
+
       // Add file header when switching files
       if (source.fileId !== currentFile) {
         currentFile = source.fileId;
         const fileLabel = source.fileName || source.fileId;
         const projectLabel = source.projectName ? ` (Project: ${source.projectName})` : '';
-        contextParts.push(`\n--- Document: ${fileLabel}${projectLabel} ---\n`);
+        const header = `\n--- Document: ${fileLabel}${projectLabel} ---\n`;
+        contextParts.push(header);
+        totalChars += header.length;
       }
 
       // Add chunk content
       contextParts.push(source.content);
+      totalChars += source.content.length + 1; // +1 for newline in join
+    }
+
+    if (truncated) {
+      contextParts.push('\n[Context truncated due to size limits]');
     }
 
     return contextParts.join('\n');
@@ -655,6 +737,11 @@ ${context}`;
       const systemMessage = messages.find((m) => m.role === 'system');
       const chatMessages = messages.filter((m) => m.role !== 'system');
 
+      // Validate we have at least one message to send
+      if (chatMessages.length === 0) {
+        throw new ExternalServiceError('Gemini', 'No user message provided');
+      }
+
       // Build Gemini content format
       const contents: Content[] = chatMessages.map((m) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
@@ -669,7 +756,11 @@ ${context}`;
 
       // Send the last user message
       const lastMessage = contents[contents.length - 1];
-      const result = await chat.sendMessage(lastMessage.parts[0].text || '');
+      const lastMessageText = lastMessage?.parts[0]?.text;
+      if (!lastMessageText) {
+        throw new ExternalServiceError('Gemini', 'Empty message content');
+      }
+      const result = await chat.sendMessage(lastMessageText);
       const response = result.response;
       const answer = response.text();
 

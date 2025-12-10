@@ -213,57 +213,95 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
   // Build Qdrant filter from API filter
   let qdrantFilter: QdrantFilter | undefined = undefined;
   if (filter) {
-    qdrantFilter = {
-      must: [],
-    };
+    let allowedFileIds: string[] | undefined = undefined;
 
     // Handle projectId filter - fetch all file IDs for the project
     if (filter.projectId && typeof filter.projectId === 'string') {
-      const projectFiles = await fileMetadataRepository.findByProjectId(filter.projectId);
-      const projectFileIds = projectFiles.map((f) => f._id);
+      // Verify project belongs to this company
+      const project = await projectRepository.findById(filter.projectId);
+      if (!project) {
+        logger.warn('Project not found for search filter', {
+          projectId: filter.projectId,
+          companyId,
+        });
+        res.json({ results: [] });
+        return;
+      }
 
-      if (projectFileIds.length === 0) {
-        // No files in project, return empty results
+      if (String(project.companyId) !== companyId) {
+        logger.warn('Project does not belong to company', {
+          projectId: filter.projectId,
+          projectCompanyId: project.companyId,
+          requestedCompanyId: companyId,
+        });
+        res.json({ results: [] }); // Return empty instead of error to avoid leaking info
+        return;
+      }
+
+      const projectFiles = await fileMetadataRepository.findByProjectId(filter.projectId);
+      allowedFileIds = projectFiles.map((f) => f._id);
+
+      if (allowedFileIds.length === 0) {
         logger.debug('No files found for project', { projectId: filter.projectId });
         res.json({ results: [] });
         return;
       }
 
-      qdrantFilter.must!.push({
-        key: 'fileId',
-        match: { any: projectFileIds },
-      });
-
       logger.debug('Filtering search by project files', {
         projectId: filter.projectId,
-        fileCount: projectFileIds.length,
+        fileCount: allowedFileIds.length,
       });
     }
 
-    if (filter.fileId) {
-      const fileIdValue = filter.fileId;
-      // Ensure fileId is a valid type for Qdrant
-      if (
-        typeof fileIdValue === 'string' ||
-        typeof fileIdValue === 'number' ||
-        typeof fileIdValue === 'boolean'
-      ) {
-        qdrantFilter.must!.push({
-          key: 'fileId',
-          match: { value: fileIdValue },
-        });
+    // Handle fileId filter - intersect with project files if both specified
+    if (filter.fileId && typeof filter.fileId === 'string') {
+      if (allowedFileIds) {
+        // Intersect: only allow if file is in project
+        if (!allowedFileIds.includes(filter.fileId)) {
+          logger.debug('FileId not in project, returning empty', {
+            fileId: filter.fileId,
+            projectId: filter.projectId,
+          });
+          res.json({ results: [] });
+          return;
+        }
+        allowedFileIds = [filter.fileId];
+      } else {
+        allowedFileIds = [filter.fileId];
       }
     }
 
-    if (filter.fileIds && Array.isArray(filter.fileIds)) {
-      qdrantFilter.must!.push({
-        key: 'fileId',
-        match: { any: filter.fileIds },
-      });
+    // Handle fileIds filter - intersect with project files if both specified
+    if (filter.fileIds && Array.isArray(filter.fileIds) && filter.fileIds.length > 0) {
+      const filterFileIds = filter.fileIds.filter((id): id is string => typeof id === 'string');
+      if (allowedFileIds) {
+        // Intersect: only keep files that are in both lists
+        const fileIdsSet = new Set(filterFileIds);
+        allowedFileIds = allowedFileIds.filter((id) => fileIdsSet.has(id));
+        if (allowedFileIds.length === 0) {
+          logger.debug('No intersection between fileIds and project files', {
+            projectId: filter.projectId,
+          });
+          res.json({ results: [] });
+          return;
+        }
+      } else {
+        allowedFileIds = filterFileIds;
+      }
     }
 
-    // Add more filter conditions as needed
-    // Example: date range, mimetype, etc.
+    // Build the final filter
+    if (allowedFileIds && allowedFileIds.length > 0) {
+      qdrantFilter = {
+        must: [
+          {
+            key: 'fileId',
+            match:
+              allowedFileIds.length === 1 ? { value: allowedFileIds[0] } : { any: allowedFileIds },
+          },
+        ],
+      };
+    }
   }
 
   // Search in company collection
