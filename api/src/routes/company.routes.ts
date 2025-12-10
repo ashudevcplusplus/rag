@@ -12,6 +12,7 @@ import { uploadLimiter, searchLimiter } from '../middleware/rate-limiter.middlew
 import { upload } from '../middleware/upload.middleware';
 import projectRoutes from './project.routes';
 import userRoutes from './user.routes';
+import chatRoutes from './chat.routes';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.use('/:companyId', companyRateLimiter as RequestHandler);
 // Mount sub-routes
 router.use('/:companyId/projects', projectRoutes);
 router.use('/:companyId/users', userRoutes);
+router.use('/:companyId/chat', chatRoutes);
 
 // Company specific routes
 router.post('/:companyId/uploads', uploadLimiter, upload.array('files', 10), uploadFile);

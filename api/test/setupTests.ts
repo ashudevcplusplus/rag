@@ -2,6 +2,26 @@
 // This prevents Redis connections during tests
 // Note: Integration tests need real MongoDB but don't need Redis, so Redis mocks are safe
 
+// Mock Qdrant client to prevent connection attempts
+jest.mock('@qdrant/js-client-rest', () => {
+  const mockQdrantClient = {
+    getCollections: jest.fn().mockResolvedValue({ collections: [] }),
+    getCollection: jest.fn().mockResolvedValue({ config: { params: { vectors: { size: 384 } } } }),
+    createCollection: jest.fn().mockResolvedValue(true),
+    deleteCollection: jest.fn().mockResolvedValue(true),
+    createPayloadIndex: jest.fn().mockResolvedValue(true),
+    upsert: jest.fn().mockResolvedValue({ operation_id: 1, status: 'completed' }),
+    search: jest.fn().mockResolvedValue([]),
+    scroll: jest.fn().mockResolvedValue({ points: [], next_page_offset: null }),
+    delete: jest.fn().mockResolvedValue({ operation_id: 1, status: 'completed' }),
+    count: jest.fn().mockResolvedValue({ count: 0 }),
+  };
+
+  return {
+    QdrantClient: jest.fn().mockImplementation(() => mockQdrantClient),
+  };
+});
+
 // Mock BullMQ Queue to prevent Redis connections
 // This must be done before any module imports queue.client.ts
 jest.mock('bullmq', () => {

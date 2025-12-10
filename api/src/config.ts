@@ -29,4 +29,14 @@ export const CONFIG = {
   GEMINI_EMBEDDING_DIMENSIONS: process.env.GEMINI_EMBEDDING_DIMENSIONS
     ? parseInt(process.env.GEMINI_EMBEDDING_DIMENSIONS, 10)
     : undefined,
+
+  // LLM Configuration for Chat API
+  LLM_PROVIDER: (process.env.LLM_PROVIDER || 'openai') as 'openai' | 'gemini',
+  // OpenAI Chat Model
+  OPENAI_CHAT_MODEL: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
+  // Gemini Chat Model
+  GEMINI_CHAT_MODEL: process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash',
+  // Chat settings
+  CHAT_MAX_TOKENS: parseInt(process.env.CHAT_MAX_TOKENS || '1024', 10),
+  CHAT_TEMPERATURE: parseFloat(process.env.CHAT_TEMPERATURE || '0.7'),
 };
