@@ -421,5 +421,15 @@ export const downloadFile = asyncHandler(async (req: Request, res: Response): Pr
 
   const { createReadStream } = await import('fs');
   const stream = createReadStream(file.filepath);
+
+  stream.on('error', (err) => {
+    logger.error('File stream error during download', { fileId, error: err.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to read file' });
+    } else {
+      res.end();
+    }
+  });
+
   stream.pipe(res);
 });

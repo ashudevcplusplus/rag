@@ -68,20 +68,25 @@ export function UploadPage() {
       // Update file statuses based on response
       // Handle both single file response (flat object) and multi-file response (results array)
       if (response.results) {
-        // Multi-file upload response
-        response.results.forEach((result) => {
-          setUploadingFiles((prev) =>
-            prev.map((f) =>
-              f.file.name === result.filename
-                ? {
-                    ...f,
-                    status: 'processing' as const,
-                    jobId: result.jobId,
-                    progress: 50,
-                  }
-                : f
-            )
-          );
+        // Multi-file upload response - match by index to handle duplicate filenames
+        setUploadingFiles((prev) => {
+          // Find uploading files to match with results
+          const uploadingIndices = prev
+            .map((f, idx) => (f.status === 'uploading' ? idx : -1))
+            .filter((idx) => idx !== -1);
+
+          return prev.map((f, idx) => {
+            const resultIndex = uploadingIndices.indexOf(idx);
+            if (resultIndex !== -1 && response.results[resultIndex]) {
+              return {
+                ...f,
+                status: 'processing' as const,
+                jobId: response.results[resultIndex].jobId,
+                progress: 50,
+              };
+            }
+            return f;
+          });
         });
         addActivity({
           text: `Uploaded ${response.results.length} files`,
