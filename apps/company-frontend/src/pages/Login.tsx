@@ -20,14 +20,14 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const isValid = await validateConnection(formData.apiUrl, formData.apiKey);
+      const isValid = await validateConnection(formData.apiUrl);
       if (isValid) {
         login(formData);
         navigate('/');
       } else {
         setError('Could not connect to API. Please check URL and API Key.');
       }
-    } catch (err) {
+    } catch {
       setError('Connection failed.');
     } finally {
       setLoading(false);

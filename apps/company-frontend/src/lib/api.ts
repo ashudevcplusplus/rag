@@ -21,12 +21,12 @@ export const createApiClient = (config: CompanyConfig) => {
   return api;
 };
 
-export const validateConnection = async (url: string, _apiKey: string) => {
+export const validateConnection = async (url: string) => {
   try {
     // Health check usually doesn't need auth, but let's check if we can reach the server
     const res = await axios.get(`${url}/health`);
     return res.status === 200;
-  } catch (e) {
+  } catch {
     return false;
   }
 };

@@ -10,7 +10,12 @@ export default function ProjectDetails() {
   const navigate = useNavigate();
   const { config } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<Array<{
+    _id: string;
+    originalFilename: string;
+    size: number;
+    processingStatus: 'completed' | 'failed' | 'pending' | 'processing';
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
@@ -102,7 +107,7 @@ export default function ProjectDetails() {
         </div>
 
         <div className="space-y-3">
-          {files.map((file: any) => (
+          {files.map((file) => (
             <div key={file._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <FileText className="w-5 h-5 text-gray-400" />

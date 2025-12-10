@@ -4,7 +4,7 @@ import { createApiClient } from '../lib/api';
 
 export default function Dashboard() {
   const { config } = useAuth();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<{ projectCount: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

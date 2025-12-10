@@ -3,7 +3,13 @@ import { LayoutDashboard, FolderKanban, Search, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import clsx from 'clsx';
 
-const NavItem = ({ to, icon: Icon, children }: any) => (
+interface NavItemProps {
+  to: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}
+
+const NavItem = ({ to, icon: Icon, children }: NavItemProps) => (
   <NavLink
     to={to}
     className={({ isActive }) =>
