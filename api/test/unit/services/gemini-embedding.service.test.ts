@@ -64,7 +64,10 @@ describe('GeminiEmbeddingService', () => {
       const result = await GeminiEmbeddingService.getEmbeddings(texts);
 
       expect(result).toEqual([mockEmbedding]);
-      expect(mockModel.embedContent).toHaveBeenCalledWith('Test text');
+      expect(mockModel.embedContent).toHaveBeenCalledWith({
+        content: { role: 'user', parts: [{ text: 'Test text' }] },
+        taskType: 'RETRIEVAL_DOCUMENT',
+      });
     });
 
     it('should successfully get embeddings for multiple texts', async () => {
@@ -126,8 +129,10 @@ describe('GeminiEmbeddingService', () => {
         taskType: 'retrieval_query',
       });
 
-      // Task type is accepted as option but not passed to embedContent directly
-      expect(mockModel.embedContent).toHaveBeenCalledWith('Query text');
+      expect(mockModel.embedContent).toHaveBeenCalledWith({
+        content: { role: 'user', parts: [{ text: 'Query text' }] },
+        taskType: 'RETRIEVAL_QUERY',
+      });
     });
 
     it('should include title when provided', async () => {
@@ -143,8 +148,11 @@ describe('GeminiEmbeddingService', () => {
         title: 'Document Title',
       });
 
-      // Title is accepted as option but not passed to embedContent directly
-      expect(mockModel.embedContent).toHaveBeenCalledWith('Document text');
+      expect(mockModel.embedContent).toHaveBeenCalledWith({
+        content: { role: 'user', parts: [{ text: 'Document text' }] },
+        taskType: 'RETRIEVAL_DOCUMENT',
+        title: 'Document Title',
+      });
     });
 
     it('should include outputDimensionality for gemini-embedding-001', async () => {
@@ -163,8 +171,12 @@ describe('GeminiEmbeddingService', () => {
         outputDimensionality: 1536,
       });
 
-      // outputDimensionality is accepted as option but not passed to embedContent directly
-      expect(mockModel.embedContent).toHaveBeenCalledWith('Test text');
+      // outputDimensionality is not supported in current SDK's EmbedContentRequest type
+      // So we verify the content and taskType are correctly passed
+      expect(mockModel.embedContent).toHaveBeenCalledWith({
+        content: { role: 'user', parts: [{ text: 'Test text' }] },
+        taskType: 'RETRIEVAL_DOCUMENT',
+      });
     });
 
     it('should throw error when API key is not set', async () => {

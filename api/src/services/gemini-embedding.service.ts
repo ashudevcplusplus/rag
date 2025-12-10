@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
 import { CONFIG } from '../config';
 import { ExternalServiceError } from '../types/error.types';
 import { logger } from '../utils/logger';
@@ -9,6 +9,15 @@ export type GeminiTaskType =
   | 'semantic_similarity'
   | 'classification'
   | 'clustering';
+
+// Map our lowercase task types to SDK's TaskType enum
+const TASK_TYPE_MAP: Record<GeminiTaskType, TaskType> = {
+  retrieval_document: TaskType.RETRIEVAL_DOCUMENT,
+  retrieval_query: TaskType.RETRIEVAL_QUERY,
+  semantic_similarity: TaskType.SEMANTIC_SIMILARITY,
+  classification: TaskType.CLASSIFICATION,
+  clustering: TaskType.CLUSTERING,
+};
 
 export interface GeminiEmbeddingOptions {
   taskType?: GeminiTaskType;
@@ -91,32 +100,32 @@ export class GeminiEmbeddingService {
           // Process each text in the batch
           const batchPromises = batch.map(async (text, index) => {
             try {
-              // Build embedding request - Gemini API accepts string or object
-              // For text-embedding models, we can pass options directly
-              const embedOptions: {
-                taskType?: string;
+              // Build embedding request with task type and other options
+              // The Gemini SDK embedContent accepts EmbedContentRequest object
+              // Content requires 'role' and 'parts' properties
+              const embedRequest: {
+                content: { role: string; parts: { text: string }[] };
+                taskType?: TaskType;
                 title?: string;
-                outputDimensionality?: number;
-              } = {};
+              } = {
+                content: { role: 'user', parts: [{ text }] },
+              };
 
-              // Add task type for text-embedding models
+              // Add task type for text-embedding models (improves search quality)
               if (modelName.includes('text-embedding') || modelName.includes('gemini-embedding')) {
-                embedOptions.taskType = taskType;
+                embedRequest.taskType = TASK_TYPE_MAP[taskType];
               }
 
               // Add title if provided (improves quality for documents)
               if (options.title) {
-                embedOptions.title = options.title;
+                embedRequest.title = options.title;
               }
 
-              // Add output dimensionality for gemini-embedding-001 (MRL support)
-              if (modelName.includes('gemini-embedding-001') && options.outputDimensionality) {
-                embedOptions.outputDimensionality = options.outputDimensionality;
-              }
+              // Note: outputDimensionality is not supported in the current SDK EmbedContentRequest type
+              // It may be available in newer SDK versions for gemini-embedding-001
 
-              // Pass text as content - Gemini SDK embedContent takes content only
-              // Task type and other options need to be configured at model level
-              const result = await model.embedContent(text);
+              // Pass the full request object with all options
+              const result = await model.embedContent(embedRequest);
 
               // Extract embedding values - handle different response structures
               let embedding: number[] = [];

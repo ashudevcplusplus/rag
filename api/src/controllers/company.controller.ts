@@ -274,6 +274,16 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
     // Handle fileIds filter - intersect with project files if both specified
     if (filter.fileIds && Array.isArray(filter.fileIds) && filter.fileIds.length > 0) {
       const filterFileIds = filter.fileIds.filter((id): id is string => typeof id === 'string');
+
+      // If all fileIds were invalid (non-string), return empty results
+      if (filterFileIds.length === 0) {
+        logger.debug('No valid string fileIds provided', {
+          originalCount: filter.fileIds.length,
+        });
+        res.json({ results: [] });
+        return;
+      }
+
       if (allowedFileIds) {
         // Intersect: only keep files that are in both lists
         const fileIdsSet = new Set(filterFileIds);
