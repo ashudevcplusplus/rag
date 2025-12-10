@@ -66,7 +66,9 @@ export function UploadPage() {
       queryClient.invalidateQueries({ queryKey: ['files', companyId, selectedProjectId] });
 
       // Update file statuses based on response
+      // Handle both single file response (flat object) and multi-file response (results array)
       if (response.results) {
+        // Multi-file upload response
         response.results.forEach((result) => {
           setUploadingFiles((prev) =>
             prev.map((f) =>
@@ -81,12 +83,29 @@ export function UploadPage() {
             )
           );
         });
+        addActivity({
+          text: `Uploaded ${response.results.length} files`,
+          type: 'upload',
+        });
+      } else if (response.jobId) {
+        // Single file upload response - update the first uploading file
+        setUploadingFiles((prev) =>
+          prev.map((f, index) =>
+            f.status === 'uploading' && index === prev.findIndex((pf) => pf.status === 'uploading')
+              ? {
+                  ...f,
+                  status: 'processing' as const,
+                  jobId: response.jobId,
+                  progress: 50,
+                }
+              : f
+          )
+        );
+        addActivity({
+          text: 'Uploaded 1 file',
+          type: 'upload',
+        });
       }
-
-      addActivity({
-        text: `Uploaded ${response.results?.length || 0} files`,
-        type: 'upload',
-      });
     },
     onError: (error: unknown) => {
       const apiError = error as { error?: string; message?: string };

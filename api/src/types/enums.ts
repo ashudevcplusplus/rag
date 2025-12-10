@@ -67,6 +67,7 @@ export enum ChangeStatus {
 export enum AnalyticsEventType {
   SEARCH = 'search',
   UPLOAD = 'upload',
+  FILE_DELETE = 'file_delete',
   PROJECT_CREATE = 'project_create',
   PROJECT_UPDATE = 'project_update',
   PROJECT_DELETE = 'project_delete',

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { projectRepository } from '../repositories/project.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
+import { embeddingRepository } from '../repositories/embedding.repository';
 import { DeletionService } from '../services/deletion.service';
 import {
   createProjectSchema,
@@ -18,6 +19,11 @@ import {
 import { getCompanyId } from '../utils/request.util';
 import { parsePaginationQuery, createPaginationResponse } from '../utils/pagination.util';
 import { asyncHandler } from '../middleware/error.middleware';
+import { z } from 'zod';
+
+const fileIdSchema = z.object({
+  fileId: z.string().min(1),
+});
 
 /**
  * Create a new project
@@ -234,4 +240,105 @@ export const searchProjects = asyncHandler(async (req: Request, res: Response): 
 
   const response = createPaginationResponse(result.projects, result.page, limit, result.total);
   res.json({ projects: response.items, pagination: response.pagination });
+});
+
+/**
+ * Get file preview/content
+ */
+export const getFilePreview = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = projectIdSchema.parse(req.params);
+  const { fileId } = fileIdSchema.parse(req.params);
+
+  // Verify project exists
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify file exists and belongs to project
+  const file = await fileMetadataRepository.findById(fileId);
+  if (!file || file.projectId !== projectId) {
+    sendNotFoundResponse(res, 'File');
+    return;
+  }
+
+  // Get file content from embeddings
+  const embedding = await embeddingRepository.findByFileId(fileId);
+
+  if (!embedding || !embedding.contents || embedding.contents.length === 0) {
+    // File exists but no content yet (still processing)
+    res.json({
+      file: {
+        _id: file._id,
+        originalFilename: file.originalFilename,
+        mimeType: file.mimetype,
+        size: file.size,
+        chunkCount: file.chunkCount || 0,
+        processingStatus: file.processingStatus,
+      },
+      content: null,
+      chunks: [],
+      message: 'File content not available yet. Processing may still be in progress.',
+    });
+    return;
+  }
+
+  // Return file metadata and content
+  res.json({
+    file: {
+      _id: file._id,
+      originalFilename: file.originalFilename,
+      mimeType: file.mimetype,
+      size: file.size,
+      chunkCount: embedding.chunkCount,
+      processingStatus: file.processingStatus,
+    },
+    content: embedding.contents.join('\n\n'),
+    chunks: embedding.contents,
+  });
+});
+
+/**
+ * Delete file from project
+ */
+export const deleteFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = projectIdSchema.parse(req.params);
+  const { fileId } = fileIdSchema.parse(req.params);
+  const companyId = getCompanyId(req);
+
+  // Verify project exists
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify file exists and belongs to project
+  const file = await fileMetadataRepository.findById(fileId);
+  if (!file || file.projectId !== projectId) {
+    sendNotFoundResponse(res, 'File');
+    return;
+  }
+
+  // Delete file and associated data
+  const success = await DeletionService.deleteFile(fileId);
+  if (!success) {
+    sendNotFoundResponse(res, 'File');
+    return;
+  }
+
+  logger.info('File deleted', { fileId, projectId });
+
+  // Publish analytics
+  if (companyId) {
+    void publishAnalytics({
+      eventType: AnalyticsEventType.FILE_DELETE,
+      companyId,
+      projectId,
+      metadata: { fileId, filename: file.originalFilename },
+    });
+  }
+
+  res.json({ message: 'File deleted successfully' });
 });

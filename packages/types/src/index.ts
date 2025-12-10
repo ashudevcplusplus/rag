@@ -202,12 +202,18 @@ export interface UploadResult {
   fileId: string;
   jobId: string;
   filename: string;
-  status: string;
+  statusUrl: string;
 }
 
 export interface UploadResponse {
-  results: UploadResult[];
   message: string;
+  // Multi-file upload response
+  results?: UploadResult[];
+  errors?: { filename: string; error: string }[];
+  // Single file upload response (backward compatibility)
+  jobId?: string;
+  fileId?: string;
+  statusUrl?: string;
 }
 
 // ============================================================================

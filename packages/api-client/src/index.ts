@@ -167,9 +167,11 @@ export const companyApi = {
   },
 
   async getStats(companyId: string): Promise<{
-    projectsCount: number;
-    filesCount: number;
+    userCount: number;
+    projectCount: number;
+    fileCount: number;
     storageUsed: number;
+    storageLimit: number;
   }> {
     return request(`/v1/companies/${companyId}/stats`);
   },
@@ -230,6 +232,20 @@ export const projectsApi = {
 // Files API
 // ============================================================================
 
+export interface FilePreviewResponse {
+  file: {
+    _id: string;
+    originalFilename: string;
+    mimeType: string;
+    size: number;
+    chunkCount: number;
+    processingStatus: string;
+  };
+  content: string | null;
+  chunks: string[];
+  message?: string;
+}
+
 export const filesApi = {
   async list(
     companyId: string,
@@ -244,6 +260,10 @@ export const filesApi = {
   },
 
   async get(companyId: string, projectId: string, fileId: string): Promise<{ file: FileMetadata }> {
+    return request(`/v1/companies/${companyId}/projects/${projectId}/files/${fileId}`);
+  },
+
+  async getPreview(companyId: string, projectId: string, fileId: string): Promise<FilePreviewResponse> {
     return request(`/v1/companies/${companyId}/projects/${projectId}/files/${fileId}`);
   },
 

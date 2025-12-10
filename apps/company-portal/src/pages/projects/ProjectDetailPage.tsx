@@ -11,6 +11,10 @@ import {
   Calendar,
   Database,
   HardDrive,
+  Eye,
+  Loader2,
+  Copy,
+  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -25,7 +29,7 @@ import {
   StatusBadge,
   Badge,
 } from '@rag/ui';
-import { projectsApi, filesApi } from '@rag/api-client';
+import { projectsApi, filesApi, type FilePreviewResponse } from '@rag/api-client';
 import { formatBytes, formatRelativeTime, formatDate } from '@rag/utils';
 import type { FileMetadata } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
@@ -39,8 +43,12 @@ export function ProjectDetailPage() {
   const { addActivity } = useAppStore();
 
   const [isDeleteFileModalOpen, setIsDeleteFileModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileMetadata | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<FilePreviewResponse | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [copiedChunk, setCopiedChunk] = useState<number | null>(null);
 
   // Fetch project details
   const { data: projectData, isLoading: projectLoading } = useQuery({
@@ -81,6 +89,44 @@ export function ProjectDetailPage() {
   const handleDeleteFile = () => {
     if (selectedFile) {
       deleteFileMutation.mutate(selectedFile._id);
+    }
+  };
+
+  const handlePreviewFile = async (file: FileMetadata) => {
+    setSelectedFile(file);
+    setIsPreviewModalOpen(true);
+    setIsLoadingPreview(true);
+    setPreviewData(null);
+
+    try {
+      const data = await filesApi.getPreview(companyId!, projectId!, file._id);
+      setPreviewData(data);
+    } catch (error) {
+      console.error('Failed to load file preview:', error);
+      toast.error('Failed to load file preview');
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const handleCopyChunk = async (chunk: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(chunk);
+      setCopiedChunk(index);
+      setTimeout(() => setCopiedChunk(null), 2000);
+    } catch (error) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
+  const handleCopyAll = async () => {
+    if (previewData?.content) {
+      try {
+        await navigator.clipboard.writeText(previewData.content);
+        toast.success('Content copied to clipboard');
+      } catch (error) {
+        toast.error('Failed to copy to clipboard');
+      }
     }
   };
 
@@ -238,14 +284,15 @@ export function ProjectDetailPage() {
               {files.map((file) => (
                 <div
                   key={file._id}
-                  className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-6 px-6 transition-colors group"
+                  className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-6 px-6 transition-colors group cursor-pointer"
+                  onClick={() => handlePreviewFile(file)}
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-gray-500" />
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
+                      <FileText className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">
+                      <h4 className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                         {file.originalFilename}
                       </h4>
                       <div className="flex items-center gap-3 text-sm text-gray-500">
@@ -263,9 +310,10 @@ export function ProjectDetailPage() {
 
                     <div className="relative">
                       <button
-                        onClick={() =>
-                          setActiveMenu(activeMenu === file._id ? null : file._id)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenu(activeMenu === file._id ? null : file._id);
+                        }}
                         className="p-1.5 rounded-lg hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <MoreVertical className="w-4 h-4 text-gray-500" />
@@ -277,7 +325,20 @@ export function ProjectDetailPage() {
                             className="fixed inset-0 z-10"
                             onClick={() => setActiveMenu(null)}
                           />
-                          <div className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                          <div
+                            className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                handlePreviewFile(file);
+                                setActiveMenu(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Preview
+                            </button>
                             <button
                               onClick={() => {
                                 // Download functionality would go here
@@ -334,6 +395,119 @@ export function ProjectDetailPage() {
             isLoading={deleteFileMutation.isPending}
           >
             Delete File
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* File Preview Modal */}
+      <Modal
+        isOpen={isPreviewModalOpen}
+        onClose={() => {
+          setIsPreviewModalOpen(false);
+          setPreviewData(null);
+          setSelectedFile(null);
+        }}
+        title={selectedFile?.originalFilename || 'File Preview'}
+        size="4xl"
+      >
+        {isLoadingPreview ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
+            <p className="text-gray-500">Loading file content...</p>
+          </div>
+        ) : previewData ? (
+          <div className="space-y-4">
+            {/* File Info */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-gray-500" />
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">
+                    {previewData.file.originalFilename}
+                  </h4>
+                  <div className="flex items-center gap-3 text-sm text-gray-500">
+                    <span>{formatBytes(previewData.file.size)}</span>
+                    <span>•</span>
+                    <span>{previewData.file.chunkCount} chunks</span>
+                    <span>•</span>
+                    <StatusBadge status={previewData.file.processingStatus} />
+                  </div>
+                </div>
+              </div>
+              {previewData.content && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Copy className="w-4 h-4" />}
+                  onClick={handleCopyAll}
+                >
+                  Copy All
+                </Button>
+              )}
+            </div>
+
+            {/* Content */}
+            {previewData.content ? (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                {previewData.chunks.map((chunk, index) => (
+                  <div
+                    key={index}
+                    className="group relative p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="default" className="text-xs">
+                            Chunk {index + 1}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                          {chunk}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleCopyChunk(chunk, index)}
+                        className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copy chunk"
+                      >
+                        {copiedChunk === index ? (
+                          <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Loader2 className="w-8 h-8 text-orange-500 animate-spin mb-4" />
+                <p className="text-gray-600 font-medium">Content not available yet</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {previewData.message || 'The file is still being processed. Please check back later.'}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-gray-500">Failed to load file preview</p>
+          </div>
+        )}
+
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setIsPreviewModalOpen(false);
+              setPreviewData(null);
+              setSelectedFile(null);
+            }}
+          >
+            Close
           </Button>
         </ModalFooter>
       </Modal>

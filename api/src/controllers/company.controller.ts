@@ -654,3 +654,17 @@ export const getCompanyVectors = asyncHandler(
     res.json(result);
   }
 );
+
+export const getCompanyStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { companyId } = companyIdSchema.parse(req.params);
+
+  const { companyRepository } = await import('../repositories/company.repository');
+  const stats = await companyRepository.getStats(companyId);
+
+  if (!stats) {
+    sendNotFoundResponse(res, 'Company');
+    return;
+  }
+
+  res.json(stats);
+});

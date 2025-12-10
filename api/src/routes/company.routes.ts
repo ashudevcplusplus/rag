@@ -6,6 +6,7 @@ import {
   triggerConsistencyCheck,
   clearCache,
   getCompanyVectors,
+  getCompanyStats,
 } from '../controllers/company.controller';
 import { companyRateLimiter } from '../middleware/company-rate-limiter.middleware';
 import { uploadLimiter, searchLimiter } from '../middleware/rate-limiter.middleware';
@@ -25,6 +26,7 @@ router.use('/:companyId/users', userRoutes);
 router.use('/:companyId/chat', chatRoutes);
 
 // Company specific routes
+router.get('/:companyId/stats', getCompanyStats);
 router.post('/:companyId/uploads', uploadLimiter, upload.array('files', 10), uploadFile);
 router.get('/:companyId/vectors', getCompanyVectors);
 

@@ -10,7 +10,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Button, EmptyState, Badge } from '@rag/ui';
-import { projectsApi } from '@rag/api-client';
+import { projectsApi, companyApi } from '@rag/api-client';
 import { formatBytes, formatRelativeTime } from '@rag/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
@@ -70,9 +70,21 @@ export function DashboardPage() {
     enabled: !!companyId,
   });
 
+  // Fetch fresh company stats (for storage info)
+  const { data: statsData } = useQuery({
+    queryKey: ['company-stats', companyId],
+    queryFn: () => companyApi.getStats(companyId!),
+    enabled: !!companyId,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   const projects = projectsData?.projects || [];
   const totalFiles = projects.reduce((sum, p) => sum + (p.fileCount || 0), 0);
   const totalVectors = projects.reduce((sum, p) => sum + (p.vectorCount || 0), 0);
+  
+  // Use fresh stats if available, fallback to stored company data
+  const storageUsed = statsData?.storageUsed ?? company?.storageUsed ?? 0;
+  const storageLimit = statsData?.storageLimit ?? company?.storageLimit ?? 0;
 
   return (
     <div className="space-y-8">
@@ -106,9 +118,9 @@ export function DashboardPage() {
         />
         <StatCard
           title="Storage"
-          value={formatBytes(company?.storageUsed || 0)}
+          value={formatBytes(storageUsed)}
           icon={<HardDrive className="w-6 h-6" />}
-          description={`of ${formatBytes(company?.storageLimit || 0)}`}
+          description={`of ${formatBytes(storageLimit)}`}
         />
       </div>
 
