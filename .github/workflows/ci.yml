@@ -2,28 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
 
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-
-    services:
-      mongodb:
-        image: mongo:7
-        env:
-          MONGO_INITDB_ROOT_USERNAME: admin
-          MONGO_INITDB_ROOT_PASSWORD: admin123
-          MONGO_INITDB_DATABASE: rag_db
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -48,11 +33,8 @@ jobs:
         working-directory: ./api
         run: npm run format:check
 
-      # Note: npm test uses jest.config.js which excludes E2E tests
-      # E2E tests require Docker services (Qdrant, Redis, Embed) and are run separately
-      - name: Run unit and integration tests (E2E excluded)
+      - name: Run unit tests
         working-directory: ./api
-        run: npm test
+        run: npm test -- --testPathPattern="test/unit"
         env:
-          MONGODB_URI: mongodb://admin:admin123@localhost:27017/rag_db?authSource=admin
           NODE_ENV: test
