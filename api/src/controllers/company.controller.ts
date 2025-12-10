@@ -217,6 +217,29 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
       must: [],
     };
 
+    // Handle projectId filter - fetch all file IDs for the project
+    if (filter.projectId && typeof filter.projectId === 'string') {
+      const projectFiles = await fileMetadataRepository.findByProjectId(filter.projectId);
+      const projectFileIds = projectFiles.map((f) => f._id);
+
+      if (projectFileIds.length === 0) {
+        // No files in project, return empty results
+        logger.debug('No files found for project', { projectId: filter.projectId });
+        res.json({ results: [] });
+        return;
+      }
+
+      qdrantFilter.must!.push({
+        key: 'fileId',
+        match: { any: projectFileIds },
+      });
+
+      logger.debug('Filtering search by project files', {
+        projectId: filter.projectId,
+        fileCount: projectFileIds.length,
+      });
+    }
+
     if (filter.fileId) {
       const fileIdValue = filter.fileId;
       // Ensure fileId is a valid type for Qdrant

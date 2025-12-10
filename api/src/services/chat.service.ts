@@ -326,6 +326,28 @@ export class ChatService {
     if (request.filter) {
       qdrantFilter = { must: [] };
 
+      // Handle projectId filter - fetch all file IDs for the project
+      if (request.filter.projectId) {
+        const projectFiles = await fileMetadataRepository.findByProjectId(request.filter.projectId);
+        const projectFileIds = projectFiles.map((f) => f._id);
+
+        if (projectFileIds.length === 0) {
+          // No files in project, return empty results
+          logger.debug('No files found for project', { projectId: request.filter.projectId });
+          return [];
+        }
+
+        qdrantFilter.must!.push({
+          key: 'fileId',
+          match: { any: projectFileIds },
+        });
+
+        logger.debug('Filtering by project files', {
+          projectId: request.filter.projectId,
+          fileCount: projectFileIds.length,
+        });
+      }
+
       if (request.filter.fileId) {
         qdrantFilter.must!.push({
           key: 'fileId',
