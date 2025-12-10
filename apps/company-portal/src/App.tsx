@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { configureApiClient } from '@rag/api-client';
 import { useAuthStore } from './store/auth.store';
@@ -39,7 +39,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const { apiKey, companyId, apiUrl, logout } = useAuthStore();
 
-  // Configure API client when auth state changes
+  // Configure API client synchronously on first render
+  useLayoutEffect(() => {
+    configureApiClient({
+      baseUrl: apiUrl,
+      apiKey: apiKey || undefined,
+      companyId: companyId || undefined,
+      onUnauthorized: () => {
+        logout();
+      },
+    });
+  }, [apiKey, companyId, apiUrl, logout]);
+
+  // Also configure on mount to ensure it's set before any API calls
   useEffect(() => {
     configureApiClient({
       baseUrl: apiUrl,

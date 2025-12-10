@@ -21,14 +21,25 @@ export function truncate(text: string, maxLength: number): string {
 
 /**
  * Generate slug from string
+ * Returns a slug that matches /^[a-z0-9-]+$/
  */
 export function slugify(text: string): string {
+  if (!text) return '';
+  
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
+    // Replace accented characters with their ASCII equivalents
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    // Remove any characters that aren't lowercase letters, numbers, spaces, or hyphens
+    .replace(/[^a-z0-9\s-]/g, '')
+    // Replace spaces and multiple hyphens with single hyphen
     .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    // Remove leading and trailing hyphens
+    .replace(/^-+|-+$/g, '')
+    // Ensure we have something valid - if empty, use a default
+    || 'project';
 }
 
 // ============================================================================

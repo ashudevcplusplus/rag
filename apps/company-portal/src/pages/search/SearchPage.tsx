@@ -53,8 +53,11 @@ export function SearchPage() {
         type: 'search',
       });
     },
-    onError: () => {
-      toast.error('Search failed. Please try again.');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Search failed. Please try again.';
+      toast.error(errorMessage);
+      console.error('Search error:', error);
     },
   });
 

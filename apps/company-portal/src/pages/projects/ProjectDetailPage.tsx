@@ -67,8 +67,11 @@ export function ProjectDetailPage() {
       addActivity({ text: `Deleted file: ${selectedFile?.originalFilename}`, type: 'upload' });
       toast.success('File deleted successfully!');
     },
-    onError: () => {
-      toast.error('Failed to delete file');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to delete file';
+      toast.error(errorMessage);
+      console.error('Delete file error:', error);
     },
   });
 

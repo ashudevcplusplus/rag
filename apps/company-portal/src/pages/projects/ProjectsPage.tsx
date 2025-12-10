@@ -55,8 +55,11 @@ export function ProjectsPage() {
       addActivity({ text: `Created project: ${response.project.name}`, type: 'project' });
       toast.success('Project created successfully!');
     },
-    onError: () => {
-      toast.error('Failed to create project');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to create project';
+      toast.error(errorMessage);
+      console.error('Create project error:', error);
     },
   });
 
@@ -70,8 +73,11 @@ export function ProjectsPage() {
       addActivity({ text: `Deleted project: ${selectedProject?.name}`, type: 'project' });
       toast.success('Project deleted successfully!');
     },
-    onError: () => {
-      toast.error('Failed to delete project');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to delete project';
+      toast.error(errorMessage);
+      console.error('Delete project error:', error);
     },
   });
 
@@ -84,14 +90,28 @@ export function ProjectsPage() {
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name) {
+    if (!formData.name.trim()) {
       toast.error('Project name is required');
       return;
     }
 
+    const slug = formData.slug || slugify(formData.name);
+    
+    // Validate slug format
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      toast.error('Slug must contain only lowercase letters, numbers, and hyphens');
+      return;
+    }
+
+    if (slug.length < 1) {
+      toast.error('A valid slug is required');
+      return;
+    }
+
     createMutation.mutate({
-      ...formData,
-      slug: formData.slug || slugify(formData.name),
+      name: formData.name.trim(),
+      slug,
+      description: formData.description?.trim(),
     });
   };
 
@@ -293,11 +313,18 @@ export function ProjectsPage() {
           <Input
             label="Slug"
             value={formData.slug}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, slug: e.target.value }))
-            }
+            onChange={(e) => {
+              // Only allow valid slug characters
+              const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+              setFormData((prev) => ({ ...prev, slug: value }));
+            }}
             placeholder="my-project"
-            hint="URL-friendly identifier"
+            hint="URL-friendly identifier (lowercase letters, numbers, hyphens)"
+            error={
+              formData.slug && !/^[a-z0-9-]*$/.test(formData.slug)
+                ? 'Only lowercase letters, numbers, and hyphens allowed'
+                : undefined
+            }
           />
 
           <Textarea

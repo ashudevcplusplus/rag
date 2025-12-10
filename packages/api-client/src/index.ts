@@ -67,8 +67,15 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     requestHeaders['Content-Type'] = 'application/json';
   }
 
+  const url = `${config.baseUrl}${endpoint}`;
+  
+  // Debug logging in development
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    console.log(`[API] ${method} ${url}`, body instanceof FormData ? '[FormData]' : body);
+  }
+
   try {
-    const response = await fetch(`${config.baseUrl}${endpoint}`, {
+    const response = await fetch(url, {
       method,
       headers: requestHeaders,
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
@@ -80,10 +87,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const error: ApiError = {
-        error: errorData.error || `HTTP ${response.status}`,
-        message: errorData.message,
+        error: errorData.error || errorData.message || `HTTP ${response.status}`,
+        message: errorData.message || errorData.error,
         statusCode: response.status,
       };
+
+      console.error(`[API Error] ${method} ${url}:`, error);
 
       if (response.status === 401 && config.onUnauthorized) {
         config.onUnauthorized();
@@ -98,7 +107,13 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     if (error instanceof Error && error.name === 'AbortError') {
       throw { error: 'Request timeout', statusCode: 408 } as ApiError;
     }
-    throw error;
+    // Re-throw API errors as-is
+    if ((error as ApiError).statusCode) {
+      throw error;
+    }
+    // Network errors
+    console.error(`[API Network Error] ${method} ${url}:`, error);
+    throw { error: 'Network error. Please check your connection.', statusCode: 0 } as ApiError;
   }
 }
 

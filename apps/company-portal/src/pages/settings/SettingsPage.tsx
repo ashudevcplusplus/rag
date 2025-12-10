@@ -42,8 +42,11 @@ export function SettingsPage() {
       });
       toast.success(`Cache cleared! ${response.keysDeleted} keys deleted.`);
     },
-    onError: () => {
-      toast.error('Failed to clear cache');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to clear cache';
+      toast.error(errorMessage);
+      console.error('Clear cache error:', error);
     },
   });
 

@@ -17,7 +17,8 @@ import {
 } from '@rag/ui';
 import { usersApi } from '@rag/api-client';
 import { formatRelativeTime } from '@rag/utils';
-import type { User, UserRole } from '@rag/types';
+import { UserRole } from '@rag/types';
+import type { User } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
 
@@ -44,7 +45,7 @@ export function UsersPage() {
     firstName: '',
     lastName: '',
     password: '',
-    role: 'MEMBER' as UserRole,
+    role: UserRole.MEMBER,
   });
 
   // Fetch users
@@ -66,13 +67,16 @@ export function UsersPage() {
         firstName: '',
         lastName: '',
         password: '',
-        role: 'MEMBER',
+        role: UserRole.MEMBER,
       });
       addActivity({ text: `Added user: ${response.user.email}`, type: 'user' });
       toast.success('User created successfully!');
     },
-    onError: () => {
-      toast.error('Failed to create user');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to create user';
+      toast.error(errorMessage);
+      console.error('Create user error:', error);
     },
   });
 
@@ -86,8 +90,11 @@ export function UsersPage() {
       addActivity({ text: `Removed user: ${selectedUser?.email}`, type: 'user' });
       toast.success('User deleted successfully!');
     },
-    onError: () => {
-      toast.error('Failed to delete user');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to delete user';
+      toast.error(errorMessage);
+      console.error('Delete user error:', error);
     },
   });
 

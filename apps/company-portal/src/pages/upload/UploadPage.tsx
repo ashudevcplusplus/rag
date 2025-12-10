@@ -88,12 +88,15 @@ export function UploadPage() {
         type: 'upload',
       });
     },
-    onError: (error) => {
-      toast.error('Failed to upload files');
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to upload files';
+      toast.error(errorMessage);
+      console.error('Upload error:', error);
       setUploadingFiles((prev) =>
         prev.map((f) =>
           f.status === 'uploading'
-            ? { ...f, status: 'error' as const, error: 'Upload failed' }
+            ? { ...f, status: 'error' as const, error: errorMessage }
             : f
         )
       );

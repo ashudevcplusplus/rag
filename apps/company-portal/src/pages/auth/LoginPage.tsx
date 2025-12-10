@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Input, Card, CardContent } from '@rag/ui';
-import { checkHealth } from '@rag/api-client';
+import { checkHealth, configureApiClient } from '@rag/api-client';
+import { UserRole, SubscriptionTier, CompanyStatus } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
 
@@ -33,10 +34,18 @@ export function LoginPage() {
   const handleTestConnection = async () => {
     setIsLoading(true);
     try {
+      // Configure API client with current form data
+      configureApiClient({
+        baseUrl: formData.apiUrl,
+        apiKey: formData.apiKey || undefined,
+        companyId: formData.companyId || undefined,
+      });
       await checkHealth();
       toast.success('Connection successful!');
     } catch (error) {
-      toast.error('Failed to connect to API');
+      const apiError = error as { error?: string; message?: string };
+      toast.error(apiError?.error || 'Failed to connect to API');
+      console.error('Connection test error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -52,12 +61,19 @@ export function LoginPage() {
 
     setIsLoading(true);
     try {
-      // Test connection with credentials
+      // Configure API client with form data and test connection
       setApiUrl(formData.apiUrl);
+      configureApiClient({
+        baseUrl: formData.apiUrl,
+        apiKey: formData.apiKey,
+        companyId: formData.companyId,
+      });
       await checkHealth();
       setStep('profile');
     } catch (error) {
-      toast.error('Failed to connect. Check your API URL and credentials.');
+      const apiError = error as { error?: string; message?: string };
+      toast.error(apiError?.error || 'Failed to connect. Check your API URL and credentials.');
+      console.error('Credentials submit error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +98,7 @@ export function LoginPage() {
         emailVerified: true,
         firstName: formData.firstName,
         lastName: formData.lastName || '',
-        role: 'OWNER' as const,
+        role: UserRole.OWNER,
         isActive: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -93,12 +109,12 @@ export function LoginPage() {
         name: formData.companyName,
         slug: formData.companyName.toLowerCase().replace(/\s+/g, '-'),
         email: formData.email,
-        subscriptionTier: 'PROFESSIONAL' as const,
+        subscriptionTier: SubscriptionTier.PROFESSIONAL,
         storageLimit: 5368709120,
         storageUsed: 0,
         maxUsers: 10,
         maxProjects: 50,
-        status: 'ACTIVE' as const,
+        status: CompanyStatus.ACTIVE,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
