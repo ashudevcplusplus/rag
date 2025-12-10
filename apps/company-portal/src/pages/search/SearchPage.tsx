@@ -82,21 +82,24 @@ export function SearchPage() {
     toast.success('Search history cleared');
   };
 
-  // Search mutation
+  // Search mutation - accepts optional searchQuery to handle recent searches
   const searchMutation = useMutation({
-    mutationFn: () =>
-      searchApi.search(companyId!, {
-        query,
+    mutationFn: (searchQuery?: string) => {
+      const queryToUse = searchQuery ?? query;
+      return searchApi.search(companyId!, {
+        query: queryToUse,
         limit,
         rerank: useRerank,
         projectId: selectedProjectId || undefined,
-      }),
-    onSuccess: (response: SearchResponse) => {
+      });
+    },
+    onSuccess: (response: SearchResponse, searchQuery?: string) => {
+      const queryUsed = searchQuery ?? query;
       setSearchResults(response.results);
       incrementSearchCount();
-      saveRecentSearch(query.trim());
+      saveRecentSearch(queryUsed.trim());
       addActivity({
-        text: `Searched: "${truncate(query, 50)}"${selectedProject ? ` in ${selectedProject.name}` : ''}`,
+        text: `Searched: "${truncate(queryUsed, 50)}"${selectedProject ? ` in ${selectedProject.name}` : ''}`,
         type: 'search',
       });
     },
@@ -275,10 +278,8 @@ export function SearchPage() {
                   key={index}
                   onClick={() => {
                     setQuery(search);
-                    // Auto-search
-                    setTimeout(() => {
-                      searchMutation.mutate();
-                    }, 100);
+                    // Pass search term directly to avoid stale closure issue
+                    searchMutation.mutate(search);
                   }}
                   className="group flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
                 >
