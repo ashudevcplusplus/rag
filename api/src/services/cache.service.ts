@@ -24,7 +24,30 @@ redis.on('connect', () => {
 
 export class CacheService {
   /**
+   * Deterministically stringify an object with sorted keys
+   * This ensures consistent cache keys regardless of property order
+   */
+  private static sortedStringify(obj: Record<string, unknown>): string {
+    const sortedKeys = Object.keys(obj).sort();
+    const sortedObj: Record<string, unknown> = {};
+    for (const key of sortedKeys) {
+      const value = obj[key];
+      // Recursively sort nested objects
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        sortedObj[key] = JSON.parse(this.sortedStringify(value as Record<string, unknown>));
+      } else if (Array.isArray(value)) {
+        // Sort arrays of primitives for consistency
+        sortedObj[key] = [...value].sort();
+      } else {
+        sortedObj[key] = value;
+      }
+    }
+    return JSON.stringify(sortedObj);
+  }
+
+  /**
    * Generates a deterministic key for a search query
+   * Includes all filter parameters (projectId, fileId, fileIds) in the hash
    */
   static generateKey(
     companyId: string,
@@ -35,7 +58,8 @@ export class CacheService {
     embeddingProvider?: 'inhouse' | 'openai' | 'gemini'
   ): string {
     const normalizedQuery = query.trim().toLowerCase();
-    const filterStr = filter ? JSON.stringify(filter) : '';
+    // Use sorted stringify for deterministic filter serialization
+    const filterStr = filter ? this.sortedStringify(filter) : '';
     const providerStr = embeddingProvider || '';
     const combined = `${normalizedQuery}:${limit}:${filterStr}:${rerank}:${providerStr}`;
     const hash = crypto.createHash('sha256').update(combined).digest('hex').substring(0, 16);
