@@ -19,22 +19,21 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./api
         run: npm ci
 
-      - name: Run linter
-        working-directory: ./api
-        run: npm run lint
+      - name: Lint API
+        run: npm run lint --workspace=mvp-api
 
-      - name: Check code formatting
-        working-directory: ./api
-        run: npm run format:check
+      - name: Check API formatting
+        run: npm run format:check --workspace=mvp-api
 
-      - name: Run unit tests
-        working-directory: ./api
-        run: npm run test:unit
+      - name: Run API unit tests
+        run: npm run test:unit --workspace=mvp-api
         env:
           NODE_ENV: test
+
+      - name: Lint Frontend
+        run: npm run lint --workspace=@repo/company-frontend
