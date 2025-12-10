@@ -1,17 +1,13 @@
 {
-  "name": "mvp",
-  "version": "1.0.0",
-  "description": "MVP - Production-Grade RAG System",
+  "name": "company-monorepo",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "clean": "./clean.sh",
-    "test": "cd api && npm test",
-    "build": "cd api && npm run build",
-    "start": "cd api && npm start",
-    "dev": "cd api && npm run dev",
-    "prepare": "husky"
-  },
-  "devDependencies": {
-    "husky": "^9.1.7"
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
   }
 }

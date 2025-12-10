@@ -42,7 +42,7 @@ services:
       - mongodb_storage:/data/db
 
   api:
-    build: ./api
+    build: ./apps/api
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -75,7 +75,7 @@ services:
       # - GEMINI_EMBEDDING_DIMENSIONS=768
     volumes:
       - ./data:/app/data
-      - ./api:/app
+      - ./apps/api:/app
       - /app/node_modules
     command: npm run dev
 
