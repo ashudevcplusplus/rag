@@ -14,6 +14,7 @@ import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProjectDetailPage } from './pages/projects/ProjectDetailPage';
 import { UploadPage } from './pages/upload/UploadPage';
 import { SearchPage } from './pages/search/SearchPage';
+import { ChatPage } from './pages/chat/ChatPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { UsersPage } from './pages/users/UsersPage';
 
@@ -84,6 +85,7 @@ function App() {
         <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/chat" element={<ChatPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

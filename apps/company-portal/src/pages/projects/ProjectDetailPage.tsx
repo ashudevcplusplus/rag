@@ -114,7 +114,7 @@ export function ProjectDetailPage() {
       await navigator.clipboard.writeText(chunk);
       setCopiedChunk(index);
       setTimeout(() => setCopiedChunk(null), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy to clipboard');
     }
   };
@@ -124,7 +124,7 @@ export function ProjectDetailPage() {
       try {
         await navigator.clipboard.writeText(previewData.content);
         toast.success('Content copied to clipboard');
-      } catch (error) {
+      } catch {
         toast.error('Failed to copy to clipboard');
       }
     }
@@ -340,10 +340,20 @@ export function ProjectDetailPage() {
                               Preview
                             </button>
                             <button
-                              onClick={() => {
-                                // Download functionality would go here
+                              onClick={async () => {
                                 setActiveMenu(null);
-                                toast.success('Download started');
+                                try {
+                                  await filesApi.download(
+                                    companyId!,
+                                    projectId!,
+                                    file._id,
+                                    file.originalFilename
+                                  );
+                                  toast.success('Download started');
+                                } catch (error) {
+                                  console.error('Download error:', error);
+                                  toast.error('Failed to download file');
+                                }
                               }}
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                             >

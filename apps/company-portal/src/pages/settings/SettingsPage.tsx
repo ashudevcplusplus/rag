@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
-  Settings,
   Building,
   Key,
   Bell,
@@ -55,7 +54,7 @@ export function SettingsPage() {
     try {
       await checkHealth();
       toast.success('Connection successful!');
-    } catch (error) {
+    } catch {
       toast.error('Connection failed. Check your API URL.');
     } finally {
       setIsTestingConnection(false);

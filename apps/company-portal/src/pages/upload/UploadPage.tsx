@@ -174,6 +174,36 @@ export function UploadPage() {
     return () => clearInterval(pollInterval);
   }, [uploadingFiles]);
 
+  const handleFiles = useCallback(
+    (files: File[]) => {
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      const validFiles = files.filter((file) => file.size <= maxSize);
+      const invalidFiles = files.filter((file) => file.size > maxSize);
+
+      if (invalidFiles.length > 0) {
+        toast.error(
+          `${invalidFiles.length} file(s) exceed the 50MB limit and were skipped`
+        );
+      }
+
+      if (validFiles.length === 0) return;
+
+      // Add files to upload queue
+      const newUploadingFiles: UploadingFile[] = validFiles.map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        status: 'uploading' as const,
+        progress: 0,
+      }));
+
+      setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
+
+      // Start upload
+      uploadMutation.mutate(validFiles);
+    },
+    [uploadMutation]
+  );
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -197,7 +227,7 @@ export function UploadPage() {
       const files = Array.from(e.dataTransfer.files);
       handleFiles(files);
     },
-    [selectedProjectId]
+    [selectedProjectId, handleFiles]
   );
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,33 +239,6 @@ export function UploadPage() {
     const files = Array.from(e.target.files || []);
     handleFiles(files);
     e.target.value = ''; // Reset input
-  };
-
-  const handleFiles = (files: File[]) => {
-    const maxSize = 50 * 1024 * 1024; // 50MB
-    const validFiles = files.filter((file) => file.size <= maxSize);
-    const invalidFiles = files.filter((file) => file.size > maxSize);
-
-    if (invalidFiles.length > 0) {
-      toast.error(
-        `${invalidFiles.length} file(s) exceed the 50MB limit and were skipped`
-      );
-    }
-
-    if (validFiles.length === 0) return;
-
-    // Add files to upload queue
-    const newUploadingFiles: UploadingFile[] = validFiles.map((file) => ({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      file,
-      status: 'uploading' as const,
-      progress: 0,
-    }));
-
-    setUploadingFiles((prev) => [...prev, ...newUploadingFiles]);
-
-    // Start upload
-    uploadMutation.mutate(validFiles);
   };
 
   const removeFile = (fileId: string) => {

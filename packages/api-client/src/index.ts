@@ -187,14 +187,23 @@ export const companyApi = {
 // Projects API
 // ============================================================================
 
+export interface ProjectStats {
+  fileCount: number;
+  vectorCount: number;
+  totalSize: number;
+  fileTypes: Record<string, number>;
+  recentUploads: number;
+}
+
 export const projectsApi = {
   async list(
     companyId: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; status?: string }
   ): Promise<{ projects: Project[]; pagination: PaginatedResponse<Project>['pagination'] }> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.status) searchParams.set('status', params.status);
     const query = searchParams.toString();
     return request(`/v1/companies/${companyId}/projects${query ? `?${query}` : ''}`);
   },
@@ -225,6 +234,16 @@ export const projectsApi = {
     return request(`/v1/companies/${companyId}/projects/${projectId}`, {
       method: 'DELETE',
     });
+  },
+
+  async archive(companyId: string, projectId: string): Promise<{ project: Project }> {
+    return request(`/v1/companies/${companyId}/projects/${projectId}/archive`, {
+      method: 'POST',
+    });
+  },
+
+  async getStats(companyId: string, projectId: string): Promise<ProjectStats> {
+    return request(`/v1/companies/${companyId}/projects/${projectId}/stats`);
   },
 };
 
@@ -291,6 +310,32 @@ export const filesApi = {
       method: 'DELETE',
     });
   },
+
+  async download(companyId: string, projectId: string, fileId: string, filename: string): Promise<void> {
+    const headers: Record<string, string> = {};
+    if (config.apiKey) {
+      headers['x-api-key'] = config.apiKey;
+    }
+
+    const response = await fetch(
+      `${config.baseUrl}/v1/companies/${companyId}/projects/${projectId}/files/${fileId}/download`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error('Download failed');
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
 };
 
 // ============================================================================
@@ -305,6 +350,125 @@ export const searchApi = {
     });
   },
 };
+
+// ============================================================================
+// Chat API
+// ============================================================================
+
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface ChatRequest {
+  query: string;
+  projectId?: string;
+  history?: ChatMessage[];
+  limit?: number;
+}
+
+export interface ChatResponse {
+  response: string;
+  sources: Array<{
+    content: string;
+    score: number;
+    fileName?: string;
+    projectName?: string;
+    chunkIndex?: number;
+  }>;
+}
+
+export const chatApi = {
+  async chat(companyId: string, request: ChatRequest): Promise<ChatResponse> {
+    return requestFn(`/v1/companies/${companyId}/chat`, {
+      method: 'POST',
+      body: request,
+      timeout: 120000, // 2 minutes for chat
+    });
+  },
+
+  streamChat(
+    companyId: string,
+    request: ChatRequest,
+    onChunk: (chunk: string) => void,
+    onComplete: (sources: ChatResponse['sources']) => void,
+    onError: (error: Error) => void
+  ): AbortController {
+    const controller = new AbortController();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (config.apiKey) {
+      headers['x-api-key'] = config.apiKey;
+    }
+
+    fetch(`${config.baseUrl}/v1/companies/${companyId}/chat/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error('No response body');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let sources: ChatResponse['sources'] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                onComplete(sources);
+                return;
+              }
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.content) {
+                  onChunk(parsed.content);
+                }
+                if (parsed.sources) {
+                  sources = parsed.sources;
+                }
+              } catch {
+                // Ignore parse errors for partial data
+              }
+            }
+          }
+        }
+
+        onComplete(sources);
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          onError(error);
+        }
+      });
+
+    return controller;
+  },
+};
+
+// Helper to use in chatApi (avoid naming conflict with 'request')
+const requestFn = request;
 
 // ============================================================================
 // Jobs API
@@ -399,6 +563,7 @@ export const api = {
   projects: projectsApi,
   files: filesApi,
   search: searchApi,
+  chat: chatApi,
   jobs: jobsApi,
   users: usersApi,
   vectors: vectorsApi,

@@ -80,7 +80,6 @@ export function DashboardPage() {
 
   const projects = projectsData?.projects || [];
   const totalFiles = projects.reduce((sum, p) => sum + (p.fileCount || 0), 0);
-  const totalVectors = projects.reduce((sum, p) => sum + (p.vectorCount || 0), 0);
   
   // Use fresh stats if available, fallback to stored company data
   const storageUsed = statsData?.storageUsed ?? company?.storageUsed ?? 0;

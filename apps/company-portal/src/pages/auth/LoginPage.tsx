@@ -132,7 +132,7 @@ export function LoginPage() {
 
       toast.success('Welcome to RAG Portal!');
       navigate('/dashboard');
-    } catch (error) {
+    } catch {
       toast.error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);

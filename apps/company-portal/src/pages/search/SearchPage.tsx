@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   FileText,
@@ -8,6 +9,9 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  FolderOpen,
+  ExternalLink,
+  Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -16,26 +20,67 @@ import {
   CardHeader,
   CardTitle,
   Button,
-  Input,
   EmptyState,
   Badge,
 } from '@rag/ui';
 import { Textarea } from '@rag/ui';
-import { searchApi } from '@rag/api-client';
+import { searchApi, projectsApi } from '@rag/api-client';
 import type { SearchResult, SearchResponse } from '@rag/types';
 import { truncate } from '@rag/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
 
+const MAX_RECENT_SEARCHES = 5;
+
 export function SearchPage() {
+  const navigate = useNavigate();
   const { companyId } = useAuthStore();
   const { incrementSearchCount, addActivity } = useAppStore();
 
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(10);
   const [useRerank, setUseRerank] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [expandedResult, setExpandedResult] = useState<string | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('recentSearches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Fetch projects for filter
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects', companyId],
+    queryFn: () => projectsApi.list(companyId!),
+    enabled: !!companyId,
+  });
+
+  const projects = projectsData?.projects || [];
+  const selectedProject = projects.find((p) => p._id === selectedProjectId);
+
+  // Save recent search
+  const saveRecentSearch = (searchQuery: string) => {
+    const updated = [searchQuery, ...recentSearches.filter((s) => s !== searchQuery)].slice(
+      0,
+      MAX_RECENT_SEARCHES
+    );
+    setRecentSearches(updated);
+    try {
+      localStorage.setItem('recentSearches', JSON.stringify(updated));
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('recentSearches');
+    toast.success('Search history cleared');
+  };
 
   // Search mutation
   const searchMutation = useMutation({
@@ -44,12 +89,14 @@ export function SearchPage() {
         query,
         limit,
         rerank: useRerank,
+        projectId: selectedProjectId || undefined,
       }),
     onSuccess: (response: SearchResponse) => {
       setSearchResults(response.results);
       incrementSearchCount();
+      saveRecentSearch(query.trim());
       addActivity({
-        text: `Searched: "${truncate(query, 50)}"`,
+        text: `Searched: "${truncate(query, 50)}"${selectedProject ? ` in ${selectedProject.name}` : ''}`,
         type: 'search',
       });
     },
@@ -146,7 +193,24 @@ export function SearchPage() {
             />
 
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Project Filter */}
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4 text-gray-400" />
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm bg-white"
+                  >
+                    <option value="">All Projects</option>
+                    {projects.map((project) => (
+                      <option key={project._id} value={project._id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-600">Results:</label>
                   <select
@@ -186,6 +250,46 @@ export function SearchPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Recent Searches */}
+      {recentSearches.length > 0 && searchResults === null && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <div className="flex items-center gap-2 text-gray-600">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm font-medium">Recent Searches</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearRecentSearches}
+              className="text-xs"
+            >
+              Clear
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-2">
+              {recentSearches.map((search, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setQuery(search);
+                    // Auto-search
+                    setTimeout(() => {
+                      searchMutation.mutate();
+                    }, 100);
+                  }}
+                  className="group flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                >
+                  <Search className="w-3 h-3" />
+                  {truncate(search, 40)}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search Results */}
       {searchResults !== null && (
@@ -263,6 +367,17 @@ export function SearchPage() {
                                     ? ` of ${result.payload.totalChunks}`
                                     : ''}
                                 </span>
+                              )}
+                              {result.payload?.projectId && (
+                                <button
+                                  onClick={() =>
+                                    navigate(`/projects/${result.payload?.projectId}`)
+                                  }
+                                  className="flex items-center gap-1 text-blue-600 hover:underline"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  View Project
+                                </button>
                               )}
                             </div>
                           </div>

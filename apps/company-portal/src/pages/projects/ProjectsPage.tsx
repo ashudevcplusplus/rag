@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen, Search, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { Plus, FolderOpen, Search, MoreVertical, Trash2, Edit, Archive, RotateCcw, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   Card,
@@ -16,9 +16,20 @@ import {
 import { Textarea } from '@rag/ui';
 import { projectsApi } from '@rag/api-client';
 import { formatRelativeTime, slugify } from '@rag/utils';
-import type { Project, CreateProjectDTO } from '@rag/types';
+import type { Project, CreateProjectDTO, UpdateProjectDTO } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
+
+const PROJECT_COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // green
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+];
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -27,7 +38,9 @@ export function ProjectsPage() {
   const { addActivity } = useAppStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'ARCHIVED'>('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -36,6 +49,12 @@ export function ProjectsPage() {
     name: '',
     slug: '',
     description: '',
+  });
+
+  const [editFormData, setEditFormData] = useState<UpdateProjectDTO & { color?: string }>({
+    name: '',
+    description: '',
+    color: '',
   });
 
   // Fetch projects
@@ -63,6 +82,45 @@ export function ProjectsPage() {
     },
   });
 
+  // Update project mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: UpdateProjectDTO }) =>
+      projectsApi.update(companyId!, projectId, data),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setIsEditModalOpen(false);
+      setSelectedProject(null);
+      addActivity({ text: `Updated project: ${response.project.name}`, type: 'project' });
+      toast.success('Project updated successfully!');
+    },
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to update project';
+      toast.error(errorMessage);
+      console.error('Update project error:', error);
+    },
+  });
+
+  // Archive project mutation
+  const archiveMutation = useMutation({
+    mutationFn: (projectId: string) => projectsApi.archive(companyId!, projectId),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      const isArchived = response.project.status === 'ARCHIVED';
+      addActivity({
+        text: `${isArchived ? 'Archived' : 'Restored'} project: ${response.project.name}`,
+        type: 'project',
+      });
+      toast.success(`Project ${isArchived ? 'archived' : 'restored'} successfully!`);
+    },
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to archive project';
+      toast.error(errorMessage);
+      console.error('Archive project error:', error);
+    },
+  });
+
   // Delete project mutation
   const deleteMutation = useMutation({
     mutationFn: (projectId: string) => projectsApi.delete(companyId!, projectId),
@@ -82,11 +140,17 @@ export function ProjectsPage() {
   });
 
   const projects = data?.projects || [];
-  const filteredProjects = projects.filter(
-    (p) =>
+  const filteredProjects = projects.filter((p) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const activeCount = projects.filter((p) => p.status === 'ACTIVE').length;
+  const archivedCount = projects.filter((p) => p.status === 'ARCHIVED').length;
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +185,30 @@ export function ProjectsPage() {
     }
   };
 
+  const handleEditProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedProject && editFormData.name?.trim()) {
+      updateMutation.mutate({
+        projectId: selectedProject._id,
+        data: {
+          name: editFormData.name.trim(),
+          description: editFormData.description?.trim(),
+          color: editFormData.color,
+        },
+      });
+    }
+  };
+
+  const openEditModal = (project: Project) => {
+    setSelectedProject(project);
+    setEditFormData({
+      name: project.name,
+      description: project.description || '',
+      color: project.color || PROJECT_COLORS[0],
+    });
+    setIsEditModalOpen(true);
+  };
+
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     setFormData((prev) => ({
@@ -148,14 +236,52 @@ export function ProjectsPage() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="max-w-md">
-        <Input
-          placeholder="Search projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          leftIcon={<Search className="w-5 h-5" />}
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="max-w-md flex-1">
+          <Input
+            placeholder="Search projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            leftIcon={<Search className="w-5 h-5" />}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-400" />
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                statusFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              All ({projects.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('ACTIVE')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-300 ${
+                statusFilter === 'ACTIVE'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Active ({activeCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter('ARCHIVED')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors border-l border-gray-300 ${
+                statusFilter === 'ARCHIVED'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Archived ({archivedCount})
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Projects Grid */}
@@ -229,7 +355,7 @@ export function ProjectsPage() {
                           className="fixed inset-0 z-10"
                           onClick={() => setActiveMenu(null)}
                         />
-                        <div className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                        <div className="absolute right-0 top-8 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -238,9 +364,41 @@ export function ProjectsPage() {
                             }}
                             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >
-                            <Edit className="w-4 h-4" />
+                            <FolderOpen className="w-4 h-4" />
                             View Details
                           </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(project);
+                              setActiveMenu(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Edit Project
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              archiveMutation.mutate(project._id);
+                              setActiveMenu(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            {project.status === 'ARCHIVED' ? (
+                              <>
+                                <RotateCcw className="w-4 h-4" />
+                                Restore Project
+                              </>
+                            ) : (
+                              <>
+                                <Archive className="w-4 h-4" />
+                                Archive Project
+                              </>
+                            )}
+                          </button>
+                          <div className="border-t border-gray-100 my-1" />
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -347,6 +505,72 @@ export function ProjectsPage() {
             </Button>
             <Button type="submit" isLoading={createMutation.isPending}>
               Create Project
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Project"
+        description="Update project details"
+      >
+        <form onSubmit={handleEditProject} className="space-y-4">
+          <Input
+            label="Project Name"
+            value={editFormData.name}
+            onChange={(e) =>
+              setEditFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            placeholder="My Project"
+            required
+          />
+
+          <Textarea
+            label="Description"
+            value={editFormData.description}
+            onChange={(e) =>
+              setEditFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
+            placeholder="Project description..."
+            rows={3}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Color
+            </label>
+            <div className="flex gap-2">
+              {PROJECT_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() =>
+                    setEditFormData((prev) => ({ ...prev, color }))
+                  }
+                  className={`w-8 h-8 rounded-full transition-all ${
+                    editFormData.color === color
+                      ? 'ring-2 ring-offset-2 ring-blue-500 scale-110'
+                      : 'hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={updateMutation.isPending}>
+              Save Changes
             </Button>
           </ModalFooter>
         </form>

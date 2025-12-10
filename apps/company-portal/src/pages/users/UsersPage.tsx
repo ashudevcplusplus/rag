@@ -36,6 +36,7 @@ export function UsersPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -45,6 +46,12 @@ export function UsersPage() {
     firstName: '',
     lastName: '',
     password: '',
+    role: UserRole.MEMBER,
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    firstName: '',
+    lastName: '',
     role: UserRole.MEMBER,
   });
 
@@ -77,6 +84,45 @@ export function UsersPage() {
       const errorMessage = apiError?.error || apiError?.message || 'Failed to create user';
       toast.error(errorMessage);
       console.error('Create user error:', error);
+    },
+  });
+
+  // Update user mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: Partial<User> }) =>
+      usersApi.update(companyId!, userId, data),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsEditModalOpen(false);
+      setSelectedUser(null);
+      addActivity({ text: `Updated user: ${response.user.email}`, type: 'user' });
+      toast.success('User updated successfully!');
+    },
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to update user';
+      toast.error(errorMessage);
+      console.error('Update user error:', error);
+    },
+  });
+
+  // Toggle user active status mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
+      usersApi.setActive(companyId!, userId, isActive),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      addActivity({
+        text: `${response.user.isActive ? 'Activated' : 'Deactivated'} user: ${response.user.email}`,
+        type: 'user',
+      });
+      toast.success(`User ${response.user.isActive ? 'activated' : 'deactivated'} successfully!`);
+    },
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to update user status';
+      toast.error(errorMessage);
+      console.error('Toggle active error:', error);
     },
   });
 
@@ -119,6 +165,30 @@ export function UsersPage() {
     if (selectedUser) {
       deleteMutation.mutate(selectedUser._id);
     }
+  };
+
+  const handleEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedUser) {
+      updateMutation.mutate({
+        userId: selectedUser._id,
+        data: {
+          firstName: editFormData.firstName,
+          lastName: editFormData.lastName,
+          role: editFormData.role,
+        },
+      });
+    }
+  };
+
+  const openEditModal = (user: User) => {
+    setSelectedUser(user);
+    setEditFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      role: user.role,
+    });
+    setIsEditModalOpen(true);
   };
 
   const canManageUsers =
@@ -242,18 +312,31 @@ export function UsersPage() {
                               className="fixed inset-0 z-10"
                               onClick={() => setActiveMenu(null)}
                             />
-                            <div className="absolute right-0 top-8 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                            <div className="absolute right-0 top-8 w-44 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                               <button
                                 onClick={() => {
-                                  // Edit user functionality
+                                  openEditModal(user);
                                   setActiveMenu(null);
-                                  toast.success('Edit user coming soon');
                                 }}
                                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                               >
                                 <Edit className="w-4 h-4" />
-                                Edit
+                                Edit User
                               </button>
+                              <button
+                                onClick={() => {
+                                  toggleActiveMutation.mutate({
+                                    userId: user._id,
+                                    isActive: !user.isActive,
+                                  });
+                                  setActiveMenu(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                <Shield className="w-4 h-4" />
+                                {user.isActive ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <div className="border-t border-gray-100 my-1" />
                               <button
                                 onClick={() => {
                                   setSelectedUser(user);
@@ -358,6 +441,78 @@ export function UsersPage() {
             </Button>
             <Button type="submit" isLoading={createMutation.isPending}>
               Add User
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit User"
+        description="Update user details and permissions"
+      >
+        <form onSubmit={handleEditUser} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="First Name"
+              value={editFormData.firstName}
+              onChange={(e) =>
+                setEditFormData((prev) => ({ ...prev, firstName: e.target.value }))
+              }
+              placeholder="John"
+              required
+            />
+            <Input
+              label="Last Name"
+              value={editFormData.lastName}
+              onChange={(e) =>
+                setEditFormData((prev) => ({ ...prev, lastName: e.target.value }))
+              }
+              placeholder="Doe"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Role
+            </label>
+            <select
+              value={editFormData.role}
+              onChange={(e) =>
+                setEditFormData((prev) => ({
+                  ...prev,
+                  role: e.target.value as UserRole,
+                }))
+              }
+              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              disabled={selectedUser?.role === 'OWNER'}
+            >
+              <option value="MEMBER">Member</option>
+              <option value="ADMIN">Admin</option>
+              <option value="VIEWER">Viewer</option>
+              {selectedUser?.role === 'OWNER' && (
+                <option value="OWNER">Owner</option>
+              )}
+            </select>
+            {selectedUser?.role === 'OWNER' && (
+              <p className="text-xs text-gray-500 mt-1">
+                Owner role cannot be changed
+              </p>
+            )}
+          </div>
+
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={updateMutation.isPending}>
+              Save Changes
             </Button>
           </ModalFooter>
         </form>
