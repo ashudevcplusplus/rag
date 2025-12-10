@@ -250,6 +250,11 @@ export const getFilePreview = asyncHandler(async (req: Request, res: Response): 
   const { fileId } = fileIdSchema.parse(req.params);
   const companyId = getCompanyId(req);
 
+  if (!companyId) {
+    sendBadRequestResponse(res, 'Company ID is required');
+    return;
+  }
+
   // Verify project exists
   const project = await projectRepository.findById(projectId);
   if (!project) {
@@ -313,6 +318,11 @@ export const deleteFile = asyncHandler(async (req: Request, res: Response): Prom
   const { projectId } = projectIdSchema.parse(req.params);
   const { fileId } = fileIdSchema.parse(req.params);
   const companyId = getCompanyId(req);
+
+  if (!companyId) {
+    sendBadRequestResponse(res, 'Company ID is required');
+    return;
+  }
 
   // Verify project exists
   const project = await projectRepository.findById(projectId);

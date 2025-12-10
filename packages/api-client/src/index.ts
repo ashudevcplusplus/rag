@@ -236,9 +236,10 @@ export const projectsApi = {
     });
   },
 
-  async archive(companyId: string, projectId: string): Promise<{ project: Project }> {
+  async archive(companyId: string, projectId: string, archive: boolean): Promise<{ message: string }> {
     return request(`/v1/companies/${companyId}/projects/${projectId}/archive`, {
       method: 'POST',
+      body: { archive },
     });
   },
 
@@ -278,7 +279,7 @@ export const filesApi = {
     return request(`/v1/companies/${companyId}/projects/${projectId}/files${query ? `?${query}` : ''}`);
   },
 
-  async get(companyId: string, projectId: string, fileId: string): Promise<{ file: FileMetadata }> {
+  async get(companyId: string, projectId: string, fileId: string): Promise<FilePreviewResponse> {
     return request(`/v1/companies/${companyId}/projects/${projectId}/files/${fileId}`);
   },
 

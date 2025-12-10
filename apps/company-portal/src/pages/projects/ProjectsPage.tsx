@@ -103,15 +103,15 @@ export function ProjectsPage() {
 
   // Archive project mutation
   const archiveMutation = useMutation({
-    mutationFn: (projectId: string) => projectsApi.archive(companyId!, projectId),
-    onSuccess: (response) => {
+    mutationFn: ({ projectId, archive }: { projectId: string; archive: boolean }) =>
+      projectsApi.archive(companyId!, projectId, archive),
+    onSuccess: (response, { archive }) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      const isArchived = response.project.status === 'ARCHIVED';
       addActivity({
-        text: `${isArchived ? 'Archived' : 'Restored'} project: ${response.project.name}`,
+        text: `${archive ? 'Archived' : 'Restored'} project`,
         type: 'project',
       });
-      toast.success(`Project ${isArchived ? 'archived' : 'restored'} successfully!`);
+      toast.success(response.message);
     },
     onError: (error: unknown) => {
       const apiError = error as { error?: string; message?: string };
@@ -381,7 +381,11 @@ export function ProjectsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              archiveMutation.mutate(project._id);
+                              const shouldArchive = project.status !== 'ARCHIVED';
+                              archiveMutation.mutate({
+                                projectId: project._id,
+                                archive: shouldArchive,
+                              });
                               setActiveMenu(null);
                             }}
                             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
