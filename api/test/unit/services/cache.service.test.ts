@@ -40,7 +40,12 @@ function createTestScanStream(keys: string[], emitData: boolean = true): MockSca
 
 describe('CacheService', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('generateKey', () => {
@@ -156,13 +161,13 @@ describe('CacheService', () => {
 
       await CacheService.invalidateCompany('company-123');
 
-      // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await jest.runAllTimersAsync();
 
       expect(mockRedis.scanStream).toHaveBeenCalledWith({
         match: 'rag_cache:company-123:*',
         count: 100,
       });
+      expect(mockRedis.del).toHaveBeenCalledWith('company-123:key1', 'company-123:key2');
     });
 
     it('should handle no keys found', async () => {
@@ -172,7 +177,7 @@ describe('CacheService', () => {
 
       await CacheService.invalidateCompany('company-123');
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await jest.runAllTimersAsync();
       expect(mockRedis.del).not.toHaveBeenCalled();
     });
 
@@ -257,7 +262,7 @@ describe('CacheService', () => {
 
       const resultPromise = CacheService.clearAll();
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await jest.runAllTimersAsync();
       const result = await resultPromise;
 
       expect(result).toBe(2);
@@ -265,13 +270,16 @@ describe('CacheService', () => {
         match: 'rag_cache:*',
         count: 100,
       });
+      expect(mockRedis.del).toHaveBeenCalledWith('key1', 'key2');
     });
 
     it('should return 0 when no keys found', async () => {
       const mockStream = createTestScanStream([], false);
       mockRedis.scanStream.mockReturnValue(mockStream);
 
-      const result = await CacheService.clearAll();
+      const resultPromise = CacheService.clearAll();
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
 
       expect(result).toBe(0);
     });
@@ -288,7 +296,7 @@ describe('CacheService', () => {
 
       const resultPromise = CacheService.clearCompany('company-123');
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await jest.runAllTimersAsync();
       const result = await resultPromise;
 
       expect(result).toBe(2);
@@ -296,13 +304,16 @@ describe('CacheService', () => {
         match: 'rag_cache:company-123:*',
         count: 100,
       });
+      expect(mockRedis.del).toHaveBeenCalledWith('company-123:key1', 'company-123:key2');
     });
 
     it('should return 0 when no keys found for company', async () => {
       const mockStream = createTestScanStream([], false);
       mockRedis.scanStream.mockReturnValue(mockStream);
 
-      const result = await CacheService.clearCompany('empty-company');
+      const resultPromise = CacheService.clearCompany('empty-company');
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
 
       expect(result).toBe(0);
     });

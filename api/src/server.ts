@@ -5,9 +5,6 @@ import compression from 'compression';
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import worker from './consumers/indexing';
-import consistencyCheckWorker from './consumers/consistency-check';
-import { closeAllWorkers } from './consumers/async-tasks';
 import {
   indexingQueue,
   consistencyCheckQueue,
@@ -19,68 +16,83 @@ import { errorHandler } from './middleware/error.middleware';
 import { generalLimiter } from './middleware/rate-limiter.middleware';
 import { database } from './config/database';
 import routes from './routes';
+import type { Worker } from 'bullmq';
 
-const app = express();
+export function createApp(): express.Express {
+  const app = express();
 
-// Setup Bull Board for Queue Visualization
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath('/admin/queues');
+  // Setup Bull Board for Queue Visualization
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath('/admin/queues');
 
-createBullBoard({
-  queues: [
-    new BullMQAdapter(indexingQueue),
-    new BullMQAdapter(consistencyCheckQueue),
-    ...allAsyncTaskQueues.map((queue) => new BullMQAdapter(queue)),
-  ],
-  serverAdapter: serverAdapter,
-});
-
-// Security middleware
-app.use(helmet()); // Set security headers
-app.use(
-  cors({
-    origin: true, // Allow all origins (or specify: ['http://localhost:8080'])
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
-  })
-); // Enable CORS
-app.use(compression()); // Compress responses
-
-// General rate limiting
-app.use(generalLimiter);
-
-// Middleware
-app.use(express.json());
-
-// Request logging middleware
-app.use((req, _res, next) => {
-  logger.info('Incoming request', {
-    method: req.method,
-    path: req.path,
-    ip: req.ip,
+  createBullBoard({
+    queues: [
+      new BullMQAdapter(indexingQueue),
+      new BullMQAdapter(consistencyCheckQueue),
+      ...allAsyncTaskQueues.map((queue) => new BullMQAdapter(queue)),
+    ],
+    serverAdapter: serverAdapter,
   });
-  next();
-});
 
-// Bull Board UI (no auth required for easier access during development)
-// In production, you should protect this with authentication
-app.use('/admin/queues', serverAdapter.getRouter());
+  // Security middleware
+  app.use(helmet()); // Set security headers
+  app.use(
+    cors({
+      origin: true, // Allow all origins (or specify: ['http://localhost:8080'])
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+    })
+  ); // Enable CORS
+  app.use(compression()); // Compress responses
 
-// API Routes
-app.use(routes);
+  // General rate limiting
+  app.use(generalLimiter);
 
-// 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
+  // Middleware
+  app.use(express.json());
 
-// Error handling middleware (must be last)
-app.use(errorHandler);
+  // Request logging middleware
+  app.use((req, _res, next) => {
+    logger.info('Incoming request', {
+      method: req.method,
+      path: req.path,
+      ip: req.ip,
+    });
+    next();
+  });
+
+  // Bull Board UI (no auth required for easier access during development)
+  // In production, you should protect this with authentication
+  app.use('/admin/queues', serverAdapter.getRouter());
+
+  // API Routes
+  app.use(routes);
+
+  // 404 handler
+  app.use((_req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+  });
+
+  // Error handling middleware (must be last)
+  app.use(errorHandler);
+
+  return app;
+}
+
+const app = createApp();
 
 // Initialize MongoDB connection before starting server
 async function startServer(): Promise<void> {
   try {
+    // Lazy-load workers so importing this module in tests does not
+    // initialize background processing.
+    const indexingWorker: Worker = (await import('./consumers/indexing')).default;
+    const consistencyWorker: Worker = (await import('./consumers/consistency-check')).default;
+    const { closeAllWorkers } = (await import('./consumers/async-tasks')) as {
+      closeAllWorkers: () => Promise<void>;
+    };
+
     // Connect to MongoDB
     await database.connect();
     logger.info('MongoDB connection established');
@@ -113,8 +125,8 @@ async function startServer(): Promise<void> {
       try {
         // 2. Close BullMQ workers (waits for current jobs to finish)
         logger.info('Closing BullMQ workers...');
-        await worker.close();
-        await consistencyCheckWorker.close();
+        await indexingWorker.close();
+        await consistencyWorker.close();
         await closeAllWorkers();
         logger.info('Workers closed successfully');
 
@@ -163,6 +175,8 @@ async function startServer(): Promise<void> {
 }
 
 // Start the server
-void startServer();
+if (require.main === module) {
+  void startServer();
+}
 
 export default app;
