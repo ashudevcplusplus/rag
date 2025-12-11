@@ -1,5 +1,6 @@
 import { AnalyticsModel, IAnalytics } from '../models/analytics.model';
 import { logger } from '../utils/logger';
+import { Types } from 'mongoose';
 
 export interface CreateAnalyticsDTO {
   companyId: string;
@@ -32,7 +33,7 @@ class AnalyticsRepository {
   async create(data: CreateAnalyticsDTO): Promise<IAnalytics> {
     try {
       const analytics = await AnalyticsModel.create({
-        companyId: data.companyId,
+        companyId: new Types.ObjectId(data.companyId),
         eventType: data.eventType,
         metadata: data.metadata,
         ipAddress: data.ipAddress,
@@ -52,7 +53,7 @@ class AnalyticsRepository {
   async query(params: AnalyticsQueryDTO): Promise<IAnalytics[]> {
     try {
       const query: Record<string, unknown> = {
-        companyId: params.companyId,
+        companyId: new Types.ObjectId(params.companyId),
       };
 
       if (params.eventType) {
@@ -87,7 +88,7 @@ class AnalyticsRepository {
   async aggregate(params: AnalyticsAggregateDTO): Promise<unknown[]> {
     try {
       const matchStage: Record<string, unknown> = {
-        companyId: params.companyId,
+        companyId: new Types.ObjectId(params.companyId),
       };
 
       if (params.eventType) {
@@ -157,7 +158,7 @@ class AnalyticsRepository {
    */
   async getEventCount(companyId: string, eventType?: string): Promise<number> {
     try {
-      const query: Record<string, string> = { companyId };
+      const query: Record<string, unknown> = { companyId: new Types.ObjectId(companyId) };
       if (eventType) {
         query.eventType = eventType;
       }
@@ -173,7 +174,9 @@ class AnalyticsRepository {
    */
   async deleteByCompany(companyId: string): Promise<number> {
     try {
-      const result = await AnalyticsModel.deleteMany({ companyId });
+      const result = await AnalyticsModel.deleteMany({
+        companyId: new Types.ObjectId(companyId),
+      });
       return result.deletedCount || 0;
     } catch (error) {
       logger.error('Failed to delete analytics', { error, companyId });

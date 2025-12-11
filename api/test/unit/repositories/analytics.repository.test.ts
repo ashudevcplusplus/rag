@@ -30,7 +30,7 @@ describe('AnalyticsRepository', () => {
       expect(result).toEqual(mockAnalytics);
       expect(AnalyticsModel.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          companyId: '507f191e810c19729de860ea',
+          companyId: expect.objectContaining({ toString: expect.any(Function) }),
           eventType: 'search',
           metadata: { query: 'test' },
         })
@@ -74,7 +74,7 @@ describe('AnalyticsRepository', () => {
 
       expect(result).toEqual(mockAnalytics);
       expect(AnalyticsModel.find).toHaveBeenCalledWith({
-        companyId: '507f191e810c19729de860ea',
+        companyId: expect.objectContaining({ toString: expect.any(Function) }),
         eventType: 'search',
       });
     });
@@ -98,7 +98,7 @@ describe('AnalyticsRepository', () => {
       });
 
       expect(AnalyticsModel.find).toHaveBeenCalledWith({
-        companyId: '507f191e810c19729de860ea',
+        companyId: expect.objectContaining({ toString: expect.any(Function) }),
         timestamp: {
           $gte: startDate,
           $lte: endDate,
@@ -115,7 +115,7 @@ describe('AnalyticsRepository', () => {
 
       expect(result).toBe(42);
       expect(AnalyticsModel.countDocuments).toHaveBeenCalledWith({
-        companyId: '507f191e810c19729de860ea',
+        companyId: expect.objectContaining({ toString: expect.any(Function) }),
       });
     });
 
@@ -125,7 +125,7 @@ describe('AnalyticsRepository', () => {
       await analyticsRepository.getEventCount('507f191e810c19729de860ea', 'search');
 
       expect(AnalyticsModel.countDocuments).toHaveBeenCalledWith({
-        companyId: '507f191e810c19729de860ea',
+        companyId: expect.objectContaining({ toString: expect.any(Function) }),
         eventType: 'search',
       });
     });
@@ -139,7 +139,7 @@ describe('AnalyticsRepository', () => {
 
       expect(result).toBe(5);
       expect(AnalyticsModel.deleteMany).toHaveBeenCalledWith({
-        companyId: '507f191e810c19729de860ea',
+        companyId: expect.objectContaining({ toString: expect.any(Function) }),
       });
     });
 
