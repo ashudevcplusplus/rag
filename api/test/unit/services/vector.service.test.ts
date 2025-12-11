@@ -660,4 +660,359 @@ describe('VectorService', () => {
       });
     });
   });
+
+  describe('countByFileIds', () => {
+    it('should count vectors for multiple file IDs', async () => {
+      mockQdrant.count.mockResolvedValueOnce({ count: 10 });
+      mockQdrant.count.mockResolvedValueOnce({ count: 20 });
+      mockQdrant.count.mockResolvedValueOnce({ count: 30 });
+
+      const result = await VectorService.countByFileIds('test-collection', [
+        'file-1',
+        'file-2',
+        'file-3',
+      ]);
+
+      expect(result.get('file-1')).toBe(10);
+      expect(result.get('file-2')).toBe(20);
+      expect(result.get('file-3')).toBe(30);
+    });
+
+    it('should handle empty file IDs array', async () => {
+      const result = await VectorService.countByFileIds('test-collection', []);
+
+      expect(result.size).toBe(0);
+    });
+
+    it('should process in batches for large file ID arrays', async () => {
+      // Create more than 50 file IDs to test batching
+      const fileIds = Array.from({ length: 60 }, (_, i) => `file-${i}`);
+      mockQdrant.count.mockResolvedValue({ count: 5 });
+
+      const result = await VectorService.countByFileIds('test-collection', fileIds);
+
+      expect(result.size).toBe(60);
+      expect(mockQdrant.count).toHaveBeenCalledTimes(60);
+    });
+  });
+
+  describe('getUniqueFileIds', () => {
+    it('should get unique file IDs from collection', async () => {
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [
+          { id: '1', payload: { fileId: 'file-1' } },
+          { id: '2', payload: { fileId: 'file-2' } },
+          { id: '3', payload: { fileId: 'file-1' } }, // Duplicate
+        ],
+        next_page_offset: 'offset-1',
+      });
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [{ id: '4', payload: { fileId: 'file-3' } }],
+        next_page_offset: undefined,
+      });
+
+      const result = await VectorService.getUniqueFileIds('test-collection');
+
+      expect(result.size).toBe(3);
+      expect(result.has('file-1')).toBe(true);
+      expect(result.has('file-2')).toBe(true);
+      expect(result.has('file-3')).toBe(true);
+    });
+
+    it('should return empty set for non-existent collection', async () => {
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.scroll.mockRejectedValue(notFoundError);
+
+      const result = await VectorService.getUniqueFileIds('non-existent');
+
+      expect(result.size).toBe(0);
+    });
+
+    it('should throw on other errors', async () => {
+      const serverError = createMockHttpError('Server error', 500);
+      mockQdrant.scroll.mockRejectedValue(serverError);
+
+      await expect(VectorService.getUniqueFileIds('test-collection')).rejects.toThrow(
+        'Server error'
+      );
+    });
+
+    it('should handle points without fileId payload', async () => {
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [
+          { id: '1', payload: { fileId: 'file-1' } },
+          { id: '2', payload: {} }, // No fileId
+          { id: '3', payload: null }, // Null payload
+        ],
+        next_page_offset: undefined,
+      });
+
+      const result = await VectorService.getUniqueFileIds('test-collection');
+
+      expect(result.size).toBe(1);
+      expect(result.has('file-1')).toBe(true);
+    });
+
+    it('should handle empty collection', async () => {
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [],
+        next_page_offset: undefined,
+      });
+
+      const result = await VectorService.getUniqueFileIds('empty-collection');
+
+      expect(result.size).toBe(0);
+    });
+  });
+
+  describe('getAllPoints generator', () => {
+    it('should yield batches of points', async () => {
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [
+          {
+            id: '1',
+            payload: { fileId: 'file-1', companyId: 'company-1', chunkIndex: 0 },
+          },
+        ],
+        next_page_offset: 'offset-1',
+      });
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [
+          {
+            id: '2',
+            payload: { fileId: 'file-2', companyId: 'company-1', chunkIndex: 0 },
+          },
+        ],
+        next_page_offset: undefined,
+      });
+
+      const batches = [];
+      for await (const batch of VectorService.getAllPoints('test-collection')) {
+        batches.push(batch);
+      }
+
+      expect(batches).toHaveLength(2);
+      expect(batches[0]).toHaveLength(1);
+      expect(batches[1]).toHaveLength(1);
+    });
+
+    it('should handle non-existent collection gracefully', async () => {
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.scroll.mockRejectedValue(notFoundError);
+
+      const batches = [];
+      for await (const batch of VectorService.getAllPoints('non-existent')) {
+        batches.push(batch);
+      }
+
+      expect(batches).toHaveLength(0);
+    });
+
+    it('should apply filter when provided', async () => {
+      mockQdrant.scroll.mockResolvedValueOnce({
+        points: [],
+        next_page_offset: undefined,
+      });
+
+      const filter = { must: [{ key: 'companyId', match: { value: 'company-123' } }] };
+
+      const batches = [];
+      for await (const batch of VectorService.getAllPoints('test-collection', filter)) {
+        batches.push(batch);
+      }
+
+      expect(mockQdrant.scroll).toHaveBeenCalledWith(
+        'test-collection',
+        expect.objectContaining({ filter })
+      );
+    });
+
+    it('should throw on non-404 errors', async () => {
+      const serverError = createMockHttpError('Server error', 500);
+      mockQdrant.scroll.mockRejectedValue(serverError);
+
+      const generator = VectorService.getAllPoints('test-collection');
+
+      await expect(generator.next()).rejects.toThrow('Server error');
+    });
+  });
+
+  describe('deleteByFileId - edge cases', () => {
+    it('should log warning if vectors still exist after deletion', async () => {
+      mockQdrant.delete.mockResolvedValue({ operation_id: 123 });
+      mockQdrant.scroll.mockResolvedValue({ points: [{ id: '1' }] });
+
+      await VectorService.deleteByFileId('test-collection', 'file-123');
+
+      // Test passes if no error is thrown
+    });
+
+    it('should handle scroll error gracefully after deletion', async () => {
+      mockQdrant.delete.mockResolvedValue({ operation_id: 123 });
+      mockQdrant.scroll.mockRejectedValue(new Error('Scroll failed'));
+
+      const result = await VectorService.deleteByFileId('test-collection', 'file-123');
+
+      // Should not throw, just log debug and return
+      expect(result).toBe(1);
+    });
+
+    it('should return 0 when no operation_id in response', async () => {
+      mockQdrant.delete.mockResolvedValue({});
+      mockQdrant.scroll.mockResolvedValue({ points: [] });
+
+      const result = await VectorService.deleteByFileId('test-collection', 'file-123');
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('deleteByProjectId - edge cases', () => {
+    it('should throw on delete error', async () => {
+      mockQdrant.delete.mockRejectedValue(new Error('Delete failed'));
+
+      await expect(
+        VectorService.deleteByProjectId('test-collection', 'project-123', ['file-1'])
+      ).rejects.toThrow('Delete failed');
+    });
+  });
+
+  describe('searchWithReranking', () => {
+    it('should perform hybrid search with reranking', async () => {
+      // Mock embeddings
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
+      });
+
+      // Mock initial search results
+      mockQdrant.search.mockResolvedValue([
+        { id: '1', score: 0.9, payload: { fileId: 'file-1', chunkIndex: 0, text_preview: 'doc1' } },
+        { id: '2', score: 0.8, payload: { fileId: 'file-2', chunkIndex: 0, text_preview: 'doc2' } },
+      ]);
+
+      // Mock embedding repository for full text
+      (embeddingRepository.findChunks as jest.Mock).mockResolvedValue([
+        { fileId: 'file-1', chunkIndex: 0, content: 'Full document 1 text' },
+        { fileId: 'file-2', chunkIndex: 0, content: 'Full document 2 text' },
+      ]);
+
+      // Mock rerank scores
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ scores: [0.95, 0.75] }),
+      });
+
+      const result = await VectorService.searchWithReranking(
+        'test-collection',
+        'test query',
+        2,
+        undefined,
+        20
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0].score).toBeGreaterThanOrEqual(0);
+      expect(result[0].score).toBeLessThanOrEqual(100);
+    });
+
+    it('should return empty array when no initial results', async () => {
+      // Mock embeddings
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
+      });
+
+      // Mock empty search results
+      mockQdrant.search.mockResolvedValue([]);
+
+      const result = await VectorService.searchWithReranking('test-collection', 'test query');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle rerank with identical scores', async () => {
+      // Mock embeddings
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
+      });
+
+      // Mock search results
+      mockQdrant.search.mockResolvedValue([
+        { id: '1', score: 0.9, payload: { fileId: 'file-1', chunkIndex: 0, text_preview: 'doc1' } },
+        { id: '2', score: 0.8, payload: { fileId: 'file-2', chunkIndex: 0, text_preview: 'doc2' } },
+      ]);
+
+      (embeddingRepository.findChunks as jest.Mock).mockResolvedValue([]);
+
+      // All same rerank scores
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ scores: [0.5, 0.5] }),
+      });
+
+      const result = await VectorService.searchWithReranking('test-collection', 'test query');
+
+      // All scores should be 50 when range is 0
+      expect(result[0].score).toBe(50);
+      expect(result[1].score).toBe(50);
+    });
+
+    it('should fall back to text_preview when full text fetch fails', async () => {
+      // Mock embeddings
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
+      });
+
+      // Mock search results
+      mockQdrant.search.mockResolvedValue([
+        {
+          id: '1',
+          score: 0.9,
+          payload: { fileId: 'file-1', chunkIndex: 0, text_preview: 'preview text' },
+        },
+      ]);
+
+      // Full text fetch fails
+      (embeddingRepository.findChunks as jest.Mock).mockRejectedValue(new Error('DB error'));
+
+      // Mock rerank
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ scores: [0.9] }),
+      });
+
+      const result = await VectorService.searchWithReranking('test-collection', 'test query');
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('ensureCollection - dimension mismatch', () => {
+    it('should throw error when collection dimensions do not match expected', async () => {
+      mockQdrant.getCollection.mockResolvedValue({
+        config: {
+          params: {
+            vectors: { size: 1536 }, // Different from expected 384 for inhouse
+          },
+        },
+      });
+
+      await expect(VectorService.ensureCollection('test-collection')).rejects.toThrow(
+        ExternalServiceError
+      );
+    });
+  });
+
+  describe('getCollectionInfo - edge cases', () => {
+    it('should return 0 points when points_count is undefined', async () => {
+      mockQdrant.getCollection.mockResolvedValue({});
+
+      const result = await VectorService.getCollectionInfo('test-collection');
+
+      expect(result).toEqual({ pointsCount: 0 });
+    });
+  });
 });

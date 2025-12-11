@@ -327,5 +327,468 @@ describe('FileMetadataRepository', () => {
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
     });
+
+    it('should list files with processingStatus filter', async () => {
+      const mockFiles = [
+        {
+          _id: { toString: () => 'file-1' },
+          processingStatus: ProcessingStatus.COMPLETED,
+        },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockFiles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      (FileMetadataModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(1);
+
+      const result = await fileMetadataRepository.list('project-123', 1, 10, {
+        processingStatus: ProcessingStatus.COMPLETED,
+      });
+
+      expect(result.files).toBeDefined();
+    });
+
+    it('should list files with mimetype filter', async () => {
+      const mockFiles = [
+        {
+          _id: { toString: () => 'file-1' },
+          mimetype: 'text/plain',
+        },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockFiles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      (FileMetadataModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(1);
+
+      const result = await fileMetadataRepository.list('project-123', 1, 10, {
+        mimetype: 'text/plain',
+      });
+
+      expect(result.files).toBeDefined();
+    });
+
+    it('should list files with tags filter', async () => {
+      const mockFiles = [
+        {
+          _id: { toString: () => 'file-1' },
+          tags: ['important'],
+        },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockFiles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      (FileMetadataModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(1);
+
+      const result = await fileMetadataRepository.list('project-123', 1, 10, {
+        tags: ['important'],
+      });
+
+      expect(result.files).toBeDefined();
+    });
+  });
+
+  describe('findByIds', () => {
+    it('should find files by multiple IDs', async () => {
+      const mockFiles = [
+        { _id: { toString: () => 'file-1' }, filename: 'test1.txt' },
+        { _id: { toString: () => 'file-2' }, filename: 'test2.txt' },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFiles),
+      });
+
+      const result = await fileMetadataRepository.findByIds(['file-1', 'file-2']);
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array for empty IDs array', async () => {
+      const result = await fileMetadataRepository.findByIds([]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findByHash', () => {
+    it('should find file by hash within project', async () => {
+      const mockFile = {
+        _id: { toString: () => 'file-123' },
+        hash: 'abc123',
+        projectId: { toString: () => 'project-123' },
+      };
+
+      (FileMetadataModel.findOne as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFile),
+      });
+
+      const result = await fileMetadataRepository.findByHash('abc123', 'project-123');
+
+      expect(result).toBeDefined();
+      expect(FileMetadataModel.findOne).toHaveBeenCalled();
+    });
+
+    it('should return null if file not found by hash', async () => {
+      (FileMetadataModel.findOne as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await fileMetadataRepository.findByHash('nonexistent', 'project-123');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findByProjectId', () => {
+    it('should find files by project ID', async () => {
+      const mockFiles = [
+        { _id: { toString: () => 'file-1' }, projectId: { toString: () => 'project-123' } },
+        { _id: { toString: () => 'file-2' }, projectId: { toString: () => 'project-123' } },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockFiles),
+        }),
+      });
+
+      const result = await fileMetadataRepository.findByProjectId('project-123');
+
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('findByUploadedBy', () => {
+    it('should find files by uploader ID', async () => {
+      const mockFiles = [{ _id: { toString: () => 'file-1' }, uploadedBy: 'user-123' }];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockFiles),
+        }),
+      });
+
+      const result = await fileMetadataRepository.findByUploadedBy('user-123');
+
+      expect(result).toHaveLength(1);
+      expect(FileMetadataModel.find).toHaveBeenCalledWith({
+        uploadedBy: 'user-123',
+        deletedAt: null,
+      });
+    });
+  });
+
+  describe('findByProcessingStatus', () => {
+    it('should find files by processing status', async () => {
+      const mockFiles = [
+        { _id: { toString: () => 'file-1' }, processingStatus: ProcessingStatus.PENDING },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockFiles),
+        }),
+      });
+
+      const result = await fileMetadataRepository.findByProcessingStatus(
+        'project-123',
+        ProcessingStatus.PENDING
+      );
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('countByProcessingStatus', () => {
+    it('should count files by processing status', async () => {
+      (FileMetadataModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(5);
+
+      const count = await fileMetadataRepository.countByProcessingStatus(
+        'project-123',
+        ProcessingStatus.COMPLETED
+      );
+
+      expect(count).toBe(5);
+    });
+  });
+
+  describe('update', () => {
+    it('should update file metadata', async () => {
+      const mockFile = {
+        _id: { toString: () => 'file-123' },
+        originalFilename: 'updated.txt',
+      };
+
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockFile),
+        }),
+      });
+
+      const result = await fileMetadataRepository.update('file-123', {
+        tags: ['updated'],
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    it('should return null if file not found during update', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(null),
+        }),
+      });
+
+      const result = await fileMetadataRepository.update('non-existent', {
+        tags: ['test'],
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updateProcessingStatus - FAILED status', () => {
+    it('should update status to FAILED with error message', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateProcessingStatus(
+        'file-123',
+        ProcessingStatus.FAILED,
+        'Processing error occurred'
+      );
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: {
+          processingStatus: ProcessingStatus.FAILED,
+          processingCompletedAt: expect.any(Date),
+          errorMessage: 'Processing error occurred',
+        },
+      });
+    });
+
+    it('should use default error message when empty string provided', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateProcessingStatus('file-123', ProcessingStatus.FAILED, '');
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: {
+          processingStatus: ProcessingStatus.FAILED,
+          processingCompletedAt: expect.any(Date),
+          errorMessage: 'Processing failed',
+        },
+      });
+    });
+
+    it('should use default error message when undefined', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateProcessingStatus('file-123', ProcessingStatus.FAILED);
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: {
+          processingStatus: ProcessingStatus.FAILED,
+          processingCompletedAt: expect.any(Date),
+          errorMessage: 'Processing failed',
+        },
+      });
+    });
+  });
+
+  describe('updateVectorIndexed - edge cases', () => {
+    it('should update without optional parameters', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateVectorIndexed('file-123', true);
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: {
+          vectorIndexed: true,
+          vectorIndexedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('should update with vectorCollection only', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateVectorIndexed('file-123', true, 'my-collection');
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: {
+          vectorIndexed: true,
+          vectorIndexedAt: expect.any(Date),
+          vectorCollection: 'my-collection',
+        },
+      });
+    });
+
+    it('should update with chunkCount of 0', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateVectorIndexed('file-123', true, undefined, 0);
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: {
+          vectorIndexed: true,
+          vectorIndexedAt: expect.any(Date),
+          chunkCount: 0,
+        },
+      });
+    });
+  });
+
+  describe('updateLastAccessed', () => {
+    it('should update last accessed timestamp', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.updateLastAccessed('file-123');
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $set: { lastAccessedAt: expect.any(Date) },
+      });
+    });
+  });
+
+  describe('incrementRetryCount - edge cases', () => {
+    it('should increment retry count without error message', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.incrementRetryCount('file-123');
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $inc: { retryCount: 1 },
+        $set: { lastRetryAt: expect.any(Date) },
+      });
+    });
+  });
+
+  describe('clearErrorMessage', () => {
+    it('should clear error message', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(true);
+
+      await fileMetadataRepository.clearErrorMessage('file-123');
+
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalledWith('file-123', {
+        $unset: { errorMessage: 1 },
+      });
+    });
+  });
+
+  describe('search', () => {
+    it('should search files by filename', async () => {
+      const mockFiles = [
+        { _id: { toString: () => 'file-1' }, originalFilename: 'test-document.txt' },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          sort: jest.fn().mockReturnValue({
+            skip: jest.fn().mockReturnValue({
+              limit: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockFiles),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      (FileMetadataModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(1);
+
+      const result = await fileMetadataRepository.search('project-123', 'document', 1, 10);
+
+      expect(result.files).toBeDefined();
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(1);
+    });
+  });
+
+  describe('getRetryableFiles', () => {
+    it('should get failed files that can be retried', async () => {
+      const mockFiles = [
+        {
+          _id: { toString: () => 'file-1' },
+          processingStatus: ProcessingStatus.FAILED,
+          retryCount: 1,
+        },
+      ];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockFiles),
+          }),
+        }),
+      });
+
+      const result = await fileMetadataRepository.getRetryableFiles(3, 10);
+
+      expect(FileMetadataModel.find).toHaveBeenCalledWith({
+        processingStatus: ProcessingStatus.FAILED,
+        retryCount: { $lt: 3 },
+        deletedAt: null,
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it('should use default parameters', async () => {
+      const mockFiles: unknown[] = [];
+
+      (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockFiles),
+          }),
+        }),
+      });
+
+      await fileMetadataRepository.getRetryableFiles();
+
+      expect(FileMetadataModel.find).toHaveBeenCalledWith({
+        processingStatus: ProcessingStatus.FAILED,
+        retryCount: { $lt: 3 },
+        deletedAt: null,
+      });
+    });
+  });
+
+  describe('delete - edge cases', () => {
+    it('should return false if file not found during delete', async () => {
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock) = jest.fn().mockResolvedValue(null);
+
+      const result = await fileMetadataRepository.delete('non-existent');
+
+      expect(result).toBe(false);
+    });
   });
 });

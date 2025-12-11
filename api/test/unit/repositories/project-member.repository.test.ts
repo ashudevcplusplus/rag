@@ -209,5 +209,203 @@ describe('ProjectMemberRepository', () => {
       expect(result.total).toBe(1);
       expect(result.page).toBe(1);
     });
+
+    it('should list members with role filter', async () => {
+      const mockMembers = [
+        {
+          _id: { toString: () => 'member-1' },
+          projectId: { toString: () => 'project-123' },
+          userId: { toString: () => 'user-1' },
+          role: ProjectRole.ADMIN,
+        },
+      ];
+
+      (ProjectMemberModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              populate: jest.fn().mockReturnValue({
+                lean: jest.fn().mockResolvedValue(mockMembers),
+              }),
+            }),
+          }),
+        }),
+      });
+
+      (ProjectMemberModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(1);
+
+      const result = await projectMemberRepository.list('project-123', 1, 10, {
+        role: ProjectRole.ADMIN,
+      });
+
+      expect(result.members).toBeDefined();
+    });
+  });
+
+  describe('findByProjectId', () => {
+    it('should find all members of a project', async () => {
+      const mockMembers = [
+        {
+          _id: { toString: () => 'member-1' },
+          projectId: { toString: () => 'project-123' },
+          userId: { toString: () => 'user-1' },
+        },
+        {
+          _id: { toString: () => 'member-2' },
+          projectId: { toString: () => 'project-123' },
+          userId: { toString: () => 'user-2' },
+        },
+      ];
+
+      (ProjectMemberModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockMembers),
+          }),
+        }),
+      });
+
+      const result = await projectMemberRepository.findByProjectId('project-123');
+
+      expect(ProjectMemberModel.find).toHaveBeenCalledWith({ projectId: 'project-123' });
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('findByUserId', () => {
+    it('should find all projects a user is member of', async () => {
+      const mockMembers = [
+        {
+          _id: { toString: () => 'member-1' },
+          projectId: { toString: () => 'project-1' },
+          userId: { toString: () => 'user-123' },
+        },
+        {
+          _id: { toString: () => 'member-2' },
+          projectId: { toString: () => 'project-2' },
+          userId: { toString: () => 'user-123' },
+        },
+      ];
+
+      (ProjectMemberModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockMembers),
+          }),
+        }),
+      });
+
+      const result = await projectMemberRepository.findByUserId('user-123');
+
+      expect(ProjectMemberModel.find).toHaveBeenCalledWith({ userId: 'user-123' });
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('update - null case', () => {
+    it('should return null if member not found during update', async () => {
+      (ProjectMemberModel.findOneAndUpdate as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await projectMemberRepository.update('project-123', 'user-999', {
+        role: ProjectRole.ADMIN,
+      });
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('countByUserId', () => {
+    it('should count projects for a user', async () => {
+      (ProjectMemberModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(3);
+
+      const count = await projectMemberRepository.countByUserId('user-123');
+
+      expect(ProjectMemberModel.countDocuments).toHaveBeenCalledWith({
+        userId: 'user-123',
+      });
+      expect(count).toBe(3);
+    });
+  });
+
+  describe('removeAllByProjectId', () => {
+    it('should remove all members from a project', async () => {
+      (ProjectMemberModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({
+        deletedCount: 5,
+      });
+
+      const count = await projectMemberRepository.removeAllByProjectId('project-123');
+
+      expect(ProjectMemberModel.deleteMany).toHaveBeenCalledWith({
+        projectId: 'project-123',
+      });
+      expect(count).toBe(5);
+    });
+
+    it('should return 0 if no members found', async () => {
+      (ProjectMemberModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({
+        deletedCount: 0,
+      });
+
+      const count = await projectMemberRepository.removeAllByProjectId('empty-project');
+
+      expect(count).toBe(0);
+    });
+
+    it('should handle undefined deletedCount', async () => {
+      (ProjectMemberModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({});
+
+      const count = await projectMemberRepository.removeAllByProjectId('project-123');
+
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('removeAllByUserId', () => {
+    it('should remove user from all projects', async () => {
+      (ProjectMemberModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({
+        deletedCount: 3,
+      });
+
+      const count = await projectMemberRepository.removeAllByUserId('user-123');
+
+      expect(ProjectMemberModel.deleteMany).toHaveBeenCalledWith({
+        userId: 'user-123',
+      });
+      expect(count).toBe(3);
+    });
+
+    it('should return 0 if user is not member of any project', async () => {
+      (ProjectMemberModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({
+        deletedCount: 0,
+      });
+
+      const count = await projectMemberRepository.removeAllByUserId('non-member');
+
+      expect(count).toBe(0);
+    });
+
+    it('should handle undefined deletedCount', async () => {
+      (ProjectMemberModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({});
+
+      const count = await projectMemberRepository.removeAllByUserId('user-123');
+
+      expect(count).toBe(0);
+    });
+  });
+
+  describe('hasRole - false case', () => {
+    it('should return false if user does not have specific role', async () => {
+      (ProjectMemberModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(0);
+
+      const result = await projectMemberRepository.hasRole(
+        'project-123',
+        'user-123',
+        ProjectRole.ADMIN
+      );
+
+      expect(result).toBe(false);
+    });
   });
 });
