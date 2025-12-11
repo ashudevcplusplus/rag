@@ -507,8 +507,20 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  // Add to indexing queue first to ensure atomic operation
-  // If queue add fails, file state remains unchanged
+  // Delete existing embeddings first
+  await embeddingRepository.deleteByFileId(fileId);
+
+  // Reset file status BEFORE adding to queue to avoid race condition
+  // (processor may pick up job and set PROCESSING before we update to PENDING)
+  await fileMetadataRepository.update(fileId, {
+    processingStatus: ProcessingStatus.PENDING,
+    chunkCount: 0,
+    vectorIndexed: false,
+    retryCount: 0,
+  });
+  await fileMetadataRepository.clearErrorMessage(fileId);
+
+  // Add to indexing queue after status is set
   // Include original embedding config to ensure vector dimension consistency
   const job = await indexingQueue.add(
     'index-file',
@@ -527,17 +539,10 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     }
   );
 
-  // Only after successful queue add, delete existing embeddings and update file state
-  await embeddingRepository.deleteByFileId(fileId);
-
-  // Reset file status, clear error message, and set job ID
+  // Update with job ID after successful queue add
   await fileMetadataRepository.update(fileId, {
-    processingStatus: ProcessingStatus.PENDING,
-    chunkCount: 0,
-    vectorIndexed: false,
     indexingJobId: job.id as string,
   });
-  await fileMetadataRepository.clearErrorMessage(fileId);
 
   logger.info('File queued for reindexing', { fileId, projectId, jobId: job.id });
 
@@ -642,8 +647,25 @@ export const bulkReindexFailed = asyncHandler(
         continue;
       }
 
-      // Add to indexing queue first to ensure atomic operation
-      // If queue add fails, file state remains unchanged
+      // Delete existing embeddings and reset file status BEFORE adding to queue
+      // to avoid race condition (processor may set PROCESSING before we update)
+      try {
+        await embeddingRepository.deleteByFileId(file._id);
+
+        // Reset file status, retry count, and clear error message
+        await fileMetadataRepository.update(file._id, {
+          processingStatus: ProcessingStatus.PENDING,
+          chunkCount: 0,
+          vectorIndexed: false,
+          retryCount: 0,
+        });
+        await fileMetadataRepository.clearErrorMessage(file._id);
+      } catch (_dbError) {
+        errors.push({ fileId: file._id, error: 'Failed to reset file state' });
+        continue;
+      }
+
+      // Add to indexing queue after status is set
       // Include original embedding config to ensure vector dimension consistency
       let job;
       try {
@@ -668,26 +690,12 @@ export const bulkReindexFailed = asyncHandler(
         continue;
       }
 
-      // Only after successful queue add, delete existing embeddings and update file state
-      // Wrap in try-catch to preserve progress and continue processing other files
-      try {
-        await embeddingRepository.deleteByFileId(file._id);
+      // Update with job ID after successful queue add
+      await fileMetadataRepository.update(file._id, {
+        indexingJobId: job.id as string,
+      });
 
-        // Reset file status, clear error message, and set job ID
-        await fileMetadataRepository.update(file._id, {
-          processingStatus: ProcessingStatus.PENDING,
-          chunkCount: 0,
-          vectorIndexed: false,
-          indexingJobId: job.id as string,
-        });
-        await fileMetadataRepository.clearErrorMessage(file._id);
-
-        results.push({ fileId: file._id, jobId: job.id as string });
-      } catch (_dbError) {
-        // Job was queued but database update failed - still report as queued with warning
-        results.push({ fileId: file._id, jobId: job.id as string });
-        errors.push({ fileId: file._id, error: 'Job queued but database state update failed' });
-      }
+      results.push({ fileId: file._id, jobId: job.id as string });
     }
 
     logger.info('Bulk reindex initiated', {
