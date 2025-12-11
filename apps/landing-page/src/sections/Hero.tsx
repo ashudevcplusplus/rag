@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Play, Zap, Shield, Cpu } from 'lucide-react';
+import { ProductDemo } from '../components/ProductDemo';
 
 const stats = [
   { value: '99.9%', label: 'Accuracy Rate' },
@@ -127,83 +128,8 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Hero Image/Dashboard Preview */}
-        <motion.div
-          initial={{ opacity: 0, y: 60 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-20 relative"
-        >
-          <div className="relative rounded-2xl overflow-hidden glass p-1">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 via-transparent to-accent-500/20" />
-            <div className="relative rounded-xl overflow-hidden bg-slate-900">
-              {/* Mock Dashboard */}
-              <div className="aspect-[16/9] p-6 sm:p-8">
-                <div className="h-full rounded-lg border border-white/10 bg-slate-900/50 p-4 sm:p-6">
-                  {/* Top Bar */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-red-500" />
-                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                      <div className="w-3 h-3 rounded-full bg-green-500" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-6 rounded-md bg-white/5" />
-                      <div className="w-16 h-6 rounded-md bg-primary-500/20" />
-                    </div>
-                  </div>
-
-                  {/* Content Grid */}
-                  <div className="grid grid-cols-3 gap-4 h-[calc(100%-3rem)]">
-                    <div className="col-span-2 space-y-4">
-                      <div className="h-1/2 rounded-lg bg-gradient-to-br from-primary-500/10 to-accent-500/10 border border-white/5 p-4">
-                        <div className="w-32 h-4 rounded bg-white/10 mb-3" />
-                        <div className="space-y-2">
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-primary-500" />
-                              <div className="flex-1 h-3 rounded bg-white/5" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="h-1/2 rounded-lg bg-white/5 border border-white/5 p-4">
-                        <div className="w-24 h-4 rounded bg-white/10 mb-3" />
-                        <div className="grid grid-cols-4 gap-2 h-[calc(100%-2rem)]">
-                          {[40, 60, 80, 45].map((height, i) => (
-                            <div key={i} className="flex items-end">
-                              <div
-                                className="w-full rounded-t bg-gradient-to-t from-primary-500 to-accent-500"
-                                style={{ height: `${height}%` }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="h-1/3 rounded-lg bg-accent-500/10 border border-white/5 p-4">
-                        <div className="w-16 h-3 rounded bg-white/10 mb-2" />
-                        <div className="text-2xl font-bold text-accent-400">98.7%</div>
-                      </div>
-                      <div className="h-1/3 rounded-lg bg-primary-500/10 border border-white/5 p-4">
-                        <div className="w-16 h-3 rounded bg-white/10 mb-2" />
-                        <div className="text-2xl font-bold text-primary-400">1,234</div>
-                      </div>
-                      <div className="h-1/3 rounded-lg bg-white/5 border border-white/5 p-4">
-                        <div className="w-16 h-3 rounded bg-white/10 mb-2" />
-                        <div className="text-2xl font-bold text-white">Active</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Glow Effect */}
-          <div className="absolute -inset-4 bg-gradient-to-r from-primary-500/20 via-accent-500/20 to-primary-500/20 blur-3xl -z-10" />
-        </motion.div>
+        {/* Product Demo */}
+        <ProductDemo />
       </div>
     </section>
   );
