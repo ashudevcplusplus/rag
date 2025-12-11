@@ -383,10 +383,10 @@ export function ProjectDetailPage() {
                                   setActiveMenu(null);
                                   reindexFileMutation.mutate(file._id);
                                 }}
-                                disabled={reindexFileMutation.isPending}
+                                disabled={reindexFileMutation.isPending && reindexFileMutation.variables === file._id}
                                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
                               >
-                                <RefreshCw className={`w-4 h-4 ${reindexFileMutation.isPending ? 'animate-spin' : ''}`} />
+                                <RefreshCw className={`w-4 h-4 ${reindexFileMutation.isPending && reindexFileMutation.variables === file._id ? 'animate-spin' : ''}`} />
                                 {file.processingStatus === 'PROCESSING' ? 'Force Retry' : 'Reindex'}
                               </button>
                             )}

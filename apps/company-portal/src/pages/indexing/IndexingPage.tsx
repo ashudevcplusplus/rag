@@ -28,7 +28,7 @@ import {
 } from '@rag/ui';
 import { projectsApi, filesApi, type IndexingStats } from '@rag/api-client';
 import { formatBytes, formatRelativeTime } from '@rag/utils';
-import type { Project, FileMetadata, ProcessingStatus } from '@rag/types';
+import type { Project, ProcessingStatus } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 
 type StatusFilter = 'all' | 'pending' | 'processing' | 'completed' | 'failed';

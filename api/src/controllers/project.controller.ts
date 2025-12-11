@@ -507,18 +507,8 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  // Delete existing embeddings for this file before reindexing
-  await embeddingRepository.deleteByFileId(fileId);
-
-  // Reset file status and clear error message
-  await fileMetadataRepository.update(fileId, {
-    processingStatus: ProcessingStatus.PENDING,
-    chunkCount: 0,
-    vectorIndexed: false,
-  });
-  await fileMetadataRepository.clearErrorMessage(fileId);
-
-  // Add to indexing queue
+  // Add to indexing queue first to ensure atomic operation
+  // If queue add fails, file state remains unchanged
   const job = await indexingQueue.add(
     'index-file',
     {
@@ -534,10 +524,17 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     }
   );
 
-  // Update file metadata with job ID
+  // Only after successful queue add, delete existing embeddings and update file state
+  await embeddingRepository.deleteByFileId(fileId);
+
+  // Reset file status, clear error message, and set job ID
   await fileMetadataRepository.update(fileId, {
+    processingStatus: ProcessingStatus.PENDING,
+    chunkCount: 0,
+    vectorIndexed: false,
     indexingJobId: job.id as string,
   });
+  await fileMetadataRepository.clearErrorMessage(fileId);
 
   logger.info('File queued for reindexing', { fileId, projectId, jobId: job.id });
 
@@ -642,36 +639,40 @@ export const bulkReindexFailed = asyncHandler(
         continue;
       }
 
-      // Delete existing embeddings
+      // Add to indexing queue first to ensure atomic operation
+      // If queue add fails, file state remains unchanged
+      let job;
+      try {
+        job = await indexingQueue.add(
+          'index-file',
+          {
+            companyId,
+            fileId: file._id,
+            filePath: file.filepath,
+            mimetype: file.mimetype,
+            fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+          },
+          {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+          }
+        );
+      } catch (_queueError) {
+        errors.push({ fileId: file._id, error: 'Failed to add to indexing queue' });
+        continue;
+      }
+
+      // Only after successful queue add, delete existing embeddings and update file state
       await embeddingRepository.deleteByFileId(file._id);
 
-      // Reset file status and clear error message
+      // Reset file status, clear error message, and set job ID
       await fileMetadataRepository.update(file._id, {
         processingStatus: ProcessingStatus.PENDING,
         chunkCount: 0,
         vectorIndexed: false,
-      });
-      await fileMetadataRepository.clearErrorMessage(file._id);
-
-      // Add to indexing queue
-      const job = await indexingQueue.add(
-        'index-file',
-        {
-          companyId,
-          fileId: file._id,
-          filePath: file.filepath,
-          mimetype: file.mimetype,
-          fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
-        },
-        {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
-        }
-      );
-
-      await fileMetadataRepository.update(file._id, {
         indexingJobId: job.id as string,
       });
+      await fileMetadataRepository.clearErrorMessage(file._id);
 
       results.push({ fileId: file._id, jobId: job.id as string });
     }
