@@ -116,3 +116,9 @@ jest.mock('ioredis', () => {
 
   return MockRedis;
 });
+
+afterEach(() => {
+  // Keep tests isolated and reduce flaky cross-test interactions
+  jest.clearAllMocks();
+  jest.restoreAllMocks();
+});
