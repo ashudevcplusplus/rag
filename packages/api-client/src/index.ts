@@ -198,18 +198,20 @@ export interface ProjectStats {
 export const projectsApi = {
   async list(
     companyId: string,
-    params?: { page?: number; limit?: number; status?: string }
+    params?: { page?: number; limit?: number; status?: string; syncStats?: boolean }
   ): Promise<{ projects: Project[]; pagination: PaginatedResponse<Project>['pagination'] }> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.limit) searchParams.set('limit', params.limit.toString());
     if (params?.status) searchParams.set('status', params.status);
+    if (params?.syncStats) searchParams.set('syncStats', 'true');
     const query = searchParams.toString();
     return request(`/v1/companies/${companyId}/projects${query ? `?${query}` : ''}`);
   },
 
-  async get(companyId: string, projectId: string): Promise<{ project: Project }> {
-    return request(`/v1/companies/${companyId}/projects/${projectId}`);
+  async get(companyId: string, projectId: string, options?: { syncStats?: boolean }): Promise<{ project: Project }> {
+    const query = options?.syncStats ? '?syncStats=true' : '';
+    return request(`/v1/companies/${companyId}/projects/${projectId}${query}`);
   },
 
   async create(companyId: string, data: CreateProjectDTO): Promise<{ project: Project }> {

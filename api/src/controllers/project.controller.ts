@@ -68,7 +68,8 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
 
 /**
  * Get project by ID
- * Recalculates fresh stats from actual data for accuracy
+ * Optionally recalculates fresh stats from actual data (disabled by default for performance)
+ * Pass ?syncStats=true to trigger stats recalculation
  */
 export const getProject = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { projectId } = projectIdSchema.parse(req.params);
@@ -79,8 +80,8 @@ export const getProject = asyncHandler(async (req: Request, res: Response): Prom
     return;
   }
 
-  // Recalculate fresh stats for accurate display (same logic as list with syncStats)
-  const syncStats = req.query.syncStats !== 'false';
+  // Only recalculate stats when explicitly requested (opt-in for performance)
+  const syncStats = req.query.syncStats === 'true';
   if (syncStats) {
     await projectRepository.recalculateStats(projectId);
     // Refetch project with updated stats
@@ -97,6 +98,7 @@ export const getProject = asyncHandler(async (req: Request, res: Response): Prom
 /**
  * List projects in a company
  * Supports syncStats query param to calculate accurate stats from file metadata
+ * Pass ?syncStats=true to trigger stats recalculation (disabled by default for performance)
  */
 export const listProjects = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const companyId = getCompanyId(req);
@@ -109,8 +111,8 @@ export const listProjects = asyncHandler(async (req: Request, res: Response): Pr
   const status = req.query.status as string;
   const ownerId = req.query.ownerId as string;
   const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
-  // Enable syncStats by default for more accurate dashboard display
-  const syncStats = req.query.syncStats !== 'false';
+  // Opt-in stats sync for performance (expensive aggregation queries)
+  const syncStats = req.query.syncStats === 'true';
 
   const result = await projectRepository.list(companyId, page, limit, {
     status,

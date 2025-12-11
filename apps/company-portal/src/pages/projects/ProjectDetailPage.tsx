@@ -50,10 +50,10 @@ export function ProjectDetailPage() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [copiedChunk, setCopiedChunk] = useState<number | null>(null);
 
-  // Fetch project details
+  // Fetch project details with accurate stats
   const { data: projectData, isLoading: projectLoading } = useQuery({
     queryKey: ['project', companyId, projectId],
-    queryFn: () => projectsApi.get(companyId!, projectId!),
+    queryFn: () => projectsApi.get(companyId!, projectId!, { syncStats: true }),
     enabled: !!companyId && !!projectId,
   });
 
