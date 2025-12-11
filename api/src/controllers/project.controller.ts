@@ -83,6 +83,7 @@ export const getProject = asyncHandler(async (req: Request, res: Response): Prom
 
 /**
  * List projects in a company
+ * Supports syncStats query param to calculate accurate stats from file metadata
  */
 export const listProjects = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const companyId = getCompanyId(req);
@@ -95,11 +96,14 @@ export const listProjects = asyncHandler(async (req: Request, res: Response): Pr
   const status = req.query.status as string;
   const ownerId = req.query.ownerId as string;
   const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
+  // Enable syncStats by default for more accurate dashboard display
+  const syncStats = req.query.syncStats !== 'false';
 
   const result = await projectRepository.list(companyId, page, limit, {
     status,
     ownerId,
     tags,
+    syncStats,
   });
 
   const response = createPaginationResponse(result.projects, result.page, limit, result.total);

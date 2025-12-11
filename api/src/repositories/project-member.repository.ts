@@ -31,7 +31,7 @@ export class ProjectMemberRepository {
    */
   async findByProjectId(projectId: string): Promise<IProjectMember[]> {
     const members = await ProjectMemberModel.find({ projectId })
-      .sort({ addedAt: -1 })
+      .sort({ createdAt: -1 })
       .populate('userId', 'firstName lastName email role')
       .lean();
     return toStringIds(members) as unknown as IProjectMember[];
@@ -42,7 +42,7 @@ export class ProjectMemberRepository {
    */
   async findByUserId(userId: string): Promise<IProjectMember[]> {
     const members = await ProjectMemberModel.find({ userId })
-      .sort({ addedAt: -1 })
+      .sort({ createdAt: -1 })
       .populate('projectId', 'name slug description')
       .lean();
     return toStringIds(members) as unknown as IProjectMember[];
@@ -128,7 +128,7 @@ export class ProjectMemberRepository {
 
     const [members, total] = await Promise.all([
       ProjectMemberModel.find(query)
-        .sort({ addedAt: -1 })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate('userId', 'firstName lastName email role')

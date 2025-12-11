@@ -20,7 +20,13 @@ import {
   EmptyState,
   ProgressBar,
 } from '@rag/ui';
-import { projectsApi, filesApi, jobsApi } from '@rag/api-client';
+import {
+  projectsApi,
+  filesApi,
+  jobsApi,
+  FILE_UPLOAD_CONSTRAINTS,
+  isAllowedFileType,
+} from '@rag/api-client';
 import { formatBytes } from '@rag/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
@@ -193,12 +199,33 @@ export function UploadPage() {
   const handleFiles = useCallback(
     (files: File[]) => {
       const maxSize = 50 * 1024 * 1024; // 50MB
-      const validFiles = files.filter((file) => file.size <= maxSize);
-      const invalidFiles = files.filter((file) => file.size > maxSize);
+      const maxFiles = FILE_UPLOAD_CONSTRAINTS.maxFiles;
 
-      if (invalidFiles.length > 0) {
+      // Check file count limit
+      if (files.length > maxFiles) {
+        toast.error(`Maximum ${maxFiles} files allowed per upload. You selected ${files.length} files.`);
+        return;
+      }
+
+      // Filter by file type
+      const allowedTypeFiles = files.filter((file) => isAllowedFileType(file));
+      const invalidTypeFiles = files.filter((file) => !isAllowedFileType(file));
+
+      if (invalidTypeFiles.length > 0) {
+        const names = invalidTypeFiles.slice(0, 3).map((f) => f.name).join(', ');
+        const more = invalidTypeFiles.length > 3 ? ` and ${invalidTypeFiles.length - 3} more` : '';
         toast.error(
-          `${invalidFiles.length} file(s) exceed the 50MB limit and were skipped`
+          `Unsupported file type(s): ${names}${more}. Only document files (PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML) are allowed.`
+        );
+      }
+
+      // Filter by size
+      const validFiles = allowedTypeFiles.filter((file) => file.size <= maxSize);
+      const oversizedFiles = allowedTypeFiles.filter((file) => file.size > maxSize);
+
+      if (oversizedFiles.length > 0) {
+        toast.error(
+          `${oversizedFiles.length} file(s) exceed the 50MB limit and were skipped`
         );
       }
 
@@ -373,6 +400,7 @@ export function UploadPage() {
               type="file"
               id="file-input"
               multiple
+              accept=".pdf,.txt,.doc,.docx,.rtf,.odt,.md,.markdown,.csv,.xml,.json,.html,.htm,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               onChange={handleFileInput}
               className="hidden"
               disabled={!selectedProjectId}
@@ -398,7 +426,10 @@ export function UploadPage() {
                     : 'Select a project to upload files'}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Supports PDF, TXT, DOC, DOCX, and more (max 50MB per file)
+                  Documents only: PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Max {FILE_UPLOAD_CONSTRAINTS.maxFiles} files per upload • 50MB per file
                 </p>
               </div>
             </div>

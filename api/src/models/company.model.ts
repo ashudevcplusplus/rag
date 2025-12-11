@@ -90,6 +90,7 @@ const companySchema = new Schema<ICompanyDocument>(
 companySchema.index({ status: 1 });
 companySchema.index({ deletedAt: 1 });
 companySchema.index({ createdAt: 1 });
+companySchema.index({ apiKeyHash: 1 }); // For API key validation lookups
 
 // Pre-save hook to ensure slug is lowercase
 companySchema.pre('save', function (next) {

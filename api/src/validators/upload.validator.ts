@@ -21,13 +21,41 @@ export const projectIdBodySchema = z.object({
   embeddingModel: z.string().optional(),
 });
 
+// Allowed document MIME types (must match upload.middleware.ts)
+const ALLOWED_MIME_TYPES = [
+  // PDF
+  'application/pdf',
+  // Plain text
+  'text/plain',
+  // Microsoft Word
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  // Rich Text Format
+  'application/rtf',
+  'text/rtf',
+  // OpenDocument Text
+  'application/vnd.oasis.opendocument.text',
+  // Markdown
+  'text/markdown',
+  'text/x-markdown',
+  // CSV
+  'text/csv',
+  // XML
+  'application/xml',
+  'text/xml',
+  // JSON
+  'application/json',
+  // HTML
+  'text/html',
+] as const;
+
 // File upload validation
 export const fileUploadSchema = z.object({
   file: z.object({
-    mimetype: z.enum(
-      ['application/pdf', 'text/plain', 'application/json', 'text/markdown', 'text/csv'],
-      { message: 'Unsupported file type' }
-    ),
+    mimetype: z.enum(ALLOWED_MIME_TYPES, {
+      message:
+        'Unsupported file type. Only document files (PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML) are allowed.',
+    }),
     size: z.number().max(50 * 1024 * 1024, { message: 'File too large (Max 50MB)' }),
     originalname: z.string(),
   }),

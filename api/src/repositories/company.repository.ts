@@ -207,6 +207,7 @@ export class CompanyRepository {
 
   /**
    * Get company stats
+   * Calculates actual storage used from file metadata for accuracy
    */
   async getStats(id: string): Promise<{
     userCount: number;
@@ -220,20 +221,38 @@ export class CompanyRepository {
       return null;
     }
 
-    const [userCount, projectCount, fileCount] = await Promise.all([
+    // Get project IDs for this company
+    const projectIds = await ProjectModel.find({ companyId: id, deletedAt: null }).distinct('_id');
+
+    // Calculate all stats including actual storage used from file metadata
+    const [userCount, projectCount, fileStats] = await Promise.all([
       UserModel.countDocuments({ companyId: id, deletedAt: null }),
       ProjectModel.countDocuments({ companyId: id, deletedAt: null }),
-      FileMetadataModel.countDocuments({
-        projectId: { $in: await ProjectModel.find({ companyId: id }).distinct('_id') },
-        deletedAt: null,
-      }),
+      FileMetadataModel.aggregate([
+        { $match: { projectId: { $in: projectIds }, deletedAt: null } },
+        {
+          $group: {
+            _id: null,
+            fileCount: { $sum: 1 },
+            totalSize: { $sum: '$size' },
+          },
+        },
+      ]),
     ]);
+
+    const fileCount = fileStats.length > 0 ? fileStats[0].fileCount : 0;
+    const actualStorageUsed = fileStats.length > 0 ? fileStats[0].totalSize : 0;
+
+    // Update cached storageUsed if it differs significantly (sync on read)
+    if (actualStorageUsed !== company.storageUsed) {
+      await CompanyModel.findByIdAndUpdate(id, { $set: { storageUsed: actualStorageUsed } });
+    }
 
     return {
       userCount,
       projectCount,
       fileCount,
-      storageUsed: company.storageUsed,
+      storageUsed: actualStorageUsed,
       storageLimit: company.storageLimit,
     };
   }

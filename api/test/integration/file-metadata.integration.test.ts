@@ -16,88 +16,73 @@ describe('File Metadata Repository Integration Tests', () => {
   let testUserId: string;
   let testFileId: string;
 
+  // Unique identifiers to avoid conflicts with other integration tests
+  const TEST_SLUG_SUFFIX = `file-meta-${Date.now()}`;
+
   beforeAll(async () => {
     await database.connect();
 
-    // Clean up FileMetadata
+    // Clean up any previous test data from this test file
     await fileMetadataRepository.model.deleteMany({});
 
-    // Ensure test data exists - check and create if missing
-    let company = await companyRepository.findBySlug('acme-corp');
-
-    if (!company) {
-      // Create company if it doesn't exist
-      company = await companyRepository.create({
-        _id: '507f1f77bcf86cd799439011',
-        name: 'Acme Corporation',
-        slug: 'acme-corp',
-        email: 'admin@acme-corp.com',
-        apiKey: 'dev-key-123',
-        subscriptionTier: SubscriptionTier.PROFESSIONAL,
-        storageLimit: 10737418240, // 10GB
-        maxUsers: 50,
-        maxProjects: 100,
-        settings: {
-          notifications: {
-            email: true,
-            slack: false,
-          },
-          features: {
-            advancedSearch: true,
-            apiAccess: true,
-          },
+    // Create fresh test data with unique identifiers
+    const company = await companyRepository.create({
+      name: 'File Metadata Test Company',
+      slug: `file-test-company-${TEST_SLUG_SUFFIX}`,
+      email: `admin-${TEST_SLUG_SUFFIX}@test.com`,
+      apiKey: `test-key-${TEST_SLUG_SUFFIX}`,
+      subscriptionTier: SubscriptionTier.PROFESSIONAL,
+      storageLimit: 10737418240, // 10GB
+      maxUsers: 50,
+      maxProjects: 100,
+      settings: {
+        notifications: {
+          email: true,
+          slack: false,
         },
-      } as any);
-    }
-
-    let user = await userRepository.findByEmail('john.doe@acme-corp.com');
-
-    if (!user) {
-      // Create user if it doesn't exist
-      const passwordHash = await userRepository.hashPassword('password123');
-      user = await userRepository.create({
-        _id: '507f1f77bcf86cd799439020',
-        companyId: company._id,
-        email: 'john.doe@acme-corp.com',
-        passwordHash,
-        firstName: 'John',
-        lastName: 'Doe',
-        role: UserRole.OWNER,
-        permissions: {
-          canUpload: true,
-          canDelete: true,
-          canShare: true,
-          canManageUsers: true,
+        features: {
+          advancedSearch: true,
+          apiAccess: true,
         },
-      } as any);
-    }
+      },
+    } as any);
 
-    let project = await projectRepository.findBySlug(company._id, 'product-docs');
+    const passwordHash = await userRepository.hashPassword('password123');
+    const user = await userRepository.create({
+      companyId: company._id,
+      email: `user-${TEST_SLUG_SUFFIX}@test.com`,
+      passwordHash,
+      firstName: 'Test',
+      lastName: 'User',
+      role: UserRole.OWNER,
+      permissions: {
+        canUpload: true,
+        canDelete: true,
+        canShare: true,
+        canManageUsers: true,
+      },
+    } as any);
 
-    if (!project) {
-      // Create project if it doesn't exist
-      project = await projectRepository.create({
-        _id: '507f1f77bcf86cd799439030',
-        companyId: company._id,
-        ownerId: user._id,
-        name: 'Product Documentation',
-        slug: 'product-docs',
-        description: 'Centralized product documentation and user guides',
-        color: '#3B82F6',
-        icon: '📚',
-        tags: ['documentation', 'product', 'guides'],
-        visibility: Visibility.COMPANY,
-        settings: {
-          autoIndex: true,
-          chunkSize: 1000,
-          chunkOverlap: 200,
-        },
-        metadata: {
-          department: 'Product',
-          category: 'Documentation',
-        },
-      } as any);
-    }
+    const project = await projectRepository.create({
+      companyId: company._id,
+      ownerId: user._id,
+      name: 'File Metadata Test Project',
+      slug: `file-test-project-${TEST_SLUG_SUFFIX}`,
+      description: 'Test project for file metadata integration tests',
+      color: '#3B82F6',
+      icon: '📁',
+      tags: ['test', 'file-metadata'],
+      visibility: Visibility.COMPANY,
+      settings: {
+        autoIndex: true,
+        chunkSize: 1000,
+        chunkOverlap: 200,
+      },
+      metadata: {
+        department: 'Testing',
+        category: 'Integration',
+      },
+    } as any);
 
     testProjectId = project._id;
     testUserId = user._id;

@@ -120,12 +120,13 @@ export class ProjectRepository {
 
   /**
    * List projects with pagination
+   * Optionally calculates real-time stats from file metadata for accuracy
    */
   async list(
     companyId: string,
     page: number = 1,
     limit: number = 10,
-    filters?: { status?: string; ownerId?: string; tags?: string[] }
+    filters?: { status?: string; ownerId?: string; tags?: string[]; syncStats?: boolean }
   ): Promise<{ projects: IProject[]; total: number; page: number; totalPages: number }> {
     const query: FilterQuery<IProjectDocument> = { companyId, deletedAt: null };
 
@@ -143,13 +144,82 @@ export class ProjectRepository {
 
     const [projects, total] = await Promise.all([
       ProjectModel.find(query)
-        .select('name description status fileCount totalSize vectorCount createdAt updatedAt tags') // Only fetch needed fields
+        .select(
+          'name description status fileCount totalSize vectorCount createdAt updatedAt tags color'
+        ) // Only fetch needed fields
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
       ProjectModel.countDocuments(query),
     ]);
+
+    // If syncStats is requested, calculate and update actual stats from file metadata
+    if (filters?.syncStats && projects.length > 0) {
+      const projectIds = projects.map((p) => p._id);
+
+      // Get actual file stats for all projects in one aggregation query
+      const fileStats = await FileMetadataModel.aggregate([
+        { $match: { projectId: { $in: projectIds }, deletedAt: null } },
+        {
+          $group: {
+            _id: '$projectId',
+            fileCount: { $sum: 1 },
+            totalSize: { $sum: '$size' },
+          },
+        },
+      ]);
+
+      // Get actual vector counts from embeddings
+      const vectorStats = await EmbeddingModel.aggregate([
+        {
+          $match: { projectId: { $in: projectIds.map((id) => new Types.ObjectId(id.toString())) } },
+        },
+        {
+          $group: {
+            _id: '$projectId',
+            vectorCount: { $sum: '$chunkCount' },
+          },
+        },
+      ]);
+
+      // Create lookup maps
+      const fileStatsMap = new Map(fileStats.map((s) => [s._id.toString(), s]));
+      const vectorStatsMap = new Map(vectorStats.map((s) => [s._id.toString(), s]));
+
+      // Update projects with actual stats
+      for (const project of projects) {
+        const projectId = project._id.toString();
+        const fStats = fileStatsMap.get(projectId);
+        const vStats = vectorStatsMap.get(projectId);
+
+        const actualFileCount = fStats?.fileCount ?? 0;
+        const actualTotalSize = fStats?.totalSize ?? 0;
+        const actualVectorCount = vStats?.vectorCount ?? 0;
+
+        // Check if database needs sync before overwriting in-memory values
+        const needsSync =
+          project.fileCount !== actualFileCount ||
+          project.totalSize !== actualTotalSize ||
+          project.vectorCount !== actualVectorCount;
+
+        // Update in-memory project object
+        project.fileCount = actualFileCount;
+        project.totalSize = actualTotalSize;
+        project.vectorCount = actualVectorCount;
+
+        // Sync to database if different (fire and forget)
+        if (needsSync) {
+          void ProjectModel.findByIdAndUpdate(project._id, {
+            $set: {
+              fileCount: actualFileCount,
+              totalSize: actualTotalSize,
+              vectorCount: actualVectorCount,
+            },
+          });
+        }
+      }
+    }
 
     return {
       projects: toStringIds(projects) as unknown as IProject[],
@@ -257,7 +327,9 @@ export class ProjectRepository {
 
     const [projects, total] = await Promise.all([
       ProjectModel.find(query)
-        .select('name description status fileCount totalSize vectorCount createdAt updatedAt tags') // Only fetch needed fields
+        .select(
+          'name description status fileCount totalSize vectorCount createdAt updatedAt tags color'
+        ) // Only fetch needed fields
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
