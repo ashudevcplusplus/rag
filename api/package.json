@@ -10,6 +10,8 @@
     "seed": "ts-node src/scripts/seed.ts",
     "test": "jest",
     "test:unit": "jest test/unit",
+    "test:coverage": "jest test/unit --coverage",
+    "test:coverage:ci": "jest test/unit --coverage --coverageReporters=text --coverageReporters=lcov --coverageReporters=json-summary",
     "test:integration": "jest test/integration --runInBand",
     "test:db": "jest test/integration/database.integration.test.ts --runInBand",
     "test:file": "jest test/integration/file-metadata.integration.test.ts --runInBand",

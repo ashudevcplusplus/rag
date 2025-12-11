@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { MockRedisClient, MockScanStream, createMockRedisClient } from '../../lib/mock-utils';
 
 // Mock ioredis BEFORE importing CacheService
 jest.mock('ioredis');
@@ -11,20 +12,31 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 
-const mockRedis: jest.Mocked<Redis> = {
-  get: jest.fn(),
-  set: jest.fn(),
-  del: jest.fn(),
-  scanStream: jest.fn(),
-  info: jest.fn(),
-  dbsize: jest.fn(),
-  on: jest.fn(),
-} as any;
+// Type-safe mock Redis client
+const mockRedis: MockRedisClient = createMockRedisClient();
 
-(Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as any);
+(Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as unknown as Redis);
 
 // Import CacheService AFTER setting up mocks
 import { CacheService } from '../../../src/services/cache.service';
+
+// Helper to create a mock scan stream for tests
+function createTestScanStream(keys: string[], emitData: boolean = true): MockScanStream {
+  const stream: MockScanStream = {
+    on: jest.fn(),
+  };
+
+  stream.on = jest.fn((event: string, callback: (data?: string[]) => void): MockScanStream => {
+    if (event === 'data' && emitData && keys.length > 0) {
+      setTimeout(() => callback(keys), 0);
+    } else if (event === 'end') {
+      setTimeout(() => callback(), emitData && keys.length > 0 ? 10 : 0);
+    }
+    return stream;
+  });
+
+  return stream;
+}
 
 describe('CacheService', () => {
   beforeEach(() => {
@@ -109,7 +121,7 @@ describe('CacheService', () => {
   describe('set', () => {
     it('should set cache with default TTL', async () => {
       const data = { results: [] };
-      mockRedis.set.mockResolvedValue('OK' as any);
+      mockRedis.set.mockResolvedValue('OK');
 
       await CacheService.set('test-key', data);
 
@@ -118,7 +130,7 @@ describe('CacheService', () => {
 
     it('should set cache with custom TTL', async () => {
       const data = { results: [] };
-      mockRedis.set.mockResolvedValue('OK' as any);
+      mockRedis.set.mockResolvedValue('OK');
 
       await CacheService.set('test-key', data, 7200);
 
@@ -134,22 +146,13 @@ describe('CacheService', () => {
 
   describe('invalidateCompany', () => {
     it('should delete all keys for a company', async () => {
-      const mockStream: any = {
-        on: jest.fn((event: string, callback: (data?: string[]) => void) => {
-          if (event === 'data') {
-            setTimeout(
-              () => callback(['rag_cache:company-123:key1', 'rag_cache:company-123:key2']),
-              0
-            );
-          } else if (event === 'end') {
-            setTimeout(() => callback(), 10);
-          }
-          return mockStream;
-        }),
-      };
+      const mockStream = createTestScanStream([
+        'rag_cache:company-123:key1',
+        'rag_cache:company-123:key2',
+      ]);
 
       mockRedis.scanStream.mockReturnValue(mockStream);
-      mockRedis.del.mockResolvedValue(2 as any);
+      mockRedis.del.mockResolvedValue(2);
 
       await CacheService.invalidateCompany('company-123');
 
@@ -163,14 +166,7 @@ describe('CacheService', () => {
     });
 
     it('should handle no keys found', async () => {
-      const mockStream: any = {
-        on: jest.fn((event: string, callback: () => void) => {
-          if (event === 'end') {
-            setTimeout(callback, 0);
-          }
-          return mockStream;
-        }),
-      };
+      const mockStream = createTestScanStream([], false);
 
       mockRedis.scanStream.mockReturnValue(mockStream);
 
@@ -193,12 +189,6 @@ describe('CacheService', () => {
     it('should return cache statistics', async () => {
       // Mock needs to be set up before the service is imported
       // Since Redis is created at module load, we need to mock it differently
-      const mockInfo = jest.fn().mockResolvedValue('used_memory_human:1.2M\n');
-      const mockDbsize = jest.fn().mockResolvedValue(42);
-
-      // We need to access the actual redis instance or mock it at module level
-      // For now, test that the method exists and handles the call
-      // The actual Redis mocking would need to happen before module import
       expect(CacheService.getStats).toBeDefined();
 
       // Since Redis is instantiated at module load, we can't easily mock it here
@@ -234,7 +224,7 @@ describe('CacheService', () => {
 
   describe('deleteKey', () => {
     it('should delete a specific cache key', async () => {
-      mockRedis.del.mockResolvedValue(1 as any);
+      mockRedis.del.mockResolvedValue(1);
 
       const result = await CacheService.deleteKey('test-key');
 
@@ -243,7 +233,7 @@ describe('CacheService', () => {
     });
 
     it('should return false if key does not exist', async () => {
-      mockRedis.del.mockResolvedValue(0 as any);
+      mockRedis.del.mockResolvedValue(0);
 
       const result = await CacheService.deleteKey('nonexistent-key');
 

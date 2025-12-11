@@ -1,6 +1,7 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { ExternalServiceError } from '../../../src/types/error.types';
 import { embeddingRepository } from '../../../src/repositories/embedding.repository';
+import { createMockHttpError, MockQdrantClient } from '../../lib/mock-utils';
 
 // Mock dependencies BEFORE importing VectorService
 jest.mock('@qdrant/js-client-rest');
@@ -25,18 +26,37 @@ jest.mock('../../../src/utils/logger', () => ({
 // Mock fetch globally
 global.fetch = jest.fn();
 
-const mockQdrant: jest.Mocked<QdrantClient> = {
+// Type-safe mock Qdrant client
+const mockQdrant: MockQdrantClient = {
   getCollection: jest.fn(),
   createCollection: jest.fn(),
   createPayloadIndex: jest.fn(),
   upsert: jest.fn(),
   search: jest.fn(),
-} as any;
+  delete: jest.fn(),
+  scroll: jest.fn(),
+  count: jest.fn(),
+};
 
-(QdrantClient as jest.MockedClass<typeof QdrantClient>).mockImplementation(() => mockQdrant);
+(QdrantClient as jest.MockedClass<typeof QdrantClient>).mockImplementation(
+  () => mockQdrant as unknown as QdrantClient
+);
 
 // Import VectorService AFTER setting up mocks
 import { VectorService } from '../../../src/services/vector.service';
+
+// Type for Qdrant search results
+interface QdrantSearchResult {
+  id: string;
+  score: number;
+  payload: Record<string, unknown> | null;
+}
+
+// Type for collection info
+interface CollectionInfo {
+  status: string;
+  vectors_count: number;
+}
 
 describe('VectorService', () => {
   beforeEach(() => {
@@ -99,7 +119,8 @@ describe('VectorService', () => {
 
   describe('ensureCollection', () => {
     it('should do nothing if collection exists', async () => {
-      mockQdrant.getCollection.mockResolvedValue({} as any);
+      const collectionInfo: CollectionInfo = { status: 'green', vectors_count: 100 };
+      mockQdrant.getCollection.mockResolvedValue(collectionInfo);
 
       await VectorService.ensureCollection('test-collection');
 
@@ -108,9 +129,8 @@ describe('VectorService', () => {
     });
 
     it('should create collection if it does not exist', async () => {
-      const error = new Error('Not found') as any;
-      error.status = 404;
-      mockQdrant.getCollection.mockRejectedValue(error);
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.getCollection.mockRejectedValue(notFoundError);
       mockQdrant.createCollection.mockResolvedValue(true);
       mockQdrant.createPayloadIndex.mockResolvedValue({
         operation_id: 0,
@@ -129,9 +149,8 @@ describe('VectorService', () => {
     });
 
     it('should create payload indexes for fileId and companyId', async () => {
-      const error = new Error('Not found') as any;
-      error.status = 404;
-      mockQdrant.getCollection.mockRejectedValue(error);
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.getCollection.mockRejectedValue(notFoundError);
       mockQdrant.createCollection.mockResolvedValue(true);
       mockQdrant.createPayloadIndex.mockResolvedValue({
         operation_id: 0,
@@ -151,9 +170,8 @@ describe('VectorService', () => {
     });
 
     it('should not throw if payload index creation fails', async () => {
-      const error = new Error('Not found') as any;
-      error.status = 404;
-      mockQdrant.getCollection.mockRejectedValue(error);
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.getCollection.mockRejectedValue(notFoundError);
       mockQdrant.createCollection.mockResolvedValue(true);
       mockQdrant.createPayloadIndex.mockRejectedValue(new Error('Index error'));
 
@@ -161,9 +179,8 @@ describe('VectorService', () => {
     });
 
     it('should throw on non-404 errors', async () => {
-      const error = new Error('Server error') as any;
-      error.status = 500;
-      mockQdrant.getCollection.mockRejectedValue(error);
+      const serverError = createMockHttpError('Server error', 500);
+      mockQdrant.getCollection.mockRejectedValue(serverError);
 
       await expect(VectorService.ensureCollection('test-collection')).rejects.toThrow(
         'Server error'
@@ -231,7 +248,7 @@ describe('VectorService', () => {
 
   describe('search', () => {
     it('should search successfully', async () => {
-      const mockResults = [
+      const mockResults: QdrantSearchResult[] = [
         { id: '1', score: 0.9, payload: { text: 'result1' } },
         { id: '2', score: 0.8, payload: { text: 'result2' } },
       ];
@@ -239,7 +256,7 @@ describe('VectorService', () => {
         { id: '1', score: 90, payload: { text: 'result1' } },
         { id: '2', score: 80, payload: { text: 'result2' } },
       ];
-      mockQdrant.search.mockResolvedValue(mockResults as any);
+      mockQdrant.search.mockResolvedValue(mockResults);
 
       const result = await VectorService.search('test-collection', [0.1, 0.2, 0.3], 10);
 
@@ -253,7 +270,8 @@ describe('VectorService', () => {
 
     it('should include filter in search', async () => {
       const filter = { must: [{ key: 'companyId', match: { value: 'company-123' } }] };
-      mockQdrant.search.mockResolvedValue([] as any);
+      const emptyResults: QdrantSearchResult[] = [];
+      mockQdrant.search.mockResolvedValue(emptyResults);
 
       await VectorService.search('test-collection', [0.1, 0.2], 5, filter);
 
@@ -265,7 +283,8 @@ describe('VectorService', () => {
     });
 
     it('should use default limit of 10', async () => {
-      mockQdrant.search.mockResolvedValue([] as any);
+      const emptyResults: QdrantSearchResult[] = [];
+      mockQdrant.search.mockResolvedValue(emptyResults);
 
       await VectorService.search('test-collection', [0.1, 0.2]);
 
@@ -282,6 +301,363 @@ describe('VectorService', () => {
       await expect(VectorService.search('test-collection', [0.1, 0.2])).rejects.toThrow(
         'Search failed'
       );
+    });
+
+    it('should handle empty results gracefully', async () => {
+      const emptyResults: QdrantSearchResult[] = [];
+      mockQdrant.search.mockResolvedValue(emptyResults);
+
+      const result = await VectorService.search('test-collection', [0.1, 0.2]);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle results with null payload', async () => {
+      const mockResults: QdrantSearchResult[] = [{ id: '1', score: 0.9, payload: null }];
+      mockQdrant.search.mockResolvedValue(mockResults);
+
+      const result = await VectorService.search('test-collection', [0.1, 0.2]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].payload).toBeNull();
+    });
+
+    it('should handle very high limit values', async () => {
+      const emptyResults: QdrantSearchResult[] = [];
+      mockQdrant.search.mockResolvedValue(emptyResults);
+
+      await VectorService.search('test-collection', [0.1, 0.2], 10000);
+
+      expect(mockQdrant.search).toHaveBeenCalledWith('test-collection', {
+        vector: [0.1, 0.2],
+        limit: 10000,
+        filter: undefined,
+      });
+    });
+
+    it('should clamp scores to 0-100 range', async () => {
+      const mockResults: QdrantSearchResult[] = [
+        { id: '1', score: 1.5, payload: {} }, // Above 1 (should clamp to 100)
+        { id: '2', score: -0.5, payload: {} }, // Below 0 (should clamp to 0)
+      ];
+      mockQdrant.search.mockResolvedValue(mockResults);
+
+      const result = await VectorService.search('test-collection', [0.1], 10);
+
+      expect(result[0].score).toBe(100); // Clamped to max
+      expect(result[1].score).toBe(0); // Clamped to min
+    });
+
+    it('should fetch content from embedding repository', async () => {
+      const mockResults: QdrantSearchResult[] = [
+        { id: '1', score: 0.9, payload: { fileId: 'file-1', chunkIndex: 0 } },
+      ];
+      mockQdrant.search.mockResolvedValue(mockResults);
+      (embeddingRepository.findChunks as jest.Mock).mockResolvedValue([
+        { fileId: 'file-1', chunkIndex: 0, content: 'Full text content from DB' },
+      ]);
+
+      const result = await VectorService.search('test-collection', [0.1], 10);
+
+      expect(embeddingRepository.findChunks).toHaveBeenCalledWith([
+        { fileId: 'file-1', chunkIndex: 0 },
+      ]);
+      expect((result[0].payload as { content?: string }).content).toBe('Full text content from DB');
+    });
+
+    it('should handle embedding repository error gracefully', async () => {
+      const mockResults: QdrantSearchResult[] = [
+        { id: '1', score: 0.9, payload: { fileId: 'file-1', chunkIndex: 0 } },
+      ];
+      mockQdrant.search.mockResolvedValue(mockResults);
+      (embeddingRepository.findChunks as jest.Mock).mockRejectedValue(new Error('DB error'));
+
+      const result = await VectorService.search('test-collection', [0.1], 10);
+
+      // Should still return results, just without enriched content
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('getEmbeddings edge cases', () => {
+    it('should handle empty text array', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ embeddings: [] }),
+      });
+
+      const result = await VectorService.getEmbeddings([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle single text input', async () => {
+      const mockEmbedding = [[0.1, 0.2, 0.3]];
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ embeddings: mockEmbedding }),
+      });
+
+      const result = await VectorService.getEmbeddings(['single text']);
+
+      expect(result).toEqual(mockEmbedding);
+    });
+
+    it('should handle very long text', async () => {
+      const longText = 'x'.repeat(100000);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ embeddings: [[0.1]] }),
+      });
+
+      const result = await VectorService.getEmbeddings([longText]);
+
+      expect(global.fetch).toHaveBeenCalled();
+      expect(result).toEqual([[0.1]]);
+    });
+
+    it('should handle unicode text correctly', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ embeddings: [[0.1, 0.2]] }),
+      });
+
+      await VectorService.getEmbeddings(['你好世界 🌍 مرحبا']);
+
+      const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string);
+      expect(callBody.texts[0]).toBe('你好世界 🌍 مرحبا');
+    });
+
+    it('should handle timeout errors', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Request timeout'));
+
+      await expect(VectorService.getEmbeddings(['text'])).rejects.toThrow('Request timeout');
+    });
+
+    it('should handle malformed JSON response', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new SyntaxError('Unexpected token');
+        },
+      });
+
+      await expect(VectorService.getEmbeddings(['text'])).rejects.toThrow();
+    });
+  });
+
+  describe('deleteByFileId', () => {
+    it('should delete vectors by fileId', async () => {
+      mockQdrant.delete.mockResolvedValue({ operation_id: 123 });
+      mockQdrant.scroll.mockResolvedValue({ points: [] });
+
+      const result = await VectorService.deleteByFileId('test-collection', 'file-123');
+
+      expect(result).toBe(1);
+      expect(mockQdrant.delete).toHaveBeenCalledWith('test-collection', {
+        wait: true,
+        filter: {
+          must: [{ key: 'fileId', match: { value: 'file-123' } }],
+        },
+      });
+    });
+
+    it('should throw on delete error', async () => {
+      mockQdrant.delete.mockRejectedValue(new Error('Delete failed'));
+
+      await expect(VectorService.deleteByFileId('test-collection', 'file-123')).rejects.toThrow(
+        'Delete failed'
+      );
+    });
+  });
+
+  describe('deleteByProjectId', () => {
+    it('should delete vectors for all files in project', async () => {
+      const fileIds = ['file-1', 'file-2', 'file-3'];
+      mockQdrant.delete.mockResolvedValue({ operation_id: 456 });
+
+      const result = await VectorService.deleteByProjectId(
+        'test-collection',
+        'project-123',
+        fileIds
+      );
+
+      expect(result).toBe(3);
+      expect(mockQdrant.delete).toHaveBeenCalledWith('test-collection', {
+        wait: true,
+        filter: {
+          must: [{ key: 'fileId', match: { any: fileIds } }],
+        },
+      });
+    });
+
+    it('should return 0 for empty fileIds array', async () => {
+      const result = await VectorService.deleteByProjectId('test-collection', 'project-123', []);
+
+      expect(result).toBe(0);
+      expect(mockQdrant.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('countByFileId', () => {
+    it('should return count of vectors for fileId', async () => {
+      mockQdrant.count.mockResolvedValue({ count: 42 });
+
+      const result = await VectorService.countByFileId('test-collection', 'file-123');
+
+      expect(result).toBe(42);
+    });
+
+    it('should return 0 for non-existent collection', async () => {
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.count.mockRejectedValue(notFoundError);
+
+      const result = await VectorService.countByFileId('test-collection', 'file-123');
+
+      expect(result).toBe(0);
+    });
+
+    it('should throw on other errors', async () => {
+      const serverError = new Error('Server error');
+      mockQdrant.count.mockRejectedValue(serverError);
+
+      await expect(VectorService.countByFileId('test-collection', 'file-123')).rejects.toThrow(
+        'Server error'
+      );
+    });
+  });
+
+  describe('getCollectionInfo', () => {
+    it('should return collection info', async () => {
+      mockQdrant.getCollection.mockResolvedValue({ points_count: 1000 });
+
+      const result = await VectorService.getCollectionInfo('test-collection');
+
+      expect(result).toEqual({ pointsCount: 1000 });
+    });
+
+    it('should return null for non-existent collection', async () => {
+      const notFoundError = createMockHttpError('Not found', 404);
+      mockQdrant.getCollection.mockRejectedValue(notFoundError);
+
+      const result = await VectorService.getCollectionInfo('non-existent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw on other errors', async () => {
+      const serverError = createMockHttpError('Server error', 500);
+      mockQdrant.getCollection.mockRejectedValue(serverError);
+
+      await expect(VectorService.getCollectionInfo('test-collection')).rejects.toThrow(
+        'Server error'
+      );
+    });
+  });
+
+  describe('rerank', () => {
+    it('should rerank documents successfully', async () => {
+      const mockScores = [0.9, 0.7, 0.5];
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ scores: mockScores }),
+      });
+
+      const result = await VectorService.rerank('test query', ['doc1', 'doc2', 'doc3']);
+
+      expect(result).toEqual(mockScores);
+    });
+
+    it('should throw ExternalServiceError on rerank service error', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        statusText: 'Service Unavailable',
+      });
+
+      await expect(VectorService.rerank('query', ['doc'])).rejects.toThrow(ExternalServiceError);
+    });
+
+    it('should throw on network error during rerank', async () => {
+      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+      await expect(VectorService.rerank('query', ['doc'])).rejects.toThrow('Network error');
+    });
+  });
+
+  describe('getEmbeddingDimensions', () => {
+    it('should return 384 for inhouse provider', () => {
+      const result = VectorService.getEmbeddingDimensions('inhouse');
+      expect(result).toBe(384);
+    });
+  });
+
+  describe('getModelName', () => {
+    it('should return model name for inhouse provider', () => {
+      const result = VectorService.getModelName('inhouse');
+      expect(result).toBe('all-MiniLM-L6-v2');
+    });
+  });
+
+  describe('upsertBatch edge cases', () => {
+    it('should handle empty points array', async () => {
+      mockQdrant.upsert.mockResolvedValue({
+        operation_id: 0,
+        status: 'completed' as const,
+      });
+
+      await VectorService.upsertBatch('test-collection', []);
+
+      expect(mockQdrant.upsert).toHaveBeenCalledWith('test-collection', {
+        wait: true,
+        points: [],
+      });
+    });
+
+    it('should handle very large batch sizes', async () => {
+      const largePoints = Array.from({ length: 1000 }, (_, i) => ({
+        id: `point-${i}`,
+        vector: [0.1, 0.2, 0.3],
+        payload: {
+          fileId: 'file-1',
+          companyId: 'company-1',
+          text_preview: `text ${i}`,
+          chunkIndex: i,
+        },
+      }));
+      mockQdrant.upsert.mockResolvedValue({
+        operation_id: 0,
+        status: 'completed' as const,
+      });
+
+      await VectorService.upsertBatch('test-collection', largePoints);
+
+      expect(mockQdrant.upsert).toHaveBeenCalled();
+    });
+
+    it('should handle points with empty payload', async () => {
+      const points = [
+        {
+          id: '1',
+          vector: [0.1],
+          payload: {
+            fileId: '',
+            companyId: '',
+            text_preview: '',
+            chunkIndex: 0,
+          },
+        },
+      ];
+      mockQdrant.upsert.mockResolvedValue({
+        operation_id: 0,
+        status: 'completed' as const,
+      });
+
+      await VectorService.upsertBatch('test-collection', points);
+
+      expect(mockQdrant.upsert).toHaveBeenCalledWith('test-collection', {
+        wait: true,
+        points,
+      });
     });
   });
 });

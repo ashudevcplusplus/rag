@@ -2,12 +2,18 @@ import { projectRepository } from '../../../src/repositories/project.repository'
 import { ProjectModel } from '../../../src/models/project.model';
 import { ProjectStatus, Visibility } from '../../../src/types/enums';
 
+// Type for mock documents
+interface MockDocument {
+  _id?: { toString: () => string } | string;
+  [key: string]: unknown;
+}
+
 // Mock Mongoose model
 jest.mock('../../../src/models/project.model');
 jest.mock('../../../src/repositories/helpers', () => ({
-  toStringId: jest.fn((doc: any) => ({ ...doc, _id: doc._id?.toString() || doc._id })),
-  toStringIds: jest.fn((docs: any[]) =>
-    docs.map((doc) => ({ ...doc, _id: doc._id?.toString() || doc._id }))
+  toStringId: jest.fn((doc: MockDocument) => ({ ...doc, _id: doc._id?.toString?.() || doc._id })),
+  toStringIds: jest.fn((docs: MockDocument[]) =>
+    docs.map((doc) => ({ ...doc, _id: doc._id?.toString?.() || doc._id }))
   ),
 }));
 
@@ -223,7 +229,7 @@ describe('ProjectRepository', () => {
 
       expect(ProjectModel.findByIdAndUpdate).toHaveBeenCalledWith(
         'project-123',
-        { $set: { deletedAt: expect.any(Date), status: 'DELETED' } },
+        { $set: { deletedAt: expect.any(Date), status: ProjectStatus.DELETED } },
         { new: true }
       );
       expect(result).toBe(true);
@@ -239,7 +245,7 @@ describe('ProjectRepository', () => {
       const result = await projectRepository.archive('project-123');
 
       expect(ProjectModel.findByIdAndUpdate).toHaveBeenCalledWith('project-123', {
-        $set: { archivedAt: expect.any(Date), status: 'ARCHIVED' },
+        $set: { archivedAt: expect.any(Date), status: ProjectStatus.ARCHIVED },
       });
       expect(result).toBe(true);
     });
