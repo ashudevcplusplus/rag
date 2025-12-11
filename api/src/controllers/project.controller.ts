@@ -507,11 +507,10 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  // Delete existing embeddings first
-  await embeddingRepository.deleteByFileId(fileId);
-
   // Reset file status BEFORE adding to queue to avoid race condition
   // (processor may pick up job and set PROCESSING before we update to PENDING)
+  // Order: 1) Update status 2) Clear error 3) Delete embeddings
+  // This ensures if embedding deletion fails, file is still in PENDING state
   await fileMetadataRepository.update(fileId, {
     processingStatus: ProcessingStatus.PENDING,
     chunkCount: 0,
@@ -519,6 +518,10 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     retryCount: 0,
   });
   await fileMetadataRepository.clearErrorMessage(fileId);
+
+  // Delete existing embeddings after state is updated
+  // If this fails, file is in PENDING state and processor will handle it
+  await embeddingRepository.deleteByFileId(fileId);
 
   // Add to indexing queue after status is set
   // Include original embedding config to ensure vector dimension consistency
@@ -647,12 +650,12 @@ export const bulkReindexFailed = asyncHandler(
         continue;
       }
 
-      // Delete existing embeddings and reset file status BEFORE adding to queue
-      // to avoid race condition (processor may set PROCESSING before we update)
+      // Reset file status BEFORE adding to queue to avoid race condition
+      // (processor may set PROCESSING before we update)
+      // Order: 1) Update status 2) Clear error 3) Delete embeddings
+      // This ensures if embedding deletion fails, file is still in PENDING state
       try {
-        await embeddingRepository.deleteByFileId(file._id);
-
-        // Reset file status, retry count, and clear error message
+        // Reset file status, retry count, and clear error message first
         await fileMetadataRepository.update(file._id, {
           processingStatus: ProcessingStatus.PENDING,
           chunkCount: 0,
@@ -660,6 +663,10 @@ export const bulkReindexFailed = asyncHandler(
           retryCount: 0,
         });
         await fileMetadataRepository.clearErrorMessage(file._id);
+
+        // Delete existing embeddings after state is updated
+        // If this fails, file is in PENDING state and processor will handle it
+        await embeddingRepository.deleteByFileId(file._id);
       } catch (_dbError) {
         errors.push({ fileId: file._id, error: 'Failed to reset file state' });
         continue;
