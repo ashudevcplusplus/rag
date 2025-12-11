@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import { generateFileHash } from '../utils/hash.util';
+import { extractText } from '../utils/text-processor';
 import { indexingQueue } from '../queue/queue.client';
 import { publishFileCleanup, publishProjectStats } from '../utils/async-events.util';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
@@ -8,6 +9,9 @@ import { companyRepository } from '../repositories/company.repository';
 import { ProcessingStatus, FileCleanupReason } from '../types/enums';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
+
+// Minimum text length to consider a file valid (in characters)
+const MIN_TEXT_LENGTH = 10;
 
 export class FileService {
   /**
@@ -71,7 +75,73 @@ export class FileService {
       tags: [],
     });
 
-    // Store file metadata in database
+    // Validate file has extractable text content BEFORE saving to database
+    try {
+      const extractedText = await extractText(file.path, file.mimetype);
+      const trimmedText = extractedText?.trim() || '';
+
+      if (trimmedText.length < MIN_TEXT_LENGTH) {
+        // Clean up the file that has no extractable text
+        try {
+          fs.unlinkSync(file.path);
+        } catch (cleanupError) {
+          logger.warn('Failed to cleanup unextractable file', {
+            filePath: file.path,
+            cleanupError,
+          });
+        }
+
+        void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.ERROR });
+
+        logger.warn('File rejected: no extractable text content', {
+          companyId,
+          projectId,
+          filename: file.originalname,
+          mimetype: file.mimetype,
+          textLength: trimmedText.length,
+        });
+
+        throw new ValidationError(
+          'File has no extractable text content. This may be a scanned image PDF or an empty file. Please ensure the file contains readable text.'
+        );
+      }
+
+      logger.debug('Text extraction validation passed', {
+        filename: file.originalname,
+        textLength: trimmedText.length,
+      });
+    } catch (extractError) {
+      // If it's already a ValidationError, rethrow it
+      if (extractError instanceof ValidationError) {
+        throw extractError;
+      }
+
+      // Clean up the file on extraction error
+      try {
+        fs.unlinkSync(file.path);
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup file after extraction error', {
+          filePath: file.path,
+          cleanupError,
+        });
+      }
+
+      void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.ERROR });
+
+      logger.warn('File rejected: text extraction failed', {
+        companyId,
+        projectId,
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        error: extractError instanceof Error ? extractError.message : String(extractError),
+      });
+
+      throw new ValidationError(
+        `Unable to extract text from file: ${extractError instanceof Error ? extractError.message : 'Unknown error'}. Please ensure the file is a valid document with readable text.`
+      );
+    }
+
+    // Store file metadata in database (include embedding config for reindexing consistency)
     const fileMetadata = await fileMetadataRepository.create({
       projectId,
       uploadedBy,
@@ -82,6 +152,8 @@ export class FileService {
       size: file.size,
       hash: fileHash,
       tags: [],
+      embeddingProvider,
+      embeddingModel,
     });
 
     // One-line event publishing for project stats (storage update happens after indexing completes)

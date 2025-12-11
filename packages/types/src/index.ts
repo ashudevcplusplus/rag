@@ -193,6 +193,7 @@ export interface FileMetadata {
   uploadedAt: string;
   processingStatus: ProcessingStatus;
   processingError?: string;
+  errorMessage?: string;
   chunkCount: number;
   vectorIds: string[];
   metadata?: Record<string, unknown>;

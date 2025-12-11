@@ -195,6 +195,23 @@ export interface ProjectStats {
   recentUploads: number;
 }
 
+export interface IndexingStats {
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  total: number;
+}
+
+export interface ReindexResponse {
+  message: string;
+  jobId?: string;
+  fileId?: string;
+  queued?: number;
+  results?: { fileId: string; jobId: string }[];
+  errors?: { fileId: string; error: string }[];
+}
+
 export const projectsApi = {
   async list(
     companyId: string,
@@ -247,6 +264,22 @@ export const projectsApi = {
 
   async getStats(companyId: string, projectId: string): Promise<ProjectStats> {
     return request(`/v1/companies/${companyId}/projects/${projectId}/stats`);
+  },
+
+  async getIndexingStats(companyId: string, projectId: string): Promise<{ stats: IndexingStats }> {
+    return request(`/v1/companies/${companyId}/projects/${projectId}/indexing/stats`);
+  },
+
+  async reindexFile(companyId: string, projectId: string, fileId: string): Promise<ReindexResponse> {
+    return request(`/v1/companies/${companyId}/projects/${projectId}/files/${fileId}/reindex`, {
+      method: 'POST',
+    });
+  },
+
+  async bulkReindexFailed(companyId: string, projectId: string): Promise<ReindexResponse> {
+    return request(`/v1/companies/${companyId}/projects/${projectId}/indexing/retry-all`, {
+      method: 'POST',
+    });
   },
 };
 

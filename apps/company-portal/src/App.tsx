@@ -17,6 +17,7 @@ import { SearchPage } from './pages/search/SearchPage';
 import { ChatPage } from './pages/chat/ChatPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { UsersPage } from './pages/users/UsersPage';
+import { IndexingPage } from './pages/indexing/IndexingPage';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -86,6 +87,7 @@ function App() {
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/indexing" element={<IndexingPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

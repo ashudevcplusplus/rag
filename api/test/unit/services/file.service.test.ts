@@ -4,6 +4,7 @@ import { fileMetadataRepository } from '../../../src/repositories/file-metadata.
 import { companyRepository } from '../../../src/repositories/company.repository';
 import { projectRepository } from '../../../src/repositories/project.repository';
 import { indexingQueue } from '../../../src/queue/queue.client';
+import { extractText } from '../../../src/utils/text-processor';
 import { ValidationError } from '../../../src/types/error.types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,6 +15,11 @@ jest.mock('../../../src/repositories/company.repository');
 jest.mock('../../../src/repositories/project.repository');
 jest.mock('../../../src/queue/queue.client');
 jest.mock('../../../src/utils/logger');
+jest.mock('../../../src/utils/text-processor', () => ({
+  extractText: jest.fn().mockResolvedValue('This is extracted text content from the file.'),
+  chunkText: jest.fn().mockReturnValue(['chunk1', 'chunk2']),
+  recursiveChunkText: jest.fn().mockReturnValue(['chunk1', 'chunk2']),
+}));
 
 describe('FileService', () => {
   let fileService: FileService;
@@ -41,6 +47,8 @@ describe('FileService', () => {
     (fileMetadataRepository.update as jest.Mock).mockResolvedValue({});
     (projectRepository.updateStats as jest.Mock).mockResolvedValue({});
     (indexingQueue.add as jest.Mock).mockResolvedValue({ id: 'job-123' });
+    // Reset extractText mock to default successful behavior
+    (extractText as jest.Mock).mockResolvedValue('This is extracted text content from the file.');
   });
 
   describe('uploadFile', () => {
@@ -87,6 +95,34 @@ describe('FileService', () => {
       ).rejects.toThrow('Storage limit reached');
 
       expect(fileMetadataRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw error if file has no extractable text', async () => {
+      (extractText as jest.Mock).mockResolvedValue('   '); // Only whitespace
+
+      await expect(
+        fileService.uploadFile('company-123', mockFile, 'project-123', 'user-123')
+      ).rejects.toThrow('File has no extractable text content');
+
+      // Verify cleanup
+      expect(fs.unlinkSync).toHaveBeenCalledWith(mockFile.path);
+      // Verify no file created
+      expect(fileMetadataRepository.create).not.toHaveBeenCalled();
+      expect(indexingQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('should throw error if text extraction fails', async () => {
+      (extractText as jest.Mock).mockRejectedValue(new Error('Unsupported file type'));
+
+      await expect(
+        fileService.uploadFile('company-123', mockFile, 'project-123', 'user-123')
+      ).rejects.toThrow('Unable to extract text from file');
+
+      // Verify cleanup
+      expect(fs.unlinkSync).toHaveBeenCalledWith(mockFile.path);
+      // Verify no file created
+      expect(fileMetadataRepository.create).not.toHaveBeenCalled();
+      expect(indexingQueue.add).not.toHaveBeenCalled();
     });
   });
 });
