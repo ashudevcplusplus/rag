@@ -261,10 +261,10 @@ describe('FileMetadataRepository', () => {
     it('should count files in project', async () => {
       (FileMetadataModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(5);
 
-      const count = await fileMetadataRepository.countByProjectId('project-123');
+      const count = await fileMetadataRepository.countByProjectId('507f1f77bcf86cd799439011');
 
       expect(FileMetadataModel.countDocuments).toHaveBeenCalledWith({
-        projectId: 'project-123',
+        projectId: expect.objectContaining({ toString: expect.any(Function) }),
         deletedAt: null,
       });
       expect(count).toBe(5);

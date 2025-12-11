@@ -219,7 +219,7 @@ export class ProjectRepository {
               totalSize: actualTotalSize,
               vectorCount: actualVectorCount,
             },
-          });
+          }).exec();
         }
       }
     }

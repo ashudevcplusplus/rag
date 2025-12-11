@@ -11,6 +11,9 @@
     "start": "cd api && npm start",
     "dev": "cd api && npm run dev",
     "dev:portal": "pnpm --filter @rag/company-portal dev",
+    "dev:all": "docker-compose up -d && pnpm --filter @rag/company-portal dev --port 3000",
+    "restart:all": "docker-compose down; pkill -f vite 2>/dev/null; lsof -ti:3000,5173,5174 2>/dev/null | xargs kill -9 2>/dev/null; docker-compose up -d --build && pnpm --filter @rag/company-portal dev --port 3000",
+    "stop:all": "docker-compose down; pkill -f vite 2>/dev/null; lsof -ti:3000,5173,5174 2>/dev/null | xargs kill -9 2>/dev/null",
     "prepare": "husky",
     "lint:portal": "pnpm --filter @rag/company-portal lint",
     "typecheck": "pnpm -r typecheck"
