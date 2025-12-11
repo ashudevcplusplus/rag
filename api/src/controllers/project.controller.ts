@@ -3,6 +3,7 @@ import { projectRepository } from '../repositories/project.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { embeddingRepository } from '../repositories/embedding.repository';
 import { DeletionService } from '../services/deletion.service';
+import { VectorService } from '../services/vector.service';
 import { indexingQueue } from '../queue/queue.client';
 import {
   createProjectSchema,
@@ -519,8 +520,10 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
   });
   await fileMetadataRepository.clearErrorMessage(fileId);
 
-  // Delete existing embeddings after state is updated
+  // Delete existing embeddings and vectors after state is updated
   // If this fails, file is in PENDING state and processor will handle it
+  const collection = `company_${companyId}`;
+  await VectorService.deleteByFileId(collection, fileId);
   await embeddingRepository.deleteByFileId(fileId);
 
   // Add to indexing queue after status is set
@@ -664,8 +667,10 @@ export const bulkReindexFailed = asyncHandler(
         });
         await fileMetadataRepository.clearErrorMessage(file._id);
 
-        // Delete existing embeddings after state is updated
+        // Delete existing embeddings and vectors after state is updated
         // If this fails, file is in PENDING state and processor will handle it
+        const collection = `company_${companyId}`;
+        await VectorService.deleteByFileId(collection, file._id);
         await embeddingRepository.deleteByFileId(file._id);
       } catch (_dbError) {
         errors.push({ fileId: file._id, error: 'Failed to reset file state' });
