@@ -15,8 +15,11 @@ export interface IProjectMember {
     [key: string]: unknown;
   };
 
-  addedAt: Date;
   addedBy?: string;
+
+  // Timestamps (managed by Mongoose)
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Permissions subschema

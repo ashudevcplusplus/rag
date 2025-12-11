@@ -50,7 +50,11 @@ export class FileMetadataRepository {
    * Find file by hash (for deduplication)
    */
   async findByHash(hash: string, projectId: string): Promise<IFileMetadata | null> {
-    const file = await FileMetadataModel.findOne({ hash, projectId, deletedAt: null }).lean();
+    const file = await FileMetadataModel.findOne({
+      hash,
+      projectId: new Types.ObjectId(projectId),
+      deletedAt: null,
+    }).lean();
     if (!file) return null;
     return toStringId(file) as unknown as IFileMetadata;
   }
@@ -59,7 +63,10 @@ export class FileMetadataRepository {
    * Find files by project ID
    */
   async findByProjectId(projectId: string): Promise<IFileMetadata[]> {
-    const files = await FileMetadataModel.find({ projectId, deletedAt: null })
+    const files = await FileMetadataModel.find({
+      projectId: new Types.ObjectId(projectId),
+      deletedAt: null,
+    })
       .sort({ uploadedAt: -1 })
       .lean();
     return toStringIds(files) as unknown as IFileMetadata[];
@@ -83,7 +90,7 @@ export class FileMetadataRepository {
     status: ProcessingStatus
   ): Promise<IFileMetadata[]> {
     const files = await FileMetadataModel.find({
-      projectId,
+      projectId: new Types.ObjectId(projectId),
       processingStatus: status,
       deletedAt: null,
     })
@@ -209,7 +216,10 @@ export class FileMetadataRepository {
       tags?: string[];
     }
   ): Promise<{ files: IFileMetadata[]; total: number; page: number; totalPages: number }> {
-    const query: FilterQuery<IFileMetadataDocument> = { projectId, deletedAt: null };
+    const query: FilterQuery<IFileMetadataDocument> = {
+      projectId: new Types.ObjectId(projectId),
+      deletedAt: null,
+    };
 
     if (filters?.processingStatus) {
       query.processingStatus = filters.processingStatus;
@@ -259,7 +269,10 @@ export class FileMetadataRepository {
    * Count files in a project
    */
   async countByProjectId(projectId: string): Promise<number> {
-    return FileMetadataModel.countDocuments({ projectId, deletedAt: null });
+    return FileMetadataModel.countDocuments({
+      projectId: new Types.ObjectId(projectId),
+      deletedAt: null,
+    });
   }
 
   /**
@@ -272,7 +285,7 @@ export class FileMetadataRepository {
     limit: number = 10
   ): Promise<{ files: IFileMetadata[]; total: number; page: number; totalPages: number }> {
     const query: FilterQuery<IFileMetadataDocument> = {
-      projectId,
+      projectId: new Types.ObjectId(projectId),
       deletedAt: null,
       $or: [
         { originalFilename: { $regex: searchTerm, $options: 'i' } },

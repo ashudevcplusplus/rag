@@ -1,6 +1,24 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IEmbedding } from '../schemas/embedding.schema';
 
+/**
+ * ARCHITECTURE NOTE: Vector Storage Strategy
+ *
+ * Currently, embedding vectors are stored directly in MongoDB for simplicity.
+ * For production scale, consider migrating vectors to a dedicated vector database
+ * (e.g., Qdrant, Pinecone, Weaviate) for:
+ *   - Efficient similarity search (ANN algorithms)
+ *   - Reduced MongoDB document size
+ *   - Better query performance for high-dimensional data
+ *
+ * The `vectorCollection` field in FileMetadata can reference the external
+ * collection/namespace in the vector DB.
+ *
+ * Migration path:
+ *   1. Keep metadata (fileId, projectId, chunkCount, provider) in MongoDB
+ *   2. Store actual vectors in vector DB with fileId as the payload
+ *   3. Use TTL or manual cleanup to sync deletions
+ */
 export interface IEmbeddingDocument
   extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId' | 'deletedAt'>,
     Document {

@@ -23,7 +23,7 @@ describe('ProjectMemberRepository', () => {
         _id: { toString: () => 'member-123' },
         projectId: { toString: () => 'project-123' },
         userId: { toString: () => 'user-123' },
-        addedAt: new Date(),
+        createdAt: new Date(),
         toObject: jest.fn().mockReturnValue({
           ...mockData,
           _id: 'member-123',

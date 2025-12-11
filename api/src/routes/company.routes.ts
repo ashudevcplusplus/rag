@@ -10,7 +10,7 @@ import {
 } from '../controllers/company.controller';
 import { companyRateLimiter } from '../middleware/company-rate-limiter.middleware';
 import { uploadLimiter, searchLimiter } from '../middleware/rate-limiter.middleware';
-import { upload } from '../middleware/upload.middleware';
+import { upload, MAX_FILES_PER_UPLOAD } from '../middleware/upload.middleware';
 import projectRoutes from './project.routes';
 import userRoutes from './user.routes';
 import chatRoutes from './chat.routes';
@@ -27,7 +27,12 @@ router.use('/:companyId/chat', chatRoutes);
 
 // Company specific routes
 router.get('/:companyId/stats', getCompanyStats);
-router.post('/:companyId/uploads', uploadLimiter, upload.array('files', 10), uploadFile);
+router.post(
+  '/:companyId/uploads',
+  uploadLimiter,
+  upload.array('files', MAX_FILES_PER_UPLOAD),
+  uploadFile
+);
 router.get('/:companyId/vectors', getCompanyVectors);
 
 router.post('/:companyId/search', searchLimiter, searchCompany);

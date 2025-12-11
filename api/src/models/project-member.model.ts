@@ -3,11 +3,16 @@ import { IProjectMember } from '../schemas/project-member.schema';
 import { ProjectRole } from '../types/enums';
 
 export interface IProjectMemberDocument
-  extends Omit<IProjectMember, '_id' | 'projectId' | 'userId' | 'addedBy'>,
+  extends Omit<
+      IProjectMember,
+      '_id' | 'projectId' | 'userId' | 'addedBy' | 'createdAt' | 'updatedAt'
+    >,
     Document {
   projectId: Types.ObjectId;
   userId: Types.ObjectId;
   addedBy?: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const projectMemberSchema = new Schema<IProjectMemberDocument>(
@@ -32,17 +37,13 @@ const projectMemberSchema = new Schema<IProjectMemberDocument>(
       type: Schema.Types.Mixed,
     },
 
-    addedAt: {
-      type: Date,
-      default: Date.now,
-    },
     addedBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
     },
   },
   {
-    timestamps: false,
+    timestamps: true, // Adds createdAt and updatedAt
     collection: 'project_members',
   }
 );

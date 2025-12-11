@@ -1,7 +1,7 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IAnalytics extends Document {
-  companyId: string;
+  companyId: Types.ObjectId;
   eventType: string;
   metadata?: Record<string, unknown>;
   timestamp: Date;
@@ -12,7 +12,8 @@ export interface IAnalytics extends Document {
 const analyticsSchema = new Schema<IAnalytics>(
   {
     companyId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
       required: true,
       index: true,
     },

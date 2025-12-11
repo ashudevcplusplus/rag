@@ -84,7 +84,7 @@ export class FileService {
       tags: [],
     });
 
-    // One-line event publishing
+    // One-line event publishing for project stats (storage update happens after indexing completes)
     void publishProjectStats({ projectId, fileCount: 1, totalSize: file.size });
 
     // Add to Queue

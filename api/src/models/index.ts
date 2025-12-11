@@ -7,3 +7,9 @@ export { ProjectMemberModel, IProjectMemberDocument } from './project-member.mod
 export { FileMetadataModel, IFileMetadataDocument } from './file-metadata.model';
 export { ApiLogModel, IApiLogDocument } from './api-log.model';
 export { EmbeddingModel, IEmbeddingDocument } from './embedding.model';
+export {
+  ConsumerChangeModel,
+  IConsumerChangeDocument,
+  IConsumerChange,
+  CreateConsumerChangeDTO,
+} from './consumer-change.model';

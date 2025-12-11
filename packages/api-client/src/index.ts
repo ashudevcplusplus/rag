@@ -198,18 +198,20 @@ export interface ProjectStats {
 export const projectsApi = {
   async list(
     companyId: string,
-    params?: { page?: number; limit?: number; status?: string }
+    params?: { page?: number; limit?: number; status?: string; syncStats?: boolean }
   ): Promise<{ projects: Project[]; pagination: PaginatedResponse<Project>['pagination'] }> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.limit) searchParams.set('limit', params.limit.toString());
     if (params?.status) searchParams.set('status', params.status);
+    if (params?.syncStats) searchParams.set('syncStats', 'true');
     const query = searchParams.toString();
     return request(`/v1/companies/${companyId}/projects${query ? `?${query}` : ''}`);
   },
 
-  async get(companyId: string, projectId: string): Promise<{ project: Project }> {
-    return request(`/v1/companies/${companyId}/projects/${projectId}`);
+  async get(companyId: string, projectId: string, options?: { syncStats?: boolean }): Promise<{ project: Project }> {
+    const query = options?.syncStats ? '?syncStats=true' : '';
+    return request(`/v1/companies/${companyId}/projects/${projectId}${query}`);
   },
 
   async create(companyId: string, data: CreateProjectDTO): Promise<{ project: Project }> {
@@ -252,6 +254,60 @@ export const projectsApi = {
 // Files API
 // ============================================================================
 
+// File upload constraints
+export const FILE_UPLOAD_CONSTRAINTS = {
+  maxFiles: 30,
+  maxFileSize: 50 * 1024 * 1024, // 50MB in bytes
+  allowedExtensions: ['.pdf', '.txt', '.doc', '.docx', '.rtf', '.odt', '.md', '.markdown', '.csv', '.xml', '.json', '.html', '.htm'],
+  allowedMimeTypes: [
+    'application/pdf',
+    'text/plain',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/rtf',
+    'text/rtf',
+    'application/vnd.oasis.opendocument.text',
+    'text/markdown',
+    'text/x-markdown',
+    'text/csv',
+    'application/xml',
+    'text/xml',
+    'application/json',
+    'text/html',
+  ],
+} as const;
+
+export function isAllowedFileType(file: File): boolean {
+  const extension = '.' + file.name.split('.').pop()?.toLowerCase();
+  const mimeType = file.type.toLowerCase();
+  return (
+    FILE_UPLOAD_CONSTRAINTS.allowedExtensions.includes(extension as typeof FILE_UPLOAD_CONSTRAINTS.allowedExtensions[number]) ||
+    FILE_UPLOAD_CONSTRAINTS.allowedMimeTypes.includes(mimeType as typeof FILE_UPLOAD_CONSTRAINTS.allowedMimeTypes[number])
+  );
+}
+
+export function validateFilesForUpload(files: File[]): { valid: boolean; error?: string } {
+  if (files.length === 0) {
+    return { valid: false, error: 'No files selected' };
+  }
+  if (files.length > FILE_UPLOAD_CONSTRAINTS.maxFiles) {
+    return { valid: false, error: `Maximum ${FILE_UPLOAD_CONSTRAINTS.maxFiles} files allowed per upload` };
+  }
+  const invalidFiles = files.filter(f => !isAllowedFileType(f));
+  if (invalidFiles.length > 0) {
+    const names = invalidFiles.map(f => f.name).join(', ');
+    return { valid: false, error: `Unsupported file type(s): ${names}. Only document files (PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML) are allowed.` };
+  }
+  // Check file size
+  const oversizedFiles = files.filter(f => f.size > FILE_UPLOAD_CONSTRAINTS.maxFileSize);
+  if (oversizedFiles.length > 0) {
+    const maxSizeMB = FILE_UPLOAD_CONSTRAINTS.maxFileSize / (1024 * 1024);
+    const names = oversizedFiles.map(f => f.name).join(', ');
+    return { valid: false, error: `File(s) exceed ${maxSizeMB}MB limit: ${names}` };
+  }
+  return { valid: true };
+}
+
 export interface FilePreviewResponse {
   file: {
     _id: string;
@@ -293,6 +349,12 @@ export const filesApi = {
     files: File[],
     onProgress?: (progress: number) => void
   ): Promise<UploadResponse> {
+    // Validate files before uploading
+    const validation = validateFilesForUpload(files);
+    if (!validation.valid) {
+      throw { error: validation.error, statusCode: 400 } as ApiError;
+    }
+
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
     formData.append('projectId', projectId);

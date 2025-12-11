@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Building,
   Key,
@@ -30,6 +30,17 @@ export function SettingsPage() {
 
   const [newApiUrl, setNewApiUrl] = useState(apiUrl);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+
+  // Fetch fresh company stats (for accurate storage info)
+  const { data: statsData } = useQuery({
+    queryKey: ['company-stats', companyId],
+    queryFn: () => companyApi.getStats(companyId!),
+    enabled: !!companyId,
+  });
+
+  // Use fresh stats if available, fallback to stored company data
+  const storageUsed = statsData?.storageUsed ?? company?.storageUsed ?? 0;
+  const storageLimit = statsData?.storageLimit ?? company?.storageLimit ?? 0;
 
   // Clear cache mutation
   const clearCacheMutation = useMutation({
@@ -127,8 +138,8 @@ export function SettingsPage() {
             <div>
               <label className="text-sm text-gray-500">Storage Used</label>
               <p className="font-medium text-gray-900">
-                {formatBytes(company?.storageUsed || 0)} of{' '}
-                {formatBytes(company?.storageLimit || 0)}
+                {formatBytes(storageUsed)} of{' '}
+                {formatBytes(storageLimit)}
               </p>
             </div>
           </CardContent>

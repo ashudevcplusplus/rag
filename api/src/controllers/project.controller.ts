@@ -68,6 +68,8 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
 
 /**
  * Get project by ID
+ * Optionally recalculates fresh stats from actual data (disabled by default for performance)
+ * Pass ?syncStats=true to trigger stats recalculation
  */
 export const getProject = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { projectId } = projectIdSchema.parse(req.params);
@@ -78,11 +80,25 @@ export const getProject = asyncHandler(async (req: Request, res: Response): Prom
     return;
   }
 
+  // Only recalculate stats when explicitly requested (opt-in for performance)
+  const syncStats = req.query.syncStats === 'true';
+  if (syncStats) {
+    await projectRepository.recalculateStats(projectId);
+    // Refetch project with updated stats
+    const updatedProject = await projectRepository.findById(projectId);
+    if (updatedProject) {
+      res.json({ project: updatedProject });
+      return;
+    }
+  }
+
   res.json({ project });
 });
 
 /**
  * List projects in a company
+ * Supports syncStats query param to calculate accurate stats from file metadata
+ * Pass ?syncStats=true to trigger stats recalculation (disabled by default for performance)
  */
 export const listProjects = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const companyId = getCompanyId(req);
@@ -95,11 +111,14 @@ export const listProjects = asyncHandler(async (req: Request, res: Response): Pr
   const status = req.query.status as string;
   const ownerId = req.query.ownerId as string;
   const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
+  // Opt-in stats sync for performance (expensive aggregation queries)
+  const syncStats = req.query.syncStats === 'true';
 
   const result = await projectRepository.list(companyId, page, limit, {
     status,
     ownerId,
     tags,
+    syncStats,
   });
 
   const response = createPaginationResponse(result.projects, result.page, limit, result.total);
