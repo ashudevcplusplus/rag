@@ -70,8 +70,9 @@ export function IndexingPage() {
   });
 
   // Fetch files for expanded project (use higher limit to show all files)
+  // Note: statusFilter is NOT in query key since filtering is done client-side
   const { data: filesData } = useQuery({
-    queryKey: ['files', companyId, expandedProjectId, statusFilter],
+    queryKey: ['files', companyId, expandedProjectId],
     queryFn: async () => {
       if (!expandedProjectId) return { files: [] };
       const result = await filesApi.list(companyId!, expandedProjectId, { limit: 100 });
