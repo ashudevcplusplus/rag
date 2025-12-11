@@ -47,6 +47,8 @@ describe('FileService', () => {
     (fileMetadataRepository.update as jest.Mock).mockResolvedValue({});
     (projectRepository.updateStats as jest.Mock).mockResolvedValue({});
     (indexingQueue.add as jest.Mock).mockResolvedValue({ id: 'job-123' });
+    // Reset extractText mock to default successful behavior
+    (extractText as jest.Mock).mockResolvedValue('This is extracted text content from the file.');
   });
 
   describe('uploadFile', () => {

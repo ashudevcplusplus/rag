@@ -42,9 +42,8 @@ export function IndexingPage() {
   const queryClient = useQueryClient();
   const { companyId } = useAuthStore();
 
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [isRetryAllModalOpen, setIsRetryAllModalOpen] = useState(false);
   const [projectToRetry, setProjectToRetry] = useState<ProjectWithStats | null>(null);
 
@@ -70,15 +69,15 @@ export function IndexingPage() {
     refetchInterval: 10000, // Refresh every 10 seconds to see status changes
   });
 
-  // Fetch files for expanded projects
+  // Fetch files for expanded project
   const { data: filesData } = useQuery({
-    queryKey: ['files', companyId, selectedProject, statusFilter],
+    queryKey: ['files', companyId, expandedProjectId, statusFilter],
     queryFn: async () => {
-      if (!selectedProject) return { files: [] };
-      const result = await filesApi.list(companyId!, selectedProject);
+      if (!expandedProjectId) return { files: [] };
+      const result = await filesApi.list(companyId!, expandedProjectId);
       return result;
     },
-    enabled: !!companyId && !!selectedProject,
+    enabled: !!companyId && !!expandedProjectId,
   });
 
   // Reindex single file mutation
@@ -156,17 +155,11 @@ export function IndexingPage() {
   });
 
   const toggleProjectExpanded = (projectId: string) => {
-    const newExpanded = new Set(expandedProjects);
-    if (newExpanded.has(projectId)) {
-      newExpanded.delete(projectId);
-      if (selectedProject === projectId) {
-        setSelectedProject(null);
-      }
+    if (expandedProjectId === projectId) {
+      setExpandedProjectId(null);
     } else {
-      newExpanded.add(projectId);
-      setSelectedProject(projectId);
+      setExpandedProjectId(projectId);
     }
-    setExpandedProjects(newExpanded);
   };
 
   const handleRetryFile = (projectId: string, fileId: string) => {
@@ -348,7 +341,7 @@ export function IndexingPage() {
                     <div className="flex items-center gap-3">
                       <ChevronDown
                         className={`w-5 h-5 text-gray-400 transition-transform ${
-                          expandedProjects.has(project._id) ? 'rotate-0' : '-rotate-90'
+                          expandedProjectId === project._id ? 'rotate-0' : '-rotate-90'
                         }`}
                       />
                       <div
@@ -409,9 +402,9 @@ export function IndexingPage() {
                   </div>
 
                   {/* Expanded Files List */}
-                  {expandedProjects.has(project._id) && (
+                  {expandedProjectId === project._id && (
                     <div className="border-t border-gray-200 p-4 bg-gray-50">
-                      {selectedProject === project._id && filteredFiles.length > 0 ? (
+                      {filteredFiles.length > 0 ? (
                         <div className="space-y-2">
                           {filteredFiles.map((file) => {
                             const errorMsg = file.errorMessage || file.processingError;
