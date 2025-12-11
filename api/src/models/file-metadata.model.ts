@@ -114,6 +114,15 @@ const fileMetadataSchema = new Schema<IFileMetadataDocument>(
       type: Date,
     },
 
+    // Embedding Configuration (stored for reindexing consistency)
+    embeddingProvider: {
+      type: String,
+      enum: ['inhouse', 'openai', 'gemini'],
+    },
+    embeddingModel: {
+      type: String,
+    },
+
     // Metadata
     metadata: {
       type: Schema.Types.Mixed,

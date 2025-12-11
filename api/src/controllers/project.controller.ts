@@ -509,6 +509,7 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
 
   // Add to indexing queue first to ensure atomic operation
   // If queue add fails, file state remains unchanged
+  // Include original embedding config to ensure vector dimension consistency
   const job = await indexingQueue.add(
     'index-file',
     {
@@ -517,6 +518,8 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
       filePath: file.filepath,
       mimetype: file.mimetype,
       fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+      embeddingProvider: file.embeddingProvider,
+      embeddingModel: file.embeddingModel,
     },
     {
       attempts: 3,
@@ -570,21 +573,21 @@ export const getIndexingStats = asyncHandler(async (req: Request, res: Response)
     return;
   }
 
-  // Get counts by processing status
+  // Get counts by processing status (efficient count queries instead of loading documents)
   const [pending, processing, completed, failed] = await Promise.all([
-    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.PENDING),
-    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.PROCESSING),
-    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.COMPLETED),
-    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.FAILED),
+    fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.PENDING),
+    fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.PROCESSING),
+    fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.COMPLETED),
+    fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.FAILED),
   ]);
 
   res.json({
     stats: {
-      pending: pending.length,
-      processing: processing.length,
-      completed: completed.length,
-      failed: failed.length,
-      total: pending.length + processing.length + completed.length + failed.length,
+      pending,
+      processing,
+      completed,
+      failed,
+      total: pending + processing + completed + failed,
     },
   });
 });
@@ -641,6 +644,7 @@ export const bulkReindexFailed = asyncHandler(
 
       // Add to indexing queue first to ensure atomic operation
       // If queue add fails, file state remains unchanged
+      // Include original embedding config to ensure vector dimension consistency
       let job;
       try {
         job = await indexingQueue.add(
@@ -651,6 +655,8 @@ export const bulkReindexFailed = asyncHandler(
             filePath: file.filepath,
             mimetype: file.mimetype,
             fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+            embeddingProvider: file.embeddingProvider,
+            embeddingModel: file.embeddingModel,
           },
           {
             attempts: 3,

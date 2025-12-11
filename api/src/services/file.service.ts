@@ -141,7 +141,7 @@ export class FileService {
       );
     }
 
-    // Store file metadata in database
+    // Store file metadata in database (include embedding config for reindexing consistency)
     const fileMetadata = await fileMetadataRepository.create({
       projectId,
       uploadedBy,
@@ -152,6 +152,8 @@ export class FileService {
       size: file.size,
       hash: fileHash,
       tags: [],
+      embeddingProvider,
+      embeddingModel,
     });
 
     // One-line event publishing for project stats (storage update happens after indexing completes)

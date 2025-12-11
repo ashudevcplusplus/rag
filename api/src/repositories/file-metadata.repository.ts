@@ -100,6 +100,17 @@ export class FileMetadataRepository {
   }
 
   /**
+   * Count files by processing status (efficient count without loading documents)
+   */
+  async countByProcessingStatus(projectId: string, status: ProcessingStatus): Promise<number> {
+    return FileMetadataModel.countDocuments({
+      projectId: new Types.ObjectId(projectId),
+      processingStatus: status,
+      deletedAt: null,
+    });
+  }
+
+  /**
    * Update file metadata
    */
   async update(id: string, data: UpdateFileMetadataDTO): Promise<IFileMetadata | null> {

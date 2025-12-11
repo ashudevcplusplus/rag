@@ -69,12 +69,12 @@ export function IndexingPage() {
     refetchInterval: 10000, // Refresh every 10 seconds to see status changes
   });
 
-  // Fetch files for expanded project
+  // Fetch files for expanded project (use higher limit to show all files)
   const { data: filesData } = useQuery({
     queryKey: ['files', companyId, expandedProjectId, statusFilter],
     queryFn: async () => {
       if (!expandedProjectId) return { files: [] };
-      const result = await filesApi.list(companyId!, expandedProjectId);
+      const result = await filesApi.list(companyId!, expandedProjectId, { limit: 100 });
       return result;
     },
     enabled: !!companyId && !!expandedProjectId,

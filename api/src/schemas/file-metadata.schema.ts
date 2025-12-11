@@ -39,6 +39,10 @@ export interface IFileMetadata {
   retryCount: number;
   lastRetryAt?: Date;
 
+  // Embedding Configuration (stored for reindexing consistency)
+  embeddingProvider?: 'inhouse' | 'openai' | 'gemini';
+  embeddingModel?: string;
+
   // Metadata
   metadata?: {
     author?: string;
@@ -81,6 +85,8 @@ export const createFileMetadataSchema = z.object({
   indexingJobId: z.string().optional(),
   tags: z.array(z.string().trim()).optional().default([]),
   metadata: fileMetadataDetailsSchema,
+  embeddingProvider: z.enum(['inhouse', 'openai', 'gemini']).optional(),
+  embeddingModel: z.string().optional(),
 });
 
 export const updateFileMetadataSchema = z.object({
