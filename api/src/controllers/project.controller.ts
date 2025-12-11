@@ -510,13 +510,13 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
   // Delete existing embeddings for this file before reindexing
   await embeddingRepository.deleteByFileId(fileId);
 
-  // Reset file status
+  // Reset file status and clear error message
   await fileMetadataRepository.update(fileId, {
     processingStatus: ProcessingStatus.PENDING,
-    errorMessage: undefined,
     chunkCount: 0,
     vectorIndexed: false,
   });
+  await fileMetadataRepository.clearErrorMessage(fileId);
 
   // Add to indexing queue
   const job = await indexingQueue.add(
@@ -645,13 +645,13 @@ export const bulkReindexFailed = asyncHandler(
       // Delete existing embeddings
       await embeddingRepository.deleteByFileId(file._id);
 
-      // Reset file status
+      // Reset file status and clear error message
       await fileMetadataRepository.update(file._id, {
         processingStatus: ProcessingStatus.PENDING,
-        errorMessage: undefined,
         chunkCount: 0,
         vectorIndexed: false,
       });
+      await fileMetadataRepository.clearErrorMessage(file._id);
 
       // Add to indexing queue
       const job = await indexingQueue.add(

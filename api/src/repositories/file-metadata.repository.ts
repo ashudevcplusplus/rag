@@ -191,6 +191,15 @@ export class FileMetadataRepository {
   }
 
   /**
+   * Clear error message (for reindexing)
+   */
+  async clearErrorMessage(id: string): Promise<void> {
+    await FileMetadataModel.findByIdAndUpdate(id, {
+      $unset: { errorMessage: 1 },
+    });
+  }
+
+  /**
    * Soft delete file (data access only - use DeletionService for full cascade delete)
    * @deprecated Use DeletionService.deleteFile() for cascading deletes with cleanup
    */
