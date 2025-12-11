@@ -26,6 +26,7 @@ export class EmbeddingRepository {
    */
   async findByProjectId(projectId: string): Promise<IEmbedding[]> {
     const embeddings = await EmbeddingModel.find({ projectId, deletedAt: null })
+      .select('fileId projectId chunkCount provider modelName vectorDimensions createdAt')
       .sort({ createdAt: -1 })
       .lean();
     return toStringIds(embeddings) as unknown as IEmbedding[];

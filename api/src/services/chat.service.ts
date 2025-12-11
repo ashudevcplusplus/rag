@@ -484,10 +484,8 @@ export class ChatService {
     const projectIds = [
       ...new Set(files.map((f) => f.projectId).filter((id): id is string => !!id)),
     ];
-    const projects = await Promise.all(projectIds.map((id) => projectRepository.findById(id)));
-    const projectMap = new Map(
-      projects.filter((p): p is NonNullable<typeof p> => !!p).map((p) => [p._id, p])
-    );
+    const projects = await projectRepository.findByIds(projectIds);
+    const projectMap = new Map(projects.map((p) => [p._id, p]));
 
     // Build sources
     for (const result of results) {

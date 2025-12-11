@@ -116,10 +116,7 @@ export class CacheService {
           const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
           redis.del(...keysWithoutPrefix).then(() => {
-            logger.info('Cache invalidated for company', {
-              companyId,
-              keysDeleted: keys.length,
-            });
+            logger.info('Cache invalidated', { companyId, keys: keys.length });
           });
         }
       });
@@ -166,13 +163,9 @@ export class CacheService {
               // Remove the prefix since ioredis adds it automatically
               const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
               const deleted = await redis.del(...keysWithoutPrefix);
-              logger.info('All cache cleared', {
-                keysDeleted: deleted,
-                totalKeys: keys.length,
-              });
+              logger.info('Cache cleared', { keys: deleted });
               resolve(deleted);
             } else {
-              logger.info('No cache keys found to clear');
               resolve(0);
             }
           } catch (error) {
@@ -213,14 +206,9 @@ export class CacheService {
               // Remove the prefix since ioredis adds it automatically
               const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
               const deleted = await redis.del(...keysWithoutPrefix);
-              logger.info('Cache cleared for company', {
-                companyId,
-                keysDeleted: deleted,
-                totalKeys: keys.length,
-              });
+              logger.info('Cache cleared', { companyId, keys: deleted });
               resolve(deleted);
             } else {
-              logger.info('No cache keys found for company', { companyId });
               resolve(0);
             }
           } catch (error) {

@@ -31,6 +31,19 @@ export class ProjectRepository {
   }
 
   /**
+   * Find multiple projects by IDs (bulk fetch to avoid N+1 queries)
+   */
+  async findByIds(ids: string[]): Promise<IProject[]> {
+    if (ids.length === 0) return [];
+    const objectIds = ids.map((id) => new Types.ObjectId(id));
+    const projects = await ProjectModel.find({
+      _id: { $in: objectIds },
+      deletedAt: null,
+    }).lean();
+    return toStringIds(projects) as unknown as IProject[];
+  }
+
+  /**
    * Find project by slug within a company
    */
   async findBySlug(companyId: string, slug: string): Promise<IProject | null> {
