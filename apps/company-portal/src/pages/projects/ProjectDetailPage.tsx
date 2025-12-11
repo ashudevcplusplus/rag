@@ -377,7 +377,7 @@ export function ProjectDetailPage() {
                               <Download className="w-4 h-4" />
                               Download
                             </button>
-                            {(file.processingStatus === 'FAILED' || file.processingStatus === 'COMPLETED') && (
+                            {(file.processingStatus === 'FAILED' || file.processingStatus === 'COMPLETED' || file.processingStatus === 'PROCESSING') && (
                               <button
                                 onClick={() => {
                                   setActiveMenu(null);
@@ -387,7 +387,7 @@ export function ProjectDetailPage() {
                                 className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
                               >
                                 <RefreshCw className={`w-4 h-4 ${reindexFileMutation.isPending ? 'animate-spin' : ''}`} />
-                                Reindex
+                                {file.processingStatus === 'PROCESSING' ? 'Force Retry' : 'Reindex'}
                               </button>
                             )}
                             <button
