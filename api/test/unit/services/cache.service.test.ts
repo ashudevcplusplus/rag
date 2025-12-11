@@ -248,4 +248,187 @@ describe('CacheService', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('clearAll', () => {
+    it('should clear all cache entries', async () => {
+      const mockStream = createTestScanStream(['rag_cache:key1', 'rag_cache:key2']);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+      mockRedis.del.mockResolvedValue(2);
+
+      const resultPromise = CacheService.clearAll();
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const result = await resultPromise;
+
+      expect(result).toBe(2);
+      expect(mockRedis.scanStream).toHaveBeenCalledWith({
+        match: 'rag_cache:*',
+        count: 100,
+      });
+    });
+
+    it('should return 0 when no keys found', async () => {
+      const mockStream = createTestScanStream([], false);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+
+      const result = await CacheService.clearAll();
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('clearCompany', () => {
+    it('should clear cache for a specific company', async () => {
+      const mockStream = createTestScanStream([
+        'rag_cache:company-123:key1',
+        'rag_cache:company-123:key2',
+      ]);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+      mockRedis.del.mockResolvedValue(2);
+
+      const resultPromise = CacheService.clearCompany('company-123');
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const result = await resultPromise;
+
+      expect(result).toBe(2);
+      expect(mockRedis.scanStream).toHaveBeenCalledWith({
+        match: 'rag_cache:company-123:*',
+        count: 100,
+      });
+    });
+
+    it('should return 0 when no keys found for company', async () => {
+      const mockStream = createTestScanStream([], false);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+
+      const result = await CacheService.clearCompany('empty-company');
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('generateKey edge cases', () => {
+    it('should handle rerank flag in key generation', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, undefined, false);
+      const key2 = CacheService.generateKey('company-123', 'query', 10, undefined, true);
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should handle embedding provider in key generation', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, undefined, false, 'openai');
+      const key2 = CacheService.generateKey('company-123', 'query', 10, undefined, false, 'gemini');
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should handle nested filter objects', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {
+        nested: { key: 'value1' },
+      });
+      const key2 = CacheService.generateKey('company-123', 'query', 10, {
+        nested: { key: 'value2' },
+      });
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should generate same key for same filter with different property order', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {
+        a: 'first',
+        b: 'second',
+      });
+      const key2 = CacheService.generateKey('company-123', 'query', 10, {
+        b: 'second',
+        a: 'first',
+      });
+
+      expect(key1).toBe(key2);
+    });
+
+    it('should handle empty filter object', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {});
+      const key2 = CacheService.generateKey('company-123', 'query', 10);
+
+      // Both should work without errors
+      expect(key1).toBeDefined();
+      expect(key2).toBeDefined();
+    });
+
+    it('should handle filter with array values', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {
+        fileIds: ['file1', 'file2'],
+      });
+      const key2 = CacheService.generateKey('company-123', 'query', 10, {
+        fileIds: ['file2', 'file1'],
+      });
+
+      // Arrays should be sorted for deterministic keys
+      expect(key1).toBe(key2);
+    });
+  });
+
+  describe('get edge cases', () => {
+    it('should handle empty string in cache', async () => {
+      mockRedis.get.mockResolvedValue('""');
+
+      const result = await CacheService.get('test-key');
+
+      expect(result).toBe('');
+    });
+
+    it('should handle array in cache', async () => {
+      const cachedArray = [1, 2, 3];
+      mockRedis.get.mockResolvedValue(JSON.stringify(cachedArray));
+
+      const result = await CacheService.get('test-key');
+
+      expect(result).toEqual(cachedArray);
+    });
+
+    it('should handle null value in cache', async () => {
+      mockRedis.get.mockResolvedValue('null');
+
+      const result = await CacheService.get('test-key');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('set edge cases', () => {
+    it('should handle setting array data', async () => {
+      const arrayData = [{ id: 1 }, { id: 2 }];
+      mockRedis.set.mockResolvedValue('OK');
+
+      await CacheService.set('test-key', arrayData);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', JSON.stringify(arrayData), 'EX', 3600);
+    });
+
+    it('should handle setting null data', async () => {
+      mockRedis.set.mockResolvedValue('OK');
+
+      await CacheService.set('test-key', null);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', 'null', 'EX', 3600);
+    });
+
+    it('should handle very short TTL', async () => {
+      mockRedis.set.mockResolvedValue('OK');
+
+      await CacheService.set('test-key', {}, 1);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', '{}', 'EX', 1);
+    });
+
+    it('should handle very long TTL', async () => {
+      mockRedis.set.mockResolvedValue('OK');
+      const oneWeek = 7 * 24 * 60 * 60;
+
+      await CacheService.set('test-key', {}, oneWeek);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', '{}', 'EX', oneWeek);
+    });
+  });
 });
