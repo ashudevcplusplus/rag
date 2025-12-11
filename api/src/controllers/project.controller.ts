@@ -487,11 +487,13 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
     return;
   }
 
-  // Check if file can be reindexed (only FAILED or COMPLETED status)
-  if (
-    file.processingStatus !== ProcessingStatus.FAILED &&
-    file.processingStatus !== ProcessingStatus.COMPLETED
-  ) {
+  // Check if file can be reindexed (FAILED, COMPLETED, or stuck PROCESSING)
+  const allowedStatuses = [
+    ProcessingStatus.FAILED,
+    ProcessingStatus.COMPLETED,
+    ProcessingStatus.PROCESSING, // Allow retry for stuck processing jobs
+  ];
+  if (!allowedStatuses.includes(file.processingStatus)) {
     sendBadRequestResponse(res, `Cannot reindex file with status: ${file.processingStatus}`);
     return;
   }

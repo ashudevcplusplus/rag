@@ -415,13 +415,21 @@ export function IndexingPage() {
                         <div className="space-y-2">
                           {filteredFiles.map((file) => {
                             const errorMsg = file.errorMessage || file.processingError;
+                            const isStuckProcessing = file.processingStatus === 'PROCESSING';
+                            const canRetry = 
+                              file.processingStatus === 'FAILED' ||
+                              file.processingStatus === 'COMPLETED' ||
+                              file.processingStatus === 'PROCESSING'; // Allow retry for stuck jobs
+                            
                             return (
                               <div
                                 key={file._id}
                                 className={`p-3 bg-white rounded-lg border ${
                                   file.processingStatus === 'FAILED' 
                                     ? 'border-red-200' 
-                                    : 'border-gray-200'
+                                    : file.processingStatus === 'PROCESSING'
+                                      ? 'border-yellow-200'
+                                      : 'border-gray-200'
                                 }`}
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -442,10 +450,9 @@ export function IndexingPage() {
                                   </div>
 
                                   <div className="flex items-center gap-2 flex-shrink-0">
-                                    {(file.processingStatus === 'FAILED' ||
-                                      file.processingStatus === 'COMPLETED') && (
+                                    {canRetry && (
                                       <Button
-                                        variant="ghost"
+                                        variant={isStuckProcessing ? 'outline' : 'ghost'}
                                         size="sm"
                                         onClick={() => handleRetryFile(project._id, file._id)}
                                         isLoading={
@@ -454,11 +461,24 @@ export function IndexingPage() {
                                         }
                                         leftIcon={<RefreshCw className="w-4 h-4" />}
                                       >
-                                        Reindex
+                                        {isStuckProcessing ? 'Force Retry' : 'Reindex'}
                                       </Button>
                                     )}
                                   </div>
                                 </div>
+
+                                {/* Processing Warning */}
+                                {isStuckProcessing && (
+                                  <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                                    <div className="flex items-start gap-2">
+                                      <Clock className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                                      <div className="text-sm text-yellow-700">
+                                        <span className="font-medium">Stuck? </span>
+                                        <span>If this file has been processing for a long time, click "Force Retry" to restart.</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
 
                                 {/* Error Message */}
                                 {file.processingStatus === 'FAILED' && errorMsg && (
