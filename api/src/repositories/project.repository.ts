@@ -170,10 +170,13 @@ export class ProjectRepository {
         },
       ]);
 
-      // Get actual vector counts from embeddings
+      // Get actual vector counts from embeddings (excluding soft-deleted)
       const vectorStats = await EmbeddingModel.aggregate([
         {
-          $match: { projectId: { $in: projectIds.map((id) => new Types.ObjectId(id.toString())) } },
+          $match: {
+            projectId: { $in: projectIds.map((id) => new Types.ObjectId(id.toString())) },
+            deletedAt: null,
+          },
         },
         {
           $group: {
@@ -277,9 +280,9 @@ export class ProjectRepository {
       },
     ]);
 
-    // Calculate actual vector count from embeddings
+    // Calculate actual vector count from embeddings (excluding soft-deleted)
     const vectorStats = await EmbeddingModel.aggregate([
-      { $match: { projectId: new Types.ObjectId(id) } },
+      { $match: { projectId: new Types.ObjectId(id), deletedAt: null } },
       {
         $group: {
           _id: null,

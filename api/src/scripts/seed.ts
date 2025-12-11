@@ -4,6 +4,14 @@ import { userRepository } from '../repositories/user.repository';
 import { projectRepository } from '../repositories/project.repository';
 import { SubscriptionTier, UserRole, Visibility } from '../types/enums';
 import { logger } from '../utils/logger';
+import { CreateCompanyDTO } from '../schemas/company.schema';
+import { CreateUserDTO } from '../schemas/user.schema';
+import { CreateProjectDTO } from '../schemas/project.schema';
+
+// Extended DTOs for seeding with explicit IDs
+type SeedCompanyDTO = CreateCompanyDTO & { _id: string };
+type SeedUserDTO = Omit<CreateUserDTO, 'password'> & { _id: string; passwordHash: string };
+type SeedProjectDTO = CreateProjectDTO & { _id: string };
 
 async function seed(): Promise<void> {
   try {
@@ -27,7 +35,7 @@ async function seed(): Promise<void> {
     // Create companies
     logger.info('Creating companies...');
 
-    const company1 = await companyRepository.create({
+    const seedCompany1: SeedCompanyDTO = {
       _id: '507f1f77bcf86cd799439011',
       name: 'Acme Corporation',
       slug: 'acme-corp',
@@ -47,8 +55,10 @@ async function seed(): Promise<void> {
           apiAccess: true,
         },
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const company1 = await companyRepository.create(
+      seedCompany1 as CreateCompanyDTO & { _id: string }
+    );
     logger.info('Company created', { companyId: company1._id, apiKey: company1.apiKey });
 
     const company2 = await companyRepository.create({
@@ -67,7 +77,7 @@ async function seed(): Promise<void> {
 
     const passwordHash = await userRepository.hashPassword('password123');
 
-    const user1 = await userRepository.create({
+    const seedUser1: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439020',
       companyId: company1._id,
       email: 'john.doe@acme-corp.com',
@@ -81,11 +91,11 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: true,
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const user1 = await userRepository.create(seedUser1 as SeedUserDTO);
     logger.info('User created', { userId: user1._id, email: user1.email });
 
-    const user2 = await userRepository.create({
+    const seedUser2: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439021',
       companyId: company1._id,
       email: 'jane.smith@acme-corp.com',
@@ -99,11 +109,11 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: false,
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const user2 = await userRepository.create(seedUser2 as SeedUserDTO);
     logger.info('User created', { userId: user2._id, email: user2.email });
 
-    const user3 = await userRepository.create({
+    const seedUser3: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439022',
       companyId: company1._id,
       email: 'bob.johnson@acme-corp.com',
@@ -117,14 +127,14 @@ async function seed(): Promise<void> {
         canShare: true,
         canManageUsers: false,
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const user3 = await userRepository.create(seedUser3 as SeedUserDTO);
     logger.info('User created', { userId: user3._id, email: user3.email });
 
     // Create users for company2
     logger.info('Creating users for TechStart Inc...');
 
-    const user4 = await userRepository.create({
+    const seedUser4: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439023',
       companyId: company2._id,
       email: 'sarah.wilson@techstart.io',
@@ -132,14 +142,14 @@ async function seed(): Promise<void> {
       firstName: 'Sarah',
       lastName: 'Wilson',
       role: UserRole.OWNER,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const user4 = await userRepository.create(seedUser4 as SeedUserDTO);
     logger.info('User created', { userId: user4._id, email: user4.email });
 
     // Create projects for company1
     logger.info('Creating projects for Acme Corporation...');
 
-    const project1 = await projectRepository.create({
+    const seedProject1: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439030',
       companyId: company1._id,
       ownerId: user1._id,
@@ -159,11 +169,13 @@ async function seed(): Promise<void> {
         department: 'Product',
         category: 'Documentation',
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const project1 = await projectRepository.create(
+      seedProject1 as CreateProjectDTO & { _id: string }
+    );
     logger.info('Project created', { projectId: project1._id, slug: project1.slug });
 
-    const project2 = await projectRepository.create({
+    const seedProject2: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439031',
       companyId: company1._id,
       ownerId: user2._id,
@@ -183,11 +195,13 @@ async function seed(): Promise<void> {
         department: 'Support',
         category: 'Knowledge Base',
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const project2 = await projectRepository.create(
+      seedProject2 as CreateProjectDTO & { _id: string }
+    );
     logger.info('Project created', { projectId: project2._id, slug: project2.slug });
 
-    const project3 = await projectRepository.create({
+    const seedProject3: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439032',
       companyId: company1._id,
       ownerId: user1._id,
@@ -202,14 +216,16 @@ async function seed(): Promise<void> {
         department: 'Legal',
         category: 'Confidential',
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const project3 = await projectRepository.create(
+      seedProject3 as CreateProjectDTO & { _id: string }
+    );
     logger.info('Project created', { projectId: project3._id, slug: project3.slug });
 
     // Create projects for company2
     logger.info('Creating projects for TechStart Inc...');
 
-    const project4 = await projectRepository.create({
+    const seedProject4: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439033',
       companyId: company2._id,
       ownerId: user4._id,
@@ -229,8 +245,10 @@ async function seed(): Promise<void> {
         department: 'Engineering',
         category: 'Technical',
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    };
+    const project4 = await projectRepository.create(
+      seedProject4 as CreateProjectDTO & { _id: string }
+    );
     logger.info('Project created', { projectId: project4._id, slug: project4.slug });
 
     logger.info('✅ Database seed completed successfully!');

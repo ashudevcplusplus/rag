@@ -68,6 +68,7 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
 
 /**
  * Get project by ID
+ * Recalculates fresh stats from actual data for accuracy
  */
 export const getProject = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { projectId } = projectIdSchema.parse(req.params);
@@ -76,6 +77,18 @@ export const getProject = asyncHandler(async (req: Request, res: Response): Prom
   if (!project) {
     sendNotFoundResponse(res, 'Project');
     return;
+  }
+
+  // Recalculate fresh stats for accurate display (same logic as list with syncStats)
+  const syncStats = req.query.syncStats !== 'false';
+  if (syncStats) {
+    await projectRepository.recalculateStats(projectId);
+    // Refetch project with updated stats
+    const updatedProject = await projectRepository.findById(projectId);
+    if (updatedProject) {
+      res.json({ project: updatedProject });
+      return;
+    }
   }
 
   res.json({ project });
