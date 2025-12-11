@@ -202,5 +202,235 @@ describe('ApiLogRepository', () => {
       });
       expect(result).toBe(10);
     });
+
+    it('should use default days if not specified', async () => {
+      (ApiLogModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({ deletedCount: 5 });
+
+      const result = await apiLogRepository.deleteOldLogs();
+
+      expect(result).toBe(5);
+    });
+
+    it('should return 0 if no logs deleted', async () => {
+      (ApiLogModel.deleteMany as jest.Mock) = jest.fn().mockResolvedValue({});
+
+      const result = await apiLogRepository.deleteOldLogs(30);
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('findByEndpoint', () => {
+    it('should find logs by endpoint with pagination', async () => {
+      const mockLogs = [
+        {
+          _id: { toString: () => 'log-1' },
+          method: 'GET',
+          endpoint: '/api/users',
+        },
+        {
+          _id: { toString: () => 'log-2' },
+          method: 'POST',
+          endpoint: '/api/users',
+        },
+      ];
+
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue(mockLogs),
+            }),
+          }),
+        }),
+      });
+
+      (ApiLogModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(20);
+
+      const result = await apiLogRepository.findByEndpoint('/api/users', 1, 50);
+
+      expect(ApiLogModel.find).toHaveBeenCalledWith({ endpoint: '/api/users' });
+      expect(result.logs).toHaveLength(2);
+      expect(result.total).toBe(20);
+    });
+
+    it('should use default pagination values', async () => {
+      const mockLogs: unknown[] = [];
+
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue(mockLogs),
+            }),
+          }),
+        }),
+      });
+
+      (ApiLogModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(0);
+
+      await apiLogRepository.findByEndpoint('/api/test');
+
+      expect(ApiLogModel.find).toHaveBeenCalledWith({ endpoint: '/api/test' });
+    });
+  });
+
+  describe('findByDateRange', () => {
+    it('should find logs within date range', async () => {
+      const startDate = new Date('2023-01-01');
+      const endDate = new Date('2023-12-31');
+      const mockLogs = [
+        {
+          _id: { toString: () => 'log-1' },
+          timestamp: new Date('2023-06-15'),
+        },
+      ];
+
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockLogs),
+        }),
+      });
+
+      const result = await apiLogRepository.findByDateRange('company-123', startDate, endDate);
+
+      expect(ApiLogModel.find).toHaveBeenCalledWith({
+        companyId: 'company-123',
+        timestamp: { $gte: startDate, $lte: endDate },
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it('should return empty array if no logs in range', async () => {
+      const startDate = new Date('2023-01-01');
+      const endDate = new Date('2023-01-02');
+
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([]),
+        }),
+      });
+
+      const result = await apiLogRepository.findByDateRange('company-123', startDate, endDate);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getHourlyDistribution', () => {
+    it('should get hourly request distribution for a day', async () => {
+      const testDate = new Date('2023-06-15');
+      const mockDistribution = [
+        { hour: 9, count: 50 },
+        { hour: 10, count: 75 },
+        { hour: 14, count: 100 },
+      ];
+
+      (ApiLogModel.aggregate as jest.Mock) = jest.fn().mockResolvedValue(mockDistribution);
+
+      const result = await apiLogRepository.getHourlyDistribution('company-123', testDate);
+
+      expect(ApiLogModel.aggregate).toHaveBeenCalled();
+      expect(result).toEqual(mockDistribution);
+    });
+
+    it('should return empty array if no requests for the day', async () => {
+      const testDate = new Date('2023-01-01');
+
+      (ApiLogModel.aggregate as jest.Mock) = jest.fn().mockResolvedValue([]);
+
+      const result = await apiLogRepository.getHourlyDistribution('company-123', testDate);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findByCompanyId - pagination', () => {
+    it('should use default pagination values', async () => {
+      const mockLogs: unknown[] = [];
+
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue(mockLogs),
+            }),
+          }),
+        }),
+      });
+
+      (ApiLogModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(0);
+
+      const result = await apiLogRepository.findByCompanyId('company-123');
+
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(0);
+    });
+
+    it('should calculate correct total pages', async () => {
+      const mockLogs = [{ _id: { toString: () => 'log-1' } }];
+
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue(mockLogs),
+            }),
+          }),
+        }),
+      });
+
+      (ApiLogModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(150);
+
+      const result = await apiLogRepository.findByCompanyId('company-123', 1, 50);
+
+      expect(result.totalPages).toBe(3);
+    });
+  });
+
+  describe('findErrors - edge cases', () => {
+    it('should return empty results when no errors exist', async () => {
+      (ApiLogModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      (ApiLogModel.countDocuments as jest.Mock) = jest.fn().mockResolvedValue(0);
+
+      const result = await apiLogRepository.findErrors('company-123');
+
+      expect(result.logs).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+  });
+
+  describe('getUsageStats - edge cases', () => {
+    it('should handle null values in response sizes', async () => {
+      const mockStats = [
+        {
+          _id: null,
+          totalRequests: 10,
+          successfulRequests: 8,
+          failedRequests: 2,
+          avgResponseTime: 45.5,
+          totalRequestSize: null,
+          totalResponseSize: 1000,
+        },
+      ];
+
+      (ApiLogModel.aggregate as jest.Mock) = jest.fn().mockResolvedValue(mockStats);
+
+      const startDate = new Date('2023-01-01');
+      const endDate = new Date('2023-12-31');
+
+      const result = await apiLogRepository.getUsageStats('company-123', startDate, endDate);
+
+      expect(result.totalDataTransferred).toBe(1000);
+    });
   });
 });
