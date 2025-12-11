@@ -43,7 +43,7 @@ const projectMemberSchema = new Schema<IProjectMemberDocument>(
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt for consistency
+    timestamps: true, // Adds createdAt and updatedAt
     collection: 'project_members',
   }
 );

@@ -255,6 +255,7 @@ export const projectsApi = {
 // File upload constraints
 export const FILE_UPLOAD_CONSTRAINTS = {
   maxFiles: 30,
+  maxFileSize: 50 * 1024 * 1024, // 50MB in bytes
   allowedExtensions: ['.pdf', '.txt', '.doc', '.docx', '.rtf', '.odt', '.md', '.markdown', '.csv', '.xml', '.json', '.html', '.htm'],
   allowedMimeTypes: [
     'application/pdf',
@@ -294,6 +295,13 @@ export function validateFilesForUpload(files: File[]): { valid: boolean; error?:
   if (invalidFiles.length > 0) {
     const names = invalidFiles.map(f => f.name).join(', ');
     return { valid: false, error: `Unsupported file type(s): ${names}. Only document files (PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML) are allowed.` };
+  }
+  // Check file size
+  const oversizedFiles = files.filter(f => f.size > FILE_UPLOAD_CONSTRAINTS.maxFileSize);
+  if (oversizedFiles.length > 0) {
+    const maxSizeMB = FILE_UPLOAD_CONSTRAINTS.maxFileSize / (1024 * 1024);
+    const names = oversizedFiles.map(f => f.name).join(', ');
+    return { valid: false, error: `File(s) exceed ${maxSizeMB}MB limit: ${names}` };
   }
   return { valid: true };
 }
