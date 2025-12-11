@@ -1,15 +1,15 @@
 from typing import List, Optional
-from fastapi import FastAPI  # type: ignore
-from pydantic import BaseModel  # type: ignore
-from sentence_transformers import SentenceTransformer, CrossEncoder  # type: ignore
-import uvicorn  # type: ignore
-import torch  # type: ignore
-import os  # type: ignore
-from pathlib import Path  # type: ignore
+from fastapi import FastAPI
+from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer, CrossEncoder
+import uvicorn
+import torch
+import os
+from pathlib import Path
 
 # Try to import ONNX Runtime optimizations (optional)
 try:
-    import onnxruntime as ort  # type: ignore
+    import onnxruntime as ort
     ONNX_AVAILABLE = True
 except ImportError as e:
     print(f"ONNX Runtime not available, using standard CrossEncoder: {e}")
@@ -25,7 +25,7 @@ onnx_model_dir = Path("/tmp/reranker_onnx")
 reranker_onnx = None
 reranker_tokenizer = None
 
-def initialize_onnx_reranker():
+def initialize_onnx_reranker() -> bool:
     """Initialize ONNX Runtime optimized reranker for faster inference"""
     global reranker_onnx, reranker_tokenizer
     
