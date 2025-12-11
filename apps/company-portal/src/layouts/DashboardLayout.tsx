@@ -13,6 +13,7 @@ import {
   ChevronDown,
   MessageSquare,
   Command,
+  RefreshCw,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button, Avatar, Modal } from '@rag/ui';
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Chat', href: '/chat', icon: MessageSquare, shortcut: 'C' },
   { name: 'Upload', href: '/upload', icon: Upload, shortcut: 'U' },
   { name: 'Search', href: '/search', icon: Search, shortcut: 'S' },
+  { name: 'Indexing', href: '/indexing', icon: RefreshCw, shortcut: 'I' },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

@@ -3,6 +3,7 @@ import { projectRepository } from '../repositories/project.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { embeddingRepository } from '../repositories/embedding.repository';
 import { DeletionService } from '../services/deletion.service';
+import { indexingQueue } from '../queue/queue.client';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -10,7 +11,7 @@ import {
 } from '../schemas/project.schema';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
-import { AnalyticsEventType } from '../types/enums';
+import { AnalyticsEventType, ProcessingStatus } from '../types/enums';
 import {
   sendConflictResponse,
   sendNotFoundResponse,
@@ -452,3 +453,238 @@ export const downloadFile = asyncHandler(async (req: Request, res: Response): Pr
 
   stream.pipe(res);
 });
+
+/**
+ * Reindex/retry a file
+ */
+export const reindexFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = projectIdSchema.parse(req.params);
+  const { fileId } = fileIdSchema.parse(req.params);
+  const companyId = getCompanyId(req);
+
+  if (!companyId) {
+    sendBadRequestResponse(res, 'Company ID is required');
+    return;
+  }
+
+  // Verify project exists
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify project belongs to the authenticated company
+  if (project.companyId !== companyId) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify file exists and belongs to project
+  const file = await fileMetadataRepository.findById(fileId);
+  if (!file || file.projectId !== projectId) {
+    sendNotFoundResponse(res, 'File');
+    return;
+  }
+
+  // Check if file can be reindexed (only FAILED or COMPLETED status)
+  if (
+    file.processingStatus !== ProcessingStatus.FAILED &&
+    file.processingStatus !== ProcessingStatus.COMPLETED
+  ) {
+    sendBadRequestResponse(res, `Cannot reindex file with status: ${file.processingStatus}`);
+    return;
+  }
+
+  // Check if file exists on disk
+  const fs = await import('fs/promises');
+  try {
+    await fs.access(file.filepath);
+  } catch {
+    sendBadRequestResponse(res, 'File content no longer exists on disk');
+    return;
+  }
+
+  // Delete existing embeddings for this file before reindexing
+  await embeddingRepository.deleteByFileId(fileId);
+
+  // Reset file status
+  await fileMetadataRepository.update(fileId, {
+    processingStatus: ProcessingStatus.PENDING,
+    errorMessage: undefined,
+    chunkCount: 0,
+    vectorIndexed: false,
+  });
+
+  // Add to indexing queue
+  const job = await indexingQueue.add(
+    'index-file',
+    {
+      companyId,
+      fileId,
+      filePath: file.filepath,
+      mimetype: file.mimetype,
+      fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+    },
+    {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+    }
+  );
+
+  // Update file metadata with job ID
+  await fileMetadataRepository.update(fileId, {
+    indexingJobId: job.id as string,
+  });
+
+  logger.info('File queued for reindexing', { fileId, projectId, jobId: job.id });
+
+  res.json({
+    message: 'File queued for reindexing',
+    jobId: job.id,
+    fileId,
+  });
+});
+
+/**
+ * Get indexing stats for a project
+ */
+export const getIndexingStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { projectId } = projectIdSchema.parse(req.params);
+  const companyId = getCompanyId(req);
+
+  if (!companyId) {
+    sendBadRequestResponse(res, 'Company ID is required');
+    return;
+  }
+
+  // Verify project exists
+  const project = await projectRepository.findById(projectId);
+  if (!project) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Verify project belongs to the authenticated company
+  if (project.companyId !== companyId) {
+    sendNotFoundResponse(res, 'Project');
+    return;
+  }
+
+  // Get counts by processing status
+  const [pending, processing, completed, failed] = await Promise.all([
+    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.PENDING),
+    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.PROCESSING),
+    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.COMPLETED),
+    fileMetadataRepository.findByProcessingStatus(projectId, ProcessingStatus.FAILED),
+  ]);
+
+  res.json({
+    stats: {
+      pending: pending.length,
+      processing: processing.length,
+      completed: completed.length,
+      failed: failed.length,
+      total: pending.length + processing.length + completed.length + failed.length,
+    },
+  });
+});
+
+/**
+ * Bulk reindex failed files in a project
+ */
+export const bulkReindexFailed = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { projectId } = projectIdSchema.parse(req.params);
+    const companyId = getCompanyId(req);
+
+    if (!companyId) {
+      sendBadRequestResponse(res, 'Company ID is required');
+      return;
+    }
+
+    // Verify project exists
+    const project = await projectRepository.findById(projectId);
+    if (!project) {
+      sendNotFoundResponse(res, 'Project');
+      return;
+    }
+
+    // Verify project belongs to the authenticated company
+    if (project.companyId !== companyId) {
+      sendNotFoundResponse(res, 'Project');
+      return;
+    }
+
+    // Get all failed files
+    const failedFiles = await fileMetadataRepository.findByProcessingStatus(
+      projectId,
+      ProcessingStatus.FAILED
+    );
+
+    if (failedFiles.length === 0) {
+      res.json({ message: 'No failed files to reindex', queued: 0 });
+      return;
+    }
+
+    const fs = await import('fs/promises');
+    const results: { fileId: string; jobId: string }[] = [];
+    const errors: { fileId: string; error: string }[] = [];
+
+    for (const file of failedFiles) {
+      // Check if file exists on disk
+      try {
+        await fs.access(file.filepath);
+      } catch {
+        errors.push({ fileId: file._id, error: 'File no longer exists on disk' });
+        continue;
+      }
+
+      // Delete existing embeddings
+      await embeddingRepository.deleteByFileId(file._id);
+
+      // Reset file status
+      await fileMetadataRepository.update(file._id, {
+        processingStatus: ProcessingStatus.PENDING,
+        errorMessage: undefined,
+        chunkCount: 0,
+        vectorIndexed: false,
+      });
+
+      // Add to indexing queue
+      const job = await indexingQueue.add(
+        'index-file',
+        {
+          companyId,
+          fileId: file._id,
+          filePath: file.filepath,
+          mimetype: file.mimetype,
+          fileSizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+        },
+        {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+        }
+      );
+
+      await fileMetadataRepository.update(file._id, {
+        indexingJobId: job.id as string,
+      });
+
+      results.push({ fileId: file._id, jobId: job.id as string });
+    }
+
+    logger.info('Bulk reindex initiated', {
+      projectId,
+      queued: results.length,
+      errors: errors.length,
+    });
+
+    res.json({
+      message: `Queued ${results.length} files for reindexing`,
+      queued: results.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  }
+);

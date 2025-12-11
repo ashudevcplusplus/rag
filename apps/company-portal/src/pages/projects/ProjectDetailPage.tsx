@@ -15,6 +15,7 @@ import {
   Loader2,
   Copy,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -80,6 +81,22 @@ export function ProjectDetailPage() {
       const errorMessage = apiError?.error || apiError?.message || 'Failed to delete file';
       toast.error(errorMessage);
       console.error('Delete file error:', error);
+    },
+  });
+
+  // Reindex file mutation
+  const reindexFileMutation = useMutation({
+    mutationFn: (fileId: string) => projectsApi.reindexFile(companyId!, projectId!, fileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files', companyId, projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', companyId, projectId] });
+      toast.success('File queued for reindexing');
+    },
+    onError: (error: unknown) => {
+      const apiError = error as { error?: string; message?: string };
+      const errorMessage = apiError?.error || apiError?.message || 'Failed to reindex file';
+      toast.error(errorMessage);
+      console.error('Reindex file error:', error);
     },
   });
 
@@ -360,6 +377,19 @@ export function ProjectDetailPage() {
                               <Download className="w-4 h-4" />
                               Download
                             </button>
+                            {(file.processingStatus === 'FAILED' || file.processingStatus === 'COMPLETED') && (
+                              <button
+                                onClick={() => {
+                                  setActiveMenu(null);
+                                  reindexFileMutation.mutate(file._id);
+                                }}
+                                disabled={reindexFileMutation.isPending}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                              >
+                                <RefreshCw className={`w-4 h-4 ${reindexFileMutation.isPending ? 'animate-spin' : ''}`} />
+                                Reindex
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedFile(file);

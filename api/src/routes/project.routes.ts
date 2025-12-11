@@ -12,6 +12,9 @@ import {
   getFilePreview,
   deleteFile,
   downloadFile,
+  reindexFile,
+  getIndexingStats,
+  bulkReindexFailed,
 } from '../controllers/project.controller';
 
 const router = Router({ mergeParams: true });
@@ -24,6 +27,9 @@ router.get('/:projectId/files', listProjectFiles);
 router.get('/:projectId/files/:fileId', getFilePreview);
 router.get('/:projectId/files/:fileId/download', downloadFile);
 router.delete('/:projectId/files/:fileId', deleteFile);
+router.post('/:projectId/files/:fileId/reindex', reindexFile);
+router.get('/:projectId/indexing/stats', getIndexingStats);
+router.post('/:projectId/indexing/retry-all', bulkReindexFailed);
 router.patch('/:projectId', updateProject);
 router.delete('/:projectId', deleteProject);
 router.post('/:projectId/archive', archiveProject);
