@@ -16,4 +16,3 @@ describe('indexingQueue (queue.client)', () => {
     });
   });
 });
-

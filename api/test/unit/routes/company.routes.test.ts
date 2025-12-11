@@ -5,7 +5,8 @@ import { Router } from 'express';
 const companyRateLimiter = jest.fn((_req: unknown, _res: unknown, next: () => void) => next());
 
 jest.mock('../../../src/middleware/company-rate-limiter.middleware', () => ({
-  companyRateLimiter: (req: unknown, res: unknown, next: () => void) => companyRateLimiter(req, res, next),
+  companyRateLimiter: (req: unknown, res: unknown, next: () => void) =>
+    companyRateLimiter(req, res, next),
 }));
 
 jest.mock('../../../src/middleware/rate-limiter.middleware', () => ({
@@ -73,4 +74,3 @@ describe('company.routes', () => {
     expect(companyRateLimiter).toHaveBeenCalled();
   });
 });
-

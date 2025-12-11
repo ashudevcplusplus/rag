@@ -33,4 +33,3 @@ describe('job.routes', () => {
     expect(res.body).toEqual({ handler: 'getConsistencyCheckJobStatus', jobId: 'j2' });
   });
 });
-

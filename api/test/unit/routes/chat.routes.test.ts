@@ -26,7 +26,10 @@ describe('chat.routes', () => {
     app.use(express.json());
     app.use('/v1/companies/:companyId/chat', chatRoutes);
 
-    const res = await request(app).post('/v1/companies/c1/chat').send({ query: 'hello' }).expect(200);
+    const res = await request(app)
+      .post('/v1/companies/c1/chat')
+      .send({ query: 'hello' })
+      .expect(200);
     expect(res.body).toEqual({ handler: 'chat', companyId: 'c1' });
   });
 
@@ -42,4 +45,3 @@ describe('chat.routes', () => {
     expect(res.body).toEqual({ handler: 'chatStream', companyId: 'c2' });
   });
 });
-

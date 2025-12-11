@@ -258,13 +258,16 @@ describe('Auth Middleware', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid API key' });
     });
 
-    it('should allow metrics endpoint without auth', async () => {
+    it('should require auth for metrics endpoint', async () => {
       (mockRequest as any).path = '/metrics';
+      delete mockRequest.headers!['x-api-key'];
 
       await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
 
-      // Depends on implementation - metrics might or might not require auth
-      // This tests the public endpoint behavior
+      // /metrics is not a public endpoint, requires API key
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should handle cancelled company status', async () => {
@@ -277,24 +280,30 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
     });
 
-    it('should handle Authorization header as fallback', async () => {
-      // Some APIs use Authorization: Bearer <key>
+    it('should not support Authorization header as fallback', async () => {
+      // Only x-api-key header is supported, not Authorization: Bearer
       mockRequest.headers!['authorization'] = 'Bearer valid-key-123';
       delete mockRequest.headers!['x-api-key'];
 
       await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
 
-      // Depends on implementation - might or might not support Bearer token
-      // This documents the expected behavior
+      // Implementation only checks x-api-key, not Authorization header
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should be case-insensitive for header name', async () => {
-      // HTTP headers are case-insensitive
-      mockRequest.headers!['X-API-KEY'] = 'valid-key-123';
+      // HTTP headers are case-insensitive - Express normalizes to lowercase
+      // Note: In tests, we set lowercase since Express does the normalization
+      mockRequest.headers!['x-api-key'] = 'valid-key-123';
       (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(mockCompany);
 
-      // Note: Express normalizes header names to lowercase
-      // This test verifies the behavior matches expectations
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(companyRepository.validateApiKey).toHaveBeenCalledWith('valid-key-123');
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockResponse.status).not.toHaveBeenCalled();
     });
 
     it('should handle concurrent authentication requests', async () => {
