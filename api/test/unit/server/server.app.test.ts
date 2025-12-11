@@ -67,4 +67,3 @@ describe('createApp (server wiring)', () => {
     expect(res.body).toHaveProperty('statusCode', 500);
   });
 });
-

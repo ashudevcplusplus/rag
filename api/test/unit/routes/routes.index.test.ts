@@ -6,11 +6,13 @@ const authenticateRequest = jest.fn((_req: unknown, _res: unknown, next: () => v
 const apiLoggingMiddleware = jest.fn((_req: unknown, _res: unknown, next: () => void) => next());
 
 jest.mock('../../../src/middleware/auth.middleware', () => ({
-  authenticateRequest: (req: unknown, res: unknown, next: () => void) => authenticateRequest(req, res, next),
+  authenticateRequest: (req: unknown, res: unknown, next: () => void) =>
+    authenticateRequest(req, res, next),
 }));
 
 jest.mock('../../../src/middleware/api-logging.middleware', () => ({
-  apiLoggingMiddleware: (req: unknown, res: unknown, next: () => void) => apiLoggingMiddleware(req, res, next),
+  apiLoggingMiddleware: (req: unknown, res: unknown, next: () => void) =>
+    apiLoggingMiddleware(req, res, next),
 }));
 
 jest.mock('../../../src/routes/company.routes', () => {
@@ -47,4 +49,3 @@ describe('routes/index', () => {
     expect(apiLoggingMiddleware).toHaveBeenCalled();
   });
 });
-

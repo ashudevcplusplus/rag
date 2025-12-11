@@ -23,4 +23,3 @@ describe('health.routes', () => {
     expect(res.body).toHaveProperty('endpoints');
   });
 });
-

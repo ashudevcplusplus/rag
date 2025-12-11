@@ -5,7 +5,9 @@ jest.mock('../../../src/controllers/user.controller', () => {
   const handler =
     (name: string, status = 200) =>
     (req: any, res: any): void => {
-      res.status(status).json({ handler: name, companyId: req.params.companyId, userId: req.params.userId });
+      res
+        .status(status)
+        .json({ handler: name, companyId: req.params.companyId, userId: req.params.userId });
     };
 
   return {
@@ -32,4 +34,3 @@ describe('user.routes', () => {
     expect(res.body).toEqual({ handler: 'getUser', companyId: 'c1', userId: 'u1' });
   });
 });
-

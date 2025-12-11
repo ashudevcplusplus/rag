@@ -105,4 +105,3 @@ describe('DatabaseConnection (database)', () => {
     await expect(database.disconnect()).resolves.not.toThrow();
   });
 });
-
