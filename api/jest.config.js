@@ -9,6 +9,11 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/test/setupTests.ts'],
 
+  // Map workspace packages to their source
+  moduleNameMapper: {
+    '^@rag/types$': '<rootDir>/../packages/types/src/index.ts',
+  },
+
   // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.ts',
