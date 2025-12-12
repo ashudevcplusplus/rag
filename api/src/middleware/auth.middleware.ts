@@ -1,27 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import crypto from 'crypto';
 import { logger } from '../utils/logger';
 import { companyRepository } from '../repositories/company.repository';
 import { ICompany } from '../schemas/company.schema';
 import { publishApiKeyTracking } from '../utils/async-events.util';
 import { CacheService } from '../services/cache.service';
 
-// API key cache TTL: 5 minutes
-const API_KEY_CACHE_TTL = 300;
-
-/**
- * Generate a cache key for an API key (hashed for security)
- */
-function getApiKeyCacheKey(apiKey: string): string {
-  const hash = crypto.createHash('sha256').update(apiKey).digest('hex').substring(0, 16);
-  return `apikey:${hash}`;
-}
-
 /**
  * Get company from cache or database
  */
 async function getCompanyByApiKey(apiKey: string): Promise<ICompany | null> {
-  const cacheKey = getApiKeyCacheKey(apiKey);
+  const cacheKey = CacheService.getApiKeyCacheKey(apiKey);
+  const cacheTTL = CacheService.getApiKeyCacheTTL();
 
   // Try cache first
   const cached = (await CacheService.get(cacheKey)) as ICompany | null;
@@ -34,7 +23,7 @@ async function getCompanyByApiKey(apiKey: string): Promise<ICompany | null> {
   const company = await companyRepository.validateApiKey(apiKey);
   if (company) {
     // Cache the result
-    await CacheService.set(cacheKey, company, API_KEY_CACHE_TTL);
+    await CacheService.set(cacheKey, company, cacheTTL);
     logger.debug('API key cached', { cacheKey, companyId: company._id });
   }
 

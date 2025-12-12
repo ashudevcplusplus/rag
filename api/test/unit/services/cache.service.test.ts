@@ -258,4 +258,56 @@ describe('CacheService', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('invalidateApiKey', () => {
+    it('should delete the API key cache entry', async () => {
+      mockRedis.del.mockResolvedValue(1 as any);
+
+      const result = await CacheService.invalidateApiKey('ck_testapikey123');
+
+      expect(result).toBe(true);
+      expect(mockRedis.del).toHaveBeenCalledWith(expect.stringMatching(/^apikey:[a-f0-9]{16}$/));
+    });
+
+    it('should return false if API key was not cached', async () => {
+      mockRedis.del.mockResolvedValue(0 as any);
+
+      const result = await CacheService.invalidateApiKey('ck_uncachedkey');
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false on Redis error', async () => {
+      mockRedis.del.mockRejectedValue(new Error('Redis error'));
+
+      const result = await CacheService.invalidateApiKey('ck_testapikey123');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getApiKeyCacheKey', () => {
+    it('should generate a deterministic cache key for an API key', () => {
+      const key1 = CacheService.getApiKeyCacheKey('ck_testapikey123');
+      const key2 = CacheService.getApiKeyCacheKey('ck_testapikey123');
+
+      expect(key1).toBe(key2);
+      expect(key1).toMatch(/^apikey:[a-f0-9]{16}$/);
+    });
+
+    it('should generate different keys for different API keys', () => {
+      const key1 = CacheService.getApiKeyCacheKey('ck_apikey1');
+      const key2 = CacheService.getApiKeyCacheKey('ck_apikey2');
+
+      expect(key1).not.toBe(key2);
+    });
+  });
+
+  describe('getApiKeyCacheTTL', () => {
+    it('should return the API key cache TTL', () => {
+      const ttl = CacheService.getApiKeyCacheTTL();
+
+      expect(ttl).toBe(300); // 5 minutes
+    });
+  });
 });

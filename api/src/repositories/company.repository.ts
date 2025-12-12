@@ -7,6 +7,8 @@ import { FilterQuery, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { toStringId, toStringIds } from './helpers';
+import { CacheService } from '../services/cache.service';
+import { logger } from '../utils/logger';
 
 export class CompanyRepository {
   public model: Model<ICompanyDocument>;
@@ -90,6 +92,16 @@ export class CompanyRepository {
    * Update company
    */
   async update(id: string, data: UpdateCompanyDTO): Promise<ICompany | null> {
+    // If status is being changed, we need to invalidate the API key cache
+    // Fetch the company first to get the API key for cache invalidation
+    const shouldInvalidateCache = data.status !== undefined;
+    let existingCompany: ICompanyDocument | null = null;
+
+    if (shouldInvalidateCache) {
+      existingCompany = await CompanyModel.findById(id).where({ deletedAt: null });
+      if (!existingCompany) return null;
+    }
+
     const company = await CompanyModel.findByIdAndUpdate(
       id,
       { $set: data },
@@ -99,6 +111,17 @@ export class CompanyRepository {
       .lean();
 
     if (!company) return null;
+
+    // Invalidate API key cache if status changed
+    if (shouldInvalidateCache && existingCompany && existingCompany.apiKey) {
+      logger.info('Invalidating API key cache due to status change', {
+        companyId: id,
+        oldStatus: existingCompany.status,
+        newStatus: data.status,
+      });
+      await CacheService.invalidateApiKey(existingCompany.apiKey);
+    }
+
     return toStringId(company) as unknown as ICompany;
   }
 
@@ -106,11 +129,23 @@ export class CompanyRepository {
    * Soft delete company
    */
   async delete(id: string): Promise<boolean> {
+    // Fetch the company first to get the API key for cache invalidation
+    const company = await CompanyModel.findById(id).where({ deletedAt: null });
+    if (!company) return false;
+
     const result = await CompanyModel.findByIdAndUpdate(
       id,
       { $set: { deletedAt: new Date() } },
       { new: true }
     );
+
+    if (result && company.apiKey) {
+      // Invalidate API key cache so deleted company can't continue making requests
+      logger.info('Invalidating API key cache due to company deletion', {
+        companyId: id,
+      });
+      await CacheService.invalidateApiKey(company.apiKey);
+    }
 
     return !!result;
   }
