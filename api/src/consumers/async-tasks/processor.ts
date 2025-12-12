@@ -32,26 +32,56 @@ export async function processAsyncTask(job: Job): Promise<unknown> {
   logger.debug('Processing async task', { jobId: job.id, taskType });
 
   switch (taskType) {
+    // Triggered by: api-logging.middleware.ts on every API response
+    // Does: Stores API request/response logs in database (method, endpoint, status, response time)
     case AsyncTaskType.API_LOGGING:
       return processApiLogging(job);
+
+    // Triggered by: file.service.ts on duplicate upload, processing error, or after indexing
+    // Does: Deletes temporary/processed files from disk to free up storage
     case AsyncTaskType.FILE_CLEANUP:
       return processFileCleanup(job);
+
+    // Triggered by: company.controller.ts after bulk file uploads
+    // Does: Invalidates Redis cache for a company to ensure fresh search results
     case AsyncTaskType.CACHE_INVALIDATION:
       return processCacheInvalidation(job);
+
+    // Triggered by: error.middleware.ts on unhandled errors
+    // Does: Stores error details in API logs for debugging and monitoring
     case AsyncTaskType.ERROR_LOGGING:
       return processErrorLogging(job);
+
+    // Triggered by: company.controller.ts after search operations
+    // Does: Stores search results in Redis cache with TTL for faster subsequent queries
     case AsyncTaskType.SEARCH_CACHING:
       return processSearchCaching(job);
+
+    // Triggered by: auth.middleware.ts on every authenticated request
+    // Does: Updates company.apiKeyLastUsed timestamp for usage tracking
     case AsyncTaskType.API_KEY_TRACKING:
       return processApiKeyTracking(job);
+
+    // Triggered by: project/chat/company controllers on CRUD and search operations
+    // Does: Stores analytics events in database for reporting and insights
     case AsyncTaskType.ANALYTICS:
       return processAnalytics(job);
+
+    // Triggered by: file.service.ts after file upload
+    // Does: Increments project.fileCount and project.totalSize counters
     case AsyncTaskType.PROJECT_STATS:
       return processProjectStats(job);
+
+    // Triggered by: (reserved for external webhook notifications)
+    // Does: Sends HTTP POST to configured webhook URLs with event payloads
     case AsyncTaskType.WEBHOOKS:
       return processWebhooks(job);
+
+    // Triggered by: indexing/processor.ts after successful file indexing
+    // Does: Increments company.storageUsed counter for quota tracking
     case AsyncTaskType.STORAGE_UPDATES:
       return processStorageUpdates(job);
+
     default:
       throw new Error(`Unknown task type: ${taskType}`);
   }

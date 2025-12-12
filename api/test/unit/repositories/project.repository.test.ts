@@ -140,6 +140,57 @@ describe('ProjectRepository', () => {
     });
   });
 
+  describe('findByIds', () => {
+    it('should find multiple projects by IDs', async () => {
+      const projectId1 = '507f1f77bcf86cd799439011';
+      const projectId2 = '507f1f77bcf86cd799439012';
+      const mockProjects = [
+        {
+          _id: { toString: () => projectId1 },
+          name: 'Project 1',
+          companyId: { toString: () => '507f1f77bcf86cd799439001' },
+        },
+        {
+          _id: { toString: () => projectId2 },
+          name: 'Project 2',
+          companyId: { toString: () => '507f1f77bcf86cd799439001' },
+        },
+      ];
+
+      (ProjectModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockProjects),
+      });
+
+      const result = await projectRepository.findByIds([projectId1, projectId2]);
+
+      expect(ProjectModel.find).toHaveBeenCalledWith({
+        _id: { $in: expect.any(Array) },
+        deletedAt: null,
+      });
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array for empty input', async () => {
+      const result = await projectRepository.findByIds([]);
+
+      expect(ProjectModel.find).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when no projects found', async () => {
+      (ProjectModel.find as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await projectRepository.findByIds([
+        '507f1f77bcf86cd799439099',
+        '507f1f77bcf86cd799439098',
+      ]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('findBySlug', () => {
     it('should find project by slug within company', async () => {
       const mockProject = {

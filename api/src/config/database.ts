@@ -29,6 +29,9 @@ class DatabaseConnection {
         await mongoose.connect(CONFIG.MONGODB_URI, {
           serverSelectionTimeoutMS: 5000,
           socketTimeoutMS: 45000,
+          maxPoolSize: 50,
+          minPoolSize: 10,
+          maxIdleTimeMS: 30000,
         });
         this.isConnected = true;
         logger.info('MongoDB connected successfully', {

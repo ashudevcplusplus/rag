@@ -6,6 +6,7 @@ import { FileMetadataModel } from '../../../src/models/file-metadata.model';
 import { SubscriptionTier, CompanyStatus } from '../../../src/types/enums';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
+import { CacheService } from '../../../src/services/cache.service';
 
 // Mock Mongoose models
 jest.mock('../../../src/models/company.model');
@@ -13,6 +14,15 @@ jest.mock('../../../src/models/user.model');
 jest.mock('../../../src/models/project.model');
 jest.mock('../../../src/models/file-metadata.model');
 jest.mock('bcryptjs');
+jest.mock('../../../src/services/cache.service');
+jest.mock('../../../src/utils/logger', () => ({
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
 
 describe('CompanyRepository', () => {
   const mockDate = new Date('2023-01-01T00:00:00Z');
@@ -553,6 +563,100 @@ describe('CompanyRepository', () => {
       }
 
       expect(results).toHaveLength(0);
+    });
+  });
+
+  describe('update', () => {
+    it('should invalidate API key cache when status changes', async () => {
+      const companyId = '5f8d04b3b54764421b7156c3';
+      const mockExistingCompany = {
+        _id: new Types.ObjectId(companyId),
+        apiKey: 'ck_existingkey',
+        status: CompanyStatus.ACTIVE,
+      };
+
+      const mockUpdatedCompany = {
+        _id: new Types.ObjectId(companyId),
+        apiKey: 'ck_existingkey',
+        status: CompanyStatus.SUSPENDED,
+      };
+
+      const mockFindByIdQuery = {
+        where: jest.fn().mockResolvedValue(mockExistingCompany),
+      };
+
+      const mockUpdateQuery = {
+        where: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUpdatedCompany),
+      };
+
+      (CompanyModel.findById as jest.Mock).mockReturnValue(mockFindByIdQuery);
+      (CompanyModel.findByIdAndUpdate as jest.Mock).mockReturnValue(mockUpdateQuery);
+      (CacheService.invalidateApiKey as jest.Mock).mockResolvedValue(true);
+
+      const result = await companyRepository.update(companyId, { status: CompanyStatus.SUSPENDED });
+
+      expect(result).toBeTruthy();
+      expect(CacheService.invalidateApiKey).toHaveBeenCalledWith('ck_existingkey');
+    });
+
+    it('should not invalidate cache when status is not changing', async () => {
+      const companyId = '5f8d04b3b54764421b7156c3';
+      const mockUpdatedCompany = {
+        _id: new Types.ObjectId(companyId),
+        name: 'Updated Name',
+      };
+
+      const mockUpdateQuery = {
+        where: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUpdatedCompany),
+      };
+
+      (CompanyModel.findByIdAndUpdate as jest.Mock).mockReturnValue(mockUpdateQuery);
+
+      const result = await companyRepository.update(companyId, { name: 'Updated Name' });
+
+      expect(result).toBeTruthy();
+      expect(CacheService.invalidateApiKey).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete', () => {
+    it('should invalidate API key cache when company is soft-deleted', async () => {
+      const companyId = '5f8d04b3b54764421b7156c3';
+      const mockCompany = {
+        _id: new Types.ObjectId(companyId),
+        apiKey: 'ck_deletedkey',
+        status: CompanyStatus.ACTIVE,
+      };
+
+      const mockFindByIdQuery = {
+        where: jest.fn().mockResolvedValue(mockCompany),
+      };
+
+      (CompanyModel.findById as jest.Mock).mockReturnValue(mockFindByIdQuery);
+      (CompanyModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockCompany);
+      (CacheService.invalidateApiKey as jest.Mock).mockResolvedValue(true);
+
+      const result = await companyRepository.delete(companyId);
+
+      expect(result).toBe(true);
+      expect(CacheService.invalidateApiKey).toHaveBeenCalledWith('ck_deletedkey');
+    });
+
+    it('should return false if company does not exist', async () => {
+      const companyId = '5f8d04b3b54764421b7156c3';
+
+      const mockFindByIdQuery = {
+        where: jest.fn().mockResolvedValue(null),
+      };
+
+      (CompanyModel.findById as jest.Mock).mockReturnValue(mockFindByIdQuery);
+
+      const result = await companyRepository.delete(companyId);
+
+      expect(result).toBe(false);
+      expect(CacheService.invalidateApiKey).not.toHaveBeenCalled();
     });
   });
 });

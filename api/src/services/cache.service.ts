@@ -3,6 +3,18 @@ import crypto from 'crypto';
 import { CONFIG } from '../config';
 import { logger } from '../utils/logger';
 
+// API key cache TTL: 5 minutes (should match auth.middleware.ts)
+const API_KEY_CACHE_TTL = 300;
+
+/**
+ * Generate a cache key for an API key (hashed for security)
+ * This must match the logic in auth.middleware.ts
+ */
+function getApiKeyCacheKey(apiKey: string): string {
+  const hash = crypto.createHash('sha256').update(apiKey).digest('hex').substring(0, 16);
+  return `apikey:${hash}`;
+}
+
 // Create Redis client for caching
 const redis = new Redis({
   host: CONFIG.REDIS_HOST,
@@ -116,10 +128,7 @@ export class CacheService {
           const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
           redis.del(...keysWithoutPrefix).then(() => {
-            logger.info('Cache invalidated for company', {
-              companyId,
-              keysDeleted: keys.length,
-            });
+            logger.info('Cache invalidated', { companyId, keys: keys.length });
           });
         }
       });
@@ -166,13 +175,9 @@ export class CacheService {
               // Remove the prefix since ioredis adds it automatically
               const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
               const deleted = await redis.del(...keysWithoutPrefix);
-              logger.info('All cache cleared', {
-                keysDeleted: deleted,
-                totalKeys: keys.length,
-              });
+              logger.info('Cache cleared', { keys: deleted });
               resolve(deleted);
             } else {
-              logger.info('No cache keys found to clear');
               resolve(0);
             }
           } catch (error) {
@@ -213,14 +218,9 @@ export class CacheService {
               // Remove the prefix since ioredis adds it automatically
               const keysWithoutPrefix = keys.map((k) => k.replace('rag_cache:', ''));
               const deleted = await redis.del(...keysWithoutPrefix);
-              logger.info('Cache cleared for company', {
-                companyId,
-                keysDeleted: deleted,
-                totalKeys: keys.length,
-              });
+              logger.info('Cache cleared', { companyId, keys: deleted });
               resolve(deleted);
             } else {
-              logger.info('No cache keys found for company', { companyId });
               resolve(0);
             }
           } catch (error) {
@@ -256,5 +256,39 @@ export class CacheService {
       logger.error('Cache key deletion error', { key, error });
       return false; // Fail gracefully
     }
+  }
+
+  /**
+   * Invalidate API key cache for a company
+   * Called when company status changes or company is soft-deleted
+   */
+  static async invalidateApiKey(apiKey: string): Promise<boolean> {
+    const cacheKey = getApiKeyCacheKey(apiKey);
+    try {
+      const deleted = await redis.del(cacheKey);
+      if (deleted > 0) {
+        logger.info('API key cache invalidated', { cacheKey });
+        return true;
+      }
+      logger.debug('API key cache not found (already expired or never cached)', { cacheKey });
+      return false;
+    } catch (error) {
+      logger.error('API key cache invalidation error', { cacheKey, error });
+      return false; // Fail gracefully
+    }
+  }
+
+  /**
+   * Get the API key cache TTL (for use by auth middleware)
+   */
+  static getApiKeyCacheTTL(): number {
+    return API_KEY_CACHE_TTL;
+  }
+
+  /**
+   * Generate an API key cache key (for use by auth middleware)
+   */
+  static getApiKeyCacheKey(apiKey: string): string {
+    return getApiKeyCacheKey(apiKey);
   }
 }

@@ -499,38 +499,7 @@ export class VectorService {
       });
 
       const deletedCount = result.operation_id ? 1 : 0; // Qdrant doesn't return exact count, but we know it succeeded
-      logger.info('Vectors deleted from Qdrant', {
-        collection: collectionName,
-        fileId,
-        operationId: result.operation_id,
-      });
-
-      // Try to get the actual count by searching first (optional, for logging)
-      try {
-        const searchResult = await qdrant.scroll(collectionName, {
-          filter: {
-            must: [
-              {
-                key: 'fileId',
-                match: { value: fileId },
-              },
-            ],
-          },
-          limit: 1,
-        });
-        // If we get results, deletion didn't work (shouldn't happen)
-        if (searchResult.points.length > 0) {
-          logger.warn('Vectors still exist after deletion attempt', {
-            collection: collectionName,
-            fileId,
-          });
-        }
-      } catch (_scrollError) {
-        // Ignore scroll errors, deletion likely succeeded
-        logger.debug('Scroll check skipped (expected after deletion)', {
-          collection: collectionName,
-        });
-      }
+      logger.info('Vectors deleted', { fileId });
 
       return deletedCount;
     } catch (error) {
@@ -564,7 +533,7 @@ export class VectorService {
       });
 
       // Delete all vectors for all files in the project
-      const result = await qdrant.delete(collectionName, {
+      await qdrant.delete(collectionName, {
         wait: true,
         filter: {
           must: [
@@ -576,12 +545,7 @@ export class VectorService {
         },
       });
 
-      logger.info('Vectors deleted from Qdrant for project', {
-        collection: collectionName,
-        projectId,
-        fileCount: fileIds.length,
-        operationId: result.operation_id,
-      });
+      logger.info('Vectors deleted for project', { projectId, fileCount: fileIds.length });
 
       return fileIds.length; // Return number of files processed
     } catch (error) {

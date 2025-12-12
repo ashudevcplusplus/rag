@@ -3,6 +3,32 @@ import { logger } from '../utils/logger';
 import { companyRepository } from '../repositories/company.repository';
 import { ICompany } from '../schemas/company.schema';
 import { publishApiKeyTracking } from '../utils/async-events.util';
+import { CacheService } from '../services/cache.service';
+
+/**
+ * Get company from cache or database
+ */
+async function getCompanyByApiKey(apiKey: string): Promise<ICompany | null> {
+  const cacheKey = CacheService.getApiKeyCacheKey(apiKey);
+  const cacheTTL = CacheService.getApiKeyCacheTTL();
+
+  // Try cache first
+  const cached = (await CacheService.get(cacheKey)) as ICompany | null;
+  if (cached) {
+    logger.debug('API key cache hit', { cacheKey });
+    return cached;
+  }
+
+  // Cache miss - query database
+  const company = await companyRepository.validateApiKey(apiKey);
+  if (company) {
+    // Cache the result
+    await CacheService.set(cacheKey, company, cacheTTL);
+    logger.debug('API key cached', { cacheKey, companyId: company._id });
+  }
+
+  return company;
+}
 
 // Extended Request type with authentication context
 export interface AuthenticatedRequest extends Request {
@@ -37,8 +63,8 @@ export const authenticateRequest = async (
   }
 
   try {
-    // Validate API key using database
-    const company = await companyRepository.validateApiKey(apiKey);
+    // Validate API key (cached in Redis for performance)
+    const company = await getCompanyByApiKey(apiKey);
 
     if (!company) {
       logger.warn('Authentication failed: Invalid API key', {

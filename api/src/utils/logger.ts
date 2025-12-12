@@ -25,15 +25,18 @@ const fileFormat = winston.format.combine(
   winston.format.json()
 );
 
+// Determine log level: LOG_LEVEL env var takes priority, then defaults based on NODE_ENV
+const logLevel =
+  process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+
 // Create the logger
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: logLevel,
   defaultMeta: { service: 'api' },
   transports: [
-    // Console output for development
+    // Console output
     new winston.transports.Console({
       format: consoleFormat,
-      level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     }),
     // Error logs
     new winston.transports.File({

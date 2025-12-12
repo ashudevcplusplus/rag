@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -50,11 +51,12 @@ export function createApp(): express.Express {
   app.use(generalLimiter);
 
   // Middleware
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Request logging middleware
+  // Request logging middleware (debug level to reduce noise)
   app.use((req, _res, next) => {
-    logger.info('Incoming request', {
+    logger.debug('Incoming request', {
       method: req.method,
       path: req.path,
       ip: req.ip,
