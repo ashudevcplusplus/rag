@@ -1,5 +1,9 @@
-# Development dependencies for type checking
+# Development dependencies for linting and type checking
 # Install with: pip install -r requirements-dev.txt
+
+# Type checking
 mypy>=1.5.0
 types-requests>=2.31.0
 
+# Linting (fast Python linter written in Rust)
+ruff>=0.1.0

@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import { MockRedisClient, MockScanStream, createMockRedisClient } from '../../lib/mock-utils';
 
 // Mock ioredis BEFORE importing CacheService
 jest.mock('ioredis');
@@ -11,24 +12,40 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 
-const mockRedis: jest.Mocked<Redis> = {
-  get: jest.fn(),
-  set: jest.fn(),
-  del: jest.fn(),
-  scanStream: jest.fn(),
-  info: jest.fn(),
-  dbsize: jest.fn(),
-  on: jest.fn(),
-} as any;
+// Type-safe mock Redis client
+const mockRedis: MockRedisClient = createMockRedisClient();
 
-(Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as any);
+(Redis as jest.MockedClass<typeof Redis>).mockImplementation(() => mockRedis as unknown as Redis);
 
 // Import CacheService AFTER setting up mocks
 import { CacheService } from '../../../src/services/cache.service';
 
+// Helper to create a mock scan stream for tests
+function createTestScanStream(keys: string[], emitData: boolean = true): MockScanStream {
+  const stream: MockScanStream = {
+    on: jest.fn(),
+  };
+
+  stream.on = jest.fn((event: string, callback: (data?: string[]) => void): MockScanStream => {
+    if (event === 'data' && emitData && keys.length > 0) {
+      setTimeout(() => callback(keys), 0);
+    } else if (event === 'end') {
+      setTimeout(() => callback(), emitData && keys.length > 0 ? 10 : 0);
+    }
+    return stream;
+  });
+
+  return stream;
+}
+
 describe('CacheService', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('generateKey', () => {
@@ -109,7 +126,7 @@ describe('CacheService', () => {
   describe('set', () => {
     it('should set cache with default TTL', async () => {
       const data = { results: [] };
-      mockRedis.set.mockResolvedValue('OK' as any);
+      mockRedis.set.mockResolvedValue('OK');
 
       await CacheService.set('test-key', data);
 
@@ -118,7 +135,7 @@ describe('CacheService', () => {
 
     it('should set cache with custom TTL', async () => {
       const data = { results: [] };
-      mockRedis.set.mockResolvedValue('OK' as any);
+      mockRedis.set.mockResolvedValue('OK');
 
       await CacheService.set('test-key', data, 7200);
 
@@ -134,49 +151,33 @@ describe('CacheService', () => {
 
   describe('invalidateCompany', () => {
     it('should delete all keys for a company', async () => {
-      const mockStream: any = {
-        on: jest.fn((event: string, callback: (data?: string[]) => void) => {
-          if (event === 'data') {
-            setTimeout(
-              () => callback(['rag_cache:company-123:key1', 'rag_cache:company-123:key2']),
-              0
-            );
-          } else if (event === 'end') {
-            setTimeout(() => callback(), 10);
-          }
-          return mockStream;
-        }),
-      };
+      const mockStream = createTestScanStream([
+        'rag_cache:company-123:key1',
+        'rag_cache:company-123:key2',
+      ]);
 
       mockRedis.scanStream.mockReturnValue(mockStream);
-      mockRedis.del.mockResolvedValue(2 as any);
+      mockRedis.del.mockResolvedValue(2);
 
       await CacheService.invalidateCompany('company-123');
 
-      // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await jest.runAllTimersAsync();
 
       expect(mockRedis.scanStream).toHaveBeenCalledWith({
         match: 'rag_cache:company-123:*',
         count: 100,
       });
+      expect(mockRedis.del).toHaveBeenCalledWith('company-123:key1', 'company-123:key2');
     });
 
     it('should handle no keys found', async () => {
-      const mockStream: any = {
-        on: jest.fn((event: string, callback: () => void) => {
-          if (event === 'end') {
-            setTimeout(callback, 0);
-          }
-          return mockStream;
-        }),
-      };
+      const mockStream = createTestScanStream([], false);
 
       mockRedis.scanStream.mockReturnValue(mockStream);
 
       await CacheService.invalidateCompany('company-123');
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await jest.runAllTimersAsync();
       expect(mockRedis.del).not.toHaveBeenCalled();
     });
 
@@ -193,12 +194,6 @@ describe('CacheService', () => {
     it('should return cache statistics', async () => {
       // Mock needs to be set up before the service is imported
       // Since Redis is created at module load, we need to mock it differently
-      const mockInfo = jest.fn().mockResolvedValue('used_memory_human:1.2M\n');
-      const mockDbsize = jest.fn().mockResolvedValue(42);
-
-      // We need to access the actual redis instance or mock it at module level
-      // For now, test that the method exists and handles the call
-      // The actual Redis mocking would need to happen before module import
       expect(CacheService.getStats).toBeDefined();
 
       // Since Redis is instantiated at module load, we can't easily mock it here
@@ -234,7 +229,7 @@ describe('CacheService', () => {
 
   describe('deleteKey', () => {
     it('should delete a specific cache key', async () => {
-      mockRedis.del.mockResolvedValue(1 as any);
+      mockRedis.del.mockResolvedValue(1);
 
       const result = await CacheService.deleteKey('test-key');
 
@@ -243,7 +238,7 @@ describe('CacheService', () => {
     });
 
     it('should return false if key does not exist', async () => {
-      mockRedis.del.mockResolvedValue(0 as any);
+      mockRedis.del.mockResolvedValue(0);
 
       const result = await CacheService.deleteKey('nonexistent-key');
 
@@ -261,7 +256,7 @@ describe('CacheService', () => {
 
   describe('invalidateApiKey', () => {
     it('should delete the API key cache entry', async () => {
-      mockRedis.del.mockResolvedValue(1 as any);
+      mockRedis.del.mockResolvedValue(1);
 
       const result = await CacheService.invalidateApiKey('ck_testapikey123');
 
@@ -270,7 +265,7 @@ describe('CacheService', () => {
     });
 
     it('should return false if API key was not cached', async () => {
-      mockRedis.del.mockResolvedValue(0 as any);
+      mockRedis.del.mockResolvedValue(0);
 
       const result = await CacheService.invalidateApiKey('ck_uncachedkey');
 
@@ -308,6 +303,195 @@ describe('CacheService', () => {
       const ttl = CacheService.getApiKeyCacheTTL();
 
       expect(ttl).toBe(300); // 5 minutes
+    });
+  });
+
+  describe('clearAll', () => {
+    it('should clear all cache entries', async () => {
+      const mockStream = createTestScanStream(['rag_cache:key1', 'rag_cache:key2']);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+      mockRedis.del.mockResolvedValue(2);
+
+      const resultPromise = CacheService.clearAll();
+
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result).toBe(2);
+      expect(mockRedis.scanStream).toHaveBeenCalledWith({
+        match: 'rag_cache:*',
+        count: 100,
+      });
+      expect(mockRedis.del).toHaveBeenCalledWith('key1', 'key2');
+    });
+
+    it('should return 0 when no keys found', async () => {
+      const mockStream = createTestScanStream([], false);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+
+      const resultPromise = CacheService.clearAll();
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('clearCompany', () => {
+    it('should clear cache for a specific company', async () => {
+      const mockStream = createTestScanStream([
+        'rag_cache:company-123:key1',
+        'rag_cache:company-123:key2',
+      ]);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+      mockRedis.del.mockResolvedValue(2);
+
+      const resultPromise = CacheService.clearCompany('company-123');
+
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result).toBe(2);
+      expect(mockRedis.scanStream).toHaveBeenCalledWith({
+        match: 'rag_cache:company-123:*',
+        count: 100,
+      });
+      expect(mockRedis.del).toHaveBeenCalledWith('company-123:key1', 'company-123:key2');
+    });
+
+    it('should return 0 when no keys found for company', async () => {
+      const mockStream = createTestScanStream([], false);
+      mockRedis.scanStream.mockReturnValue(mockStream);
+
+      const resultPromise = CacheService.clearCompany('empty-company');
+      await jest.runAllTimersAsync();
+      const result = await resultPromise;
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('generateKey edge cases', () => {
+    it('should handle rerank flag in key generation', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, undefined, false);
+      const key2 = CacheService.generateKey('company-123', 'query', 10, undefined, true);
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should handle embedding provider in key generation', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, undefined, false, 'openai');
+      const key2 = CacheService.generateKey('company-123', 'query', 10, undefined, false, 'gemini');
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should handle nested filter objects', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {
+        nested: { key: 'value1' },
+      });
+      const key2 = CacheService.generateKey('company-123', 'query', 10, {
+        nested: { key: 'value2' },
+      });
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should generate same key for same filter with different property order', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {
+        a: 'first',
+        b: 'second',
+      });
+      const key2 = CacheService.generateKey('company-123', 'query', 10, {
+        b: 'second',
+        a: 'first',
+      });
+
+      expect(key1).toBe(key2);
+    });
+
+    it('should handle empty filter object', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {});
+      const key2 = CacheService.generateKey('company-123', 'query', 10);
+
+      // Both should work without errors
+      expect(key1).toBeDefined();
+      expect(key2).toBeDefined();
+    });
+
+    it('should handle filter with array values', () => {
+      const key1 = CacheService.generateKey('company-123', 'query', 10, {
+        fileIds: ['file1', 'file2'],
+      });
+      const key2 = CacheService.generateKey('company-123', 'query', 10, {
+        fileIds: ['file2', 'file1'],
+      });
+
+      // Arrays should be sorted for deterministic keys
+      expect(key1).toBe(key2);
+    });
+  });
+
+  describe('get edge cases', () => {
+    it('should handle empty string in cache', async () => {
+      mockRedis.get.mockResolvedValue('""');
+
+      const result = await CacheService.get('test-key');
+
+      expect(result).toBe('');
+    });
+
+    it('should handle array in cache', async () => {
+      const cachedArray = [1, 2, 3];
+      mockRedis.get.mockResolvedValue(JSON.stringify(cachedArray));
+
+      const result = await CacheService.get('test-key');
+
+      expect(result).toEqual(cachedArray);
+    });
+
+    it('should handle null value in cache', async () => {
+      mockRedis.get.mockResolvedValue('null');
+
+      const result = await CacheService.get('test-key');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('set edge cases', () => {
+    it('should handle setting array data', async () => {
+      const arrayData = [{ id: 1 }, { id: 2 }];
+      mockRedis.set.mockResolvedValue('OK');
+
+      await CacheService.set('test-key', arrayData);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', JSON.stringify(arrayData), 'EX', 3600);
+    });
+
+    it('should handle setting null data', async () => {
+      mockRedis.set.mockResolvedValue('OK');
+
+      await CacheService.set('test-key', null);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', 'null', 'EX', 3600);
+    });
+
+    it('should handle very short TTL', async () => {
+      mockRedis.set.mockResolvedValue('OK');
+
+      await CacheService.set('test-key', {}, 1);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', '{}', 'EX', 1);
+    });
+
+    it('should handle very long TTL', async () => {
+      mockRedis.set.mockResolvedValue('OK');
+      const oneWeek = 7 * 24 * 60 * 60;
+
+      await CacheService.set('test-key', {}, oneWeek);
+
+      expect(mockRedis.set).toHaveBeenCalledWith('test-key', '{}', 'EX', oneWeek);
     });
   });
 });

@@ -75,6 +75,7 @@ export function UploadPage() {
       // Handle both single file response (flat object) and multi-file response (results array)
       if (response.results) {
         // Multi-file upload response - match by index to handle duplicate filenames
+        const results = response.results; // Capture for closure
         setUploadingFiles((prev) => {
           // Find uploading files to match with results
           const uploadingIndices = prev
@@ -83,11 +84,11 @@ export function UploadPage() {
 
           return prev.map((f, idx) => {
             const resultIndex = uploadingIndices.indexOf(idx);
-            if (resultIndex !== -1 && response.results[resultIndex]) {
+            if (resultIndex !== -1 && results[resultIndex]) {
               return {
                 ...f,
                 status: 'processing' as const,
-                jobId: response.results[resultIndex].jobId,
+                jobId: results[resultIndex].jobId,
                 progress: 50,
               };
             }
@@ -95,7 +96,7 @@ export function UploadPage() {
           });
         });
         addActivity({
-          text: `Uploaded ${response.results.length} files`,
+          text: `Uploaded ${results.length} files`,
           type: 'upload',
         });
       } else if (response.jobId) {

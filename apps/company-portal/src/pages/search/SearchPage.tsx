@@ -117,14 +117,14 @@ export function SearchPage() {
       toast.error('Please enter a search query');
       return;
     }
-    searchMutation.mutate();
+    searchMutation.mutate(undefined);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       if (query.trim()) {
-        searchMutation.mutate();
+        searchMutation.mutate(undefined);
       }
     }
   };

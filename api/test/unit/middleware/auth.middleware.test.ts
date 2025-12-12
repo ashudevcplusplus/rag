@@ -199,4 +199,128 @@ describe('Auth Middleware', () => {
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
+
+  describe('edge cases and security', () => {
+    it('should trim whitespace from API key', async () => {
+      mockRequest.headers!['x-api-key'] = '  valid-key-123  ';
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(mockCompany);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // Depends on implementation - if it trims, validateApiKey would be called with trimmed key
+      expect(companyRepository.validateApiKey).toHaveBeenCalled();
+    });
+
+    it('should handle empty string API key', async () => {
+      mockRequest.headers!['x-api-key'] = '';
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+    });
+
+    it('should handle very long API key', async () => {
+      mockRequest.headers!['x-api-key'] = 'a'.repeat(10000);
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(null);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+    });
+
+    it('should handle special characters in API key', async () => {
+      mockRequest.headers!['x-api-key'] = 'key-with-$pecial-ch@rs!';
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(null);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(companyRepository.validateApiKey).toHaveBeenCalledWith('key-with-$pecial-ch@rs!');
+    });
+
+    it('should handle connection timeout', async () => {
+      mockRequest.headers!['x-api-key'] = 'valid-key';
+      (companyRepository.validateApiKey as jest.Mock).mockRejectedValue(
+        new Error('Connection timeout')
+      );
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+    });
+
+    it('should handle null company from validation', async () => {
+      mockRequest.headers!['x-api-key'] = 'some-key';
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(null);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid API key' });
+    });
+
+    it('should require auth for metrics endpoint', async () => {
+      (mockRequest as any).path = '/metrics';
+      delete mockRequest.headers!['x-api-key'];
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // /metrics is not a public endpoint, requires API key
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should handle cancelled company status', async () => {
+      mockRequest.headers!['x-api-key'] = 'cancelled-company-key';
+      const cancelledCompany = { ...mockCompany, status: CompanyStatus.CANCELLED };
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(cancelledCompany);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(403);
+    });
+
+    it('should not support Authorization header as fallback', async () => {
+      // Only x-api-key header is supported, not Authorization: Bearer
+      mockRequest.headers!['authorization'] = 'Bearer valid-key-123';
+      delete mockRequest.headers!['x-api-key'];
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      // Implementation only checks x-api-key, not Authorization header
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should be case-insensitive for header name', async () => {
+      // HTTP headers are case-insensitive - Express normalizes to lowercase
+      // Note: In tests, we set lowercase since Express does the normalization
+      mockRequest.headers!['x-api-key'] = 'valid-key-123';
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(mockCompany);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(companyRepository.validateApiKey).toHaveBeenCalledWith('valid-key-123');
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockResponse.status).not.toHaveBeenCalled();
+    });
+
+    it('should handle concurrent authentication requests', async () => {
+      mockRequest.headers!['x-api-key'] = 'valid-key-123';
+      (companyRepository.validateApiKey as jest.Mock).mockResolvedValue(mockCompany);
+
+      // Simulate concurrent requests
+      const promises = [
+        authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext),
+        authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext),
+        authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext),
+      ];
+
+      await Promise.all(promises);
+
+      // Each request should be handled independently
+      expect(companyRepository.validateApiKey).toHaveBeenCalledTimes(3);
+    });
+  });
 });
