@@ -61,8 +61,8 @@ export function formatBytes(bytes: number, decimals = 2): string {
 /**
  * Format relative time (e.g., "2 hours ago")
  */
-export function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString);
+export function formatRelativeTime(input: string | Date): string {
+  const date = input instanceof Date ? input : new Date(input);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const minutes = Math.floor(diff / 60000);

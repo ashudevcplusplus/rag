@@ -87,6 +87,134 @@ describe('Text Processor', () => {
         expect(chunk.trim().length).toBeGreaterThan(0);
       });
     });
+
+    test('handles overlap larger than chunk text (extractOverlap edge case)', () => {
+      // When overlap is large relative to chunk, the extractOverlap function
+      // should return the entire chunk
+      const text = 'A B C D E F G H I J K L M N O P Q R S T U V W X Y Z';
+      // Use chunk size 20 and overlap 15 to test extractOverlap edge case
+      const chunks = chunkText(text, 20, 15);
+      expect(chunks.length).toBeGreaterThan(1);
+      chunks.forEach((chunk: string) => {
+        expect(chunk.trim().length).toBeGreaterThan(0);
+      });
+    });
+
+    test('handles minimum overlap constraint (line 70 edge case)', () => {
+      // This tests the case where word boundary search would reduce overlap
+      // below minimum (80% of requested)
+      const text = 'WordA WordB WordC WordD WordE WordF WordG WordH WordI WordJ';
+      // Chunk size 25, overlap 10 - forces word boundary adjustment
+      const chunks = chunkText(text, 25, 10);
+      expect(chunks.length).toBeGreaterThan(1);
+      expect(chunks[0]).toContain('Word');
+    });
+
+    test('handles text with no separators requiring force split (lines 102-132)', () => {
+      // Create text with no spaces, newlines, or sentence boundaries
+      const text = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      // Use small chunk size to force character-level splitting
+      const chunks = chunkText(text, 20, 5);
+      expect(chunks.length).toBeGreaterThan(1);
+      // Verify all characters are included across chunks
+      const joinedChunks = chunks.join('');
+      expect(joinedChunks).toContain('abcdefghij');
+      expect(joinedChunks).toContain('XYZ');
+    });
+
+    test('handles very long continuous text with forced character splitting', () => {
+      // Long text without natural break points
+      const longWord = 'x'.repeat(150);
+      const chunks = chunkText(longWord, 50, 10);
+      expect(chunks.length).toBeGreaterThan(1);
+      // Each chunk should respect the size limit (accounting for overlap)
+      chunks.forEach((chunk: string) => {
+        expect(chunk.length).toBeLessThanOrEqual(60); // chunkSize + some overlap tolerance
+      });
+    });
+
+    test('handles whitespace-only text', () => {
+      const text = '   \n\n   \t   ';
+      const chunks = chunkText(text, 100, 20);
+      // Should return empty or chunks that trim to empty
+      const nonEmptyChunks = chunks.filter((c: string) => c.trim().length > 0);
+      expect(nonEmptyChunks).toEqual([]);
+    });
+
+    test('covers line 70: overlap reset when word boundary search reduces overlap below minimum', () => {
+      // Create text where word boundary at position would reduce overlap below 80%
+      // Need text that when split, the extractOverlap function finds a space/newline
+      // that would result in less than minOverlap (80% of requested)
+      const text = 'ThisIsAVeryLongWordWithNoSpacesUntilHere ThenMoreTextWithoutSpacesForAWhile';
+      const chunks = chunkText(text, 40, 20);
+      expect(chunks.length).toBeGreaterThan(1);
+      // Verify chunks contain expected content
+      expect(chunks[0]).toContain('ThisIsA');
+    });
+
+    test('covers lines 112-130: force split with very small available size', () => {
+      // Create text that triggers the force split path with small pieces
+      // When currentLength + piece.length > availableSize triggers line 112
+      const text = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz';
+      // Small chunk size with relatively large overlap
+      const chunks = chunkText(text, 15, 8);
+      expect(chunks.length).toBeGreaterThan(2);
+      // Verify content is preserved
+      chunks.forEach((chunk: string) => {
+        expect(chunk.length).toBeGreaterThan(0);
+      });
+    });
+
+    test('covers line 124-130: small remaining text after separator exhaustion', () => {
+      // Text that after all separators are exhausted, leaves small pieces (lines 124-130)
+      const text = 'ab cd ef gh ij kl mn op qr st uv wx yz';
+      const chunks = chunkText(text, 10, 3);
+      expect(chunks.length).toBeGreaterThan(2);
+      // First chunk should start from beginning
+      expect(chunks[0]).toContain('ab');
+    });
+
+    test('covers force split path (line 102-118) - text with no separators larger than chunkSize', () => {
+      // Create text WITHOUT any separators (\n\n, \n, . , space)
+      // This forces the code through all separator levels to the force split path
+      const noSeparatorText = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      // Use small chunk size so the text is definitely larger than chunkSize
+      const chunks = chunkText(noSeparatorText, 20, 5);
+
+      expect(chunks.length).toBeGreaterThan(1);
+      // Verify content is distributed across chunks
+      expect(chunks.some((c: string) => c.includes('abc'))).toBe(true);
+      expect(chunks.some((c: string) => c.includes('XYZ') || c.includes('xyz'))).toBe(true);
+    });
+
+    test('covers line 70: overlap reduced below minimum due to space position', () => {
+      // Need a chunk where:
+      // 1. Length > chunkOverlap
+      // 2. A space is found in the search window
+      // 3. After adjusting to space+1, remaining overlap < minOverlap (80%)
+      // Example: chunkOverlap=20, minOverlap=16
+      // Chunk of 30 chars with space at position 27 (from end position 3)
+      // overlapStart = 30-20 = 10, search finds space at 27, new overlapStart=28
+      // remaining = 30-28 = 2 < 16, so reset to 30-20=10
+      const text = 'LongWordWithoutAnySpaces AndThenASpaceNearEnd';
+      // chunkSize=25, overlap=20, chunk will be ~25 chars
+      // If we get "LongWordWithoutAnySpaces " as a chunk (25 chars)
+      // space at position 24, overlapStart=10, finds space at 24, overlapStart=25
+      // remaining=25-25=0 < 16, reset to 25-20=5
+      const chunks = chunkText(text, 25, 20);
+      expect(chunks.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test('covers lines 124-130: text smaller than chunkSize after exhausting separators', () => {
+      // Create text where after processing, the remaining piece is <= chunkSize
+      // but needs to go through the else branch (lines 124-130)
+      // Use text with no standard separators that is between chunkSize and 0
+      const shortNoSepText = 'abcdefghij'; // 10 chars, no separators
+      const chunks = chunkText(shortNoSepText, 20, 5);
+      // Single chunk since it's smaller than chunkSize
+      expect(chunks.length).toBe(1);
+      expect(chunks[0]).toBe('abcdefghij');
+    });
   });
 
   // --- Extraction Logic ---
