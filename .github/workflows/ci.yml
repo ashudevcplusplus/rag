@@ -396,6 +396,10 @@ jobs:
           
           if [ "${{ needs.api-checks.result }}" != "success" ] || \
              [ "${{ needs.api-build.result }}" != "success" ] || \
+             [ "${{ needs.frontend-checks.result }}" != "success" ] || \
+             [ "${{ needs.python-checks.result }}" != "success" ] || \
+             [ "${{ needs.docker-build.result }}" != "success" ] || \
+             [ "${{ needs.security-audit.result }}" != "success" ] || \
              [ "${{ needs.coverage-check.result }}" != "success" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "❌ **Critical checks failed!**" >> $GITHUB_STEP_SUMMARY
