@@ -116,6 +116,7 @@ describe('ChatService', () => {
     (fileMetadataRepository.findByIds as jest.Mock).mockResolvedValue([mockFile]);
     (fileMetadataRepository.findByProjectId as jest.Mock).mockResolvedValue([mockFile]);
     (projectRepository.findById as jest.Mock).mockResolvedValue(mockProject);
+    (projectRepository.findByIds as jest.Mock).mockResolvedValue([mockProject]);
 
     // Setup mock response for streaming tests
     mockResponse = createMockResponse();

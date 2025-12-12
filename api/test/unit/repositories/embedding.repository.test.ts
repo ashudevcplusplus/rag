@@ -109,6 +109,7 @@ describe('EmbeddingRepository', () => {
       const mockEmbeddings = [mockEmbedding, { ...mockEmbedding, _id: new Types.ObjectId() }];
 
       const mockQuery = {
+        select: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockEmbeddings),
       };
@@ -127,6 +128,7 @@ describe('EmbeddingRepository', () => {
 
     it('should return empty array if no embeddings found', async () => {
       const mockQuery = {
+        select: jest.fn().mockReturnThis(),
         sort: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue([]),
       };
