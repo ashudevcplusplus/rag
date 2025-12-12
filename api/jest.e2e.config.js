@@ -8,5 +8,10 @@ module.exports = {
   },
   testTimeout: 120000,
   verbose: true,
+
+  // Map workspace packages to their source
+  moduleNameMapper: {
+    '^@rag/types$': '<rootDir>/../packages/types/src/index.ts',
+  },
 };
 

@@ -19,10 +19,9 @@
   },
   "dependencies": {
     "@rag/types": "workspace:*",
+    "@rag/utils": "workspace:*",
     "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.454.0",
-    "tailwind-merge": "^2.5.4"
+    "lucide-react": "^0.454.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
