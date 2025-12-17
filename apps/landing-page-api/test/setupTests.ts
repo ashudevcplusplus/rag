@@ -1,5 +1,8 @@
 // Global mocks for external services that shouldn't connect in test environment
 
+// Store original Types for use in tests
+const actualMongoose = jest.requireActual('mongoose');
+
 // Mock mongoose to prevent database connections during unit tests
 jest.mock('mongoose', () => {
   const mockModel = jest.fn();
@@ -19,6 +22,9 @@ jest.mock('mongoose', () => {
     connect: jest.fn().mockResolvedValue(mockConnection),
     disconnect: jest.fn().mockResolvedValue(undefined),
     connection: mockConnection,
+    // Preserve actual Types for ObjectId usage in tests
+    Types: actualMongoose.Types,
+    Document: actualMongoose.Document,
   };
 });
 

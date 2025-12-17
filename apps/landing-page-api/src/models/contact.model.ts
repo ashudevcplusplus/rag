@@ -1,7 +1,7 @@
-import { Schema, model, Document } from 'mongoose';
-import { IContact } from '../schemas/contact.schema';
+import { Schema, model, Document } from "mongoose";
+import { IContact } from "../schemas/contact.schema";
 
-export interface IContactDocument extends Omit<IContact, '_id'>, Document {}
+export interface IContactDocument extends Omit<IContact, "_id">, Document {}
 
 const contactSchema = new Schema<IContactDocument>(
   {
@@ -30,14 +30,14 @@ const contactSchema = new Schema<IContactDocument>(
     },
     status: {
       type: String,
-      enum: ['new', 'read', 'replied'],
-      default: 'new',
+      enum: ["new", "read", "replied"],
+      default: "new",
     },
   },
   {
     timestamps: true,
-    collection: 'contacts',
-  }
+    collection: "contacts",
+  },
 );
 
 // Indexes
@@ -45,5 +45,4 @@ contactSchema.index({ status: 1 });
 contactSchema.index({ email: 1 });
 contactSchema.index({ createdAt: -1 });
 
-export const ContactModel = model<IContactDocument>('Contact', contactSchema);
-
+export const ContactModel = model<IContactDocument>("Contact", contactSchema);

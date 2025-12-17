@@ -1,7 +1,13 @@
-import { NewsletterModel, INewsletterDocument } from '../models/newsletter.model';
-import { SubscribeNewsletterDTO, INewsletter } from '../schemas/newsletter.schema';
-import { Model } from 'mongoose';
-import { toStringId, toStringIds } from './helpers';
+import {
+  NewsletterModel,
+  INewsletterDocument,
+} from "../models/newsletter.model";
+import {
+  SubscribeNewsletterDTO,
+  INewsletter,
+} from "../schemas/newsletter.schema";
+import { Model } from "mongoose";
+import { toStringId, toStringIds } from "./helpers";
 
 export class NewsletterRepository {
   public model: Model<INewsletterDocument>;
@@ -13,7 +19,9 @@ export class NewsletterRepository {
   /**
    * Subscribe to newsletter (or resubscribe if already exists)
    */
-  async subscribe(data: SubscribeNewsletterDTO): Promise<{ subscriber: INewsletter; isNew: boolean }> {
+  async subscribe(
+    data: SubscribeNewsletterDTO,
+  ): Promise<{ subscriber: INewsletter; isNew: boolean }> {
     const existing = await NewsletterModel.findOne({ email: data.email });
 
     if (existing) {
@@ -25,7 +33,7 @@ export class NewsletterRepository {
         await existing.save();
       }
       return {
-        subscriber: toStringId(existing.toObject()) as unknown as INewsletter,
+        subscriber: toStringId(existing) as INewsletter,
         isNew: false,
       };
     }
@@ -37,7 +45,7 @@ export class NewsletterRepository {
     });
     const saved = await subscriber.save();
     return {
-      subscriber: toStringId(saved.toObject()) as unknown as INewsletter,
+      subscriber: toStringId(saved) as INewsletter,
       isNew: true,
     };
   }
@@ -55,7 +63,7 @@ export class NewsletterRepository {
           unsubscribedAt: new Date(),
         },
       },
-      { new: true }
+      { new: true },
     );
     return !!result;
   }
@@ -66,7 +74,7 @@ export class NewsletterRepository {
   async findByEmail(email: string): Promise<INewsletter | null> {
     const subscriber = await NewsletterModel.findOne({ email }).lean();
     if (!subscriber) return null;
-    return toStringId(subscriber) as unknown as INewsletter;
+    return toStringId(subscriber) as INewsletter;
   }
 
   /**
@@ -75,7 +83,7 @@ export class NewsletterRepository {
   async list(
     page: number = 1,
     limit: number = 50,
-    filters?: { isSubscribed?: boolean }
+    filters?: { isSubscribed?: boolean },
   ): Promise<{
     subscribers: INewsletter[];
     total: number;
@@ -91,12 +99,16 @@ export class NewsletterRepository {
     const skip = (page - 1) * limit;
 
     const [subscribers, total] = await Promise.all([
-      NewsletterModel.find(query).sort({ subscribedAt: -1 }).skip(skip).limit(limit).lean(),
+      NewsletterModel.find(query)
+        .sort({ subscribedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       NewsletterModel.countDocuments(query),
     ]);
 
     return {
-      subscribers: toStringIds(subscribers) as unknown as INewsletter[],
+      subscribers: toStringIds(subscribers) as INewsletter[],
       total,
       page,
       totalPages: Math.ceil(total / limit),
@@ -106,7 +118,11 @@ export class NewsletterRepository {
   /**
    * Get newsletter stats
    */
-  async getStats(): Promise<{ total: number; active: number; unsubscribed: number }> {
+  async getStats(): Promise<{
+    total: number;
+    active: number;
+    unsubscribed: number;
+  }> {
     const [total, active, unsubscribed] = await Promise.all([
       NewsletterModel.countDocuments({}),
       NewsletterModel.countDocuments({ isSubscribed: true }),
@@ -122,4 +138,3 @@ export class NewsletterRepository {
 }
 
 export const newsletterRepository = new NewsletterRepository();
-

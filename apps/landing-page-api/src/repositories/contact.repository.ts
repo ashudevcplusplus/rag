@@ -1,7 +1,11 @@
-import { ContactModel, IContactDocument } from '../models/contact.model';
-import { CreateContactDTO, UpdateContactDTO, IContact } from '../schemas/contact.schema';
-import { FilterQuery, Model } from 'mongoose';
-import { toStringId, toStringIds } from './helpers';
+import { ContactModel, IContactDocument } from "../models/contact.model";
+import {
+  CreateContactDTO,
+  UpdateContactDTO,
+  IContact,
+} from "../schemas/contact.schema";
+import { FilterQuery, Model } from "mongoose";
+import { toStringId, toStringIds } from "./helpers";
 
 export class ContactRepository {
   public model: Model<IContactDocument>;
@@ -16,7 +20,7 @@ export class ContactRepository {
   async create(data: CreateContactDTO): Promise<IContact> {
     const contact = new ContactModel(data);
     const saved = await contact.save();
-    return toStringId(saved.toObject()) as unknown as IContact;
+    return toStringId(saved) as IContact;
   }
 
   /**
@@ -25,7 +29,7 @@ export class ContactRepository {
   async findById(id: string): Promise<IContact | null> {
     const contact = await ContactModel.findById(id).lean();
     if (!contact) return null;
-    return toStringId(contact) as unknown as IContact;
+    return toStringId(contact) as IContact;
   }
 
   /**
@@ -35,11 +39,11 @@ export class ContactRepository {
     const contact = await ContactModel.findByIdAndUpdate(
       id,
       { $set: data },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).lean();
 
     if (!contact) return null;
-    return toStringId(contact) as unknown as IContact;
+    return toStringId(contact) as IContact;
   }
 
   /**
@@ -56,8 +60,13 @@ export class ContactRepository {
   async list(
     page: number = 1,
     limit: number = 20,
-    filters?: { status?: string }
-  ): Promise<{ contacts: IContact[]; total: number; page: number; totalPages: number }> {
+    filters?: { status?: string },
+  ): Promise<{
+    contacts: IContact[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const query: FilterQuery<IContactDocument> = {};
 
     if (filters?.status) {
@@ -67,12 +76,16 @@ export class ContactRepository {
     const skip = (page - 1) * limit;
 
     const [contacts, total] = await Promise.all([
-      ContactModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      ContactModel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       ContactModel.countDocuments(query),
     ]);
 
     return {
-      contacts: toStringIds(contacts) as unknown as IContact[],
+      contacts: toStringIds(contacts) as IContact[],
       total,
       page,
       totalPages: Math.ceil(total / limit),
@@ -82,12 +95,17 @@ export class ContactRepository {
   /**
    * Get contact stats
    */
-  async getStats(): Promise<{ total: number; new: number; read: number; replied: number }> {
+  async getStats(): Promise<{
+    total: number;
+    new: number;
+    read: number;
+    replied: number;
+  }> {
     const [total, newCount, readCount, repliedCount] = await Promise.all([
       ContactModel.countDocuments({}),
-      ContactModel.countDocuments({ status: 'new' }),
-      ContactModel.countDocuments({ status: 'read' }),
-      ContactModel.countDocuments({ status: 'replied' }),
+      ContactModel.countDocuments({ status: "new" }),
+      ContactModel.countDocuments({ status: "read" }),
+      ContactModel.countDocuments({ status: "replied" }),
     ]);
 
     return {
@@ -100,4 +118,3 @@ export class ContactRepository {
 }
 
 export const contactRepository = new ContactRepository();
-

@@ -1,6 +1,6 @@
-import mongoose from 'mongoose';
-import { CONFIG } from '../config';
-import { logger } from '../utils/logger';
+import mongoose from "mongoose";
+import { CONFIG } from "../config";
+import { logger } from "../utils/logger";
 
 class DatabaseConnection {
   private static instance: DatabaseConnection;
@@ -17,7 +17,7 @@ class DatabaseConnection {
 
   public async connect(): Promise<void> {
     if (this.isConnected) {
-      logger.info('MongoDB already connected');
+      logger.info("MongoDB already connected");
       return;
     }
 
@@ -34,33 +34,38 @@ class DatabaseConnection {
           maxIdleTimeMS: 30000,
         });
         this.isConnected = true;
-        logger.info('MongoDB connected successfully', {
+        logger.info("MongoDB connected successfully", {
           host: mongoose.connection.host,
           database: mongoose.connection.name,
         });
 
-        mongoose.connection.on('error', (error) => {
-          logger.error('MongoDB connection error', { error });
+        mongoose.connection.on("error", (error) => {
+          logger.error("MongoDB connection error", { error });
         });
 
-        mongoose.connection.on('disconnected', () => {
-          logger.warn('MongoDB disconnected');
+        mongoose.connection.on("disconnected", () => {
+          logger.warn("MongoDB disconnected");
           this.isConnected = false;
         });
 
-        mongoose.connection.on('reconnected', () => {
-          logger.info('MongoDB reconnected');
+        mongoose.connection.on("reconnected", () => {
+          logger.info("MongoDB reconnected");
           this.isConnected = true;
         });
         return;
       } catch (error) {
-        logger.warn(`MongoDB connection attempt ${attempt}/${maxRetries} failed`, {
-          error: error instanceof Error ? error.message : error,
-        });
+        logger.warn(
+          `MongoDB connection attempt ${attempt}/${maxRetries} failed`,
+          {
+            error: error instanceof Error ? error.message : error,
+          },
+        );
         if (attempt < maxRetries) {
           await new Promise((resolve) => setTimeout(resolve, retryDelay));
         } else {
-          logger.error('MongoDB connection failed after all retries', { error });
+          logger.error("MongoDB connection failed after all retries", {
+            error,
+          });
           throw error;
         }
       }
@@ -75,9 +80,9 @@ class DatabaseConnection {
     try {
       await mongoose.disconnect();
       this.isConnected = false;
-      logger.info('MongoDB disconnected successfully');
+      logger.info("MongoDB disconnected successfully");
     } catch (error) {
-      logger.warn('MongoDB disconnect error (non-fatal)', {
+      logger.warn("MongoDB disconnect error (non-fatal)", {
         error: error instanceof Error ? error.message : error,
       });
       this.isConnected = false;
@@ -94,4 +99,3 @@ class DatabaseConnection {
 }
 
 export const database = DatabaseConnection.getInstance();
-

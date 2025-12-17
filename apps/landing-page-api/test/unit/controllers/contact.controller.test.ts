@@ -197,7 +197,7 @@ describe('ContactController', () => {
       const validationError = new z.ZodError([
         {
           code: 'invalid_enum_value',
-          expected: ['new', 'read', 'replied'],
+          options: ['new', 'read', 'replied'],
           received: 'invalid',
           path: ['status'],
           message: 'Invalid status',

@@ -1,10 +1,35 @@
-import { contactRepository } from '../../../src/repositories/contact.repository';
-import { ContactModel } from '../../../src/models/contact.model';
 import { Types } from 'mongoose';
 import { CreateContactDTO } from '../../../src/schemas/contact.schema';
 
-// Mock Mongoose model
-jest.mock('../../../src/models/contact.model');
+// Create mock functions before mocking the model
+const mockSave = jest.fn();
+const mockFindById = jest.fn();
+const mockFindByIdAndUpdate = jest.fn();
+const mockFindByIdAndDelete = jest.fn();
+const mockFind = jest.fn();
+const mockCountDocuments = jest.fn();
+
+// Mock the ContactModel
+jest.mock('../../../src/models/contact.model', () => {
+  const MockContactModel = jest.fn().mockImplementation(() => ({
+    save: mockSave,
+  }));
+
+  // Add static methods to the mock
+  (MockContactModel as unknown as Record<string, jest.Mock>).findById = mockFindById;
+  (MockContactModel as unknown as Record<string, jest.Mock>).findByIdAndUpdate = mockFindByIdAndUpdate;
+  (MockContactModel as unknown as Record<string, jest.Mock>).findByIdAndDelete = mockFindByIdAndDelete;
+  (MockContactModel as unknown as Record<string, jest.Mock>).find = mockFind;
+  (MockContactModel as unknown as Record<string, jest.Mock>).countDocuments = mockCountDocuments;
+
+  return {
+    ContactModel: MockContactModel,
+  };
+});
+
+// Import after mocking
+import { contactRepository } from '../../../src/repositories/contact.repository';
+import { ContactModel } from '../../../src/models/contact.model';
 
 describe('ContactRepository', () => {
   beforeEach(() => {
@@ -35,9 +60,7 @@ describe('ContactRepository', () => {
         }),
       };
 
-      (ContactModel as unknown as jest.Mock).mockImplementation(() => ({
-        save: jest.fn().mockResolvedValue(mockSavedContact),
-      }));
+      mockSave.mockResolvedValue(mockSavedContact);
 
       const result = await contactRepository.create(mockData);
 
@@ -62,7 +85,7 @@ describe('ContactRepository', () => {
         status: 'new',
       };
 
-      (ContactModel.findById as jest.Mock).mockReturnValue({
+      mockFindById.mockReturnValue({
         lean: jest.fn().mockResolvedValue(mockContact),
       });
 
@@ -78,7 +101,7 @@ describe('ContactRepository', () => {
     });
 
     it('should return null if contact not found', async () => {
-      (ContactModel.findById as jest.Mock).mockReturnValue({
+      mockFindById.mockReturnValue({
         lean: jest.fn().mockResolvedValue(null),
       });
 
@@ -97,7 +120,7 @@ describe('ContactRepository', () => {
         status: 'read',
       };
 
-      (ContactModel.findByIdAndUpdate as jest.Mock).mockReturnValue({
+      mockFindByIdAndUpdate.mockReturnValue({
         lean: jest.fn().mockResolvedValue(mockUpdatedContact),
       });
 
@@ -111,7 +134,7 @@ describe('ContactRepository', () => {
           _id: '5f8d04b3b54764421b7156c1',
         })
       );
-      expect(ContactModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      expect(mockFindByIdAndUpdate).toHaveBeenCalledWith(
         '5f8d04b3b54764421b7156c1',
         { $set: { status: 'read' } },
         { new: true, runValidators: true }
@@ -119,7 +142,7 @@ describe('ContactRepository', () => {
     });
 
     it('should return null if contact not found', async () => {
-      (ContactModel.findByIdAndUpdate as jest.Mock).mockReturnValue({
+      mockFindByIdAndUpdate.mockReturnValue({
         lean: jest.fn().mockResolvedValue(null),
       });
 
@@ -135,16 +158,16 @@ describe('ContactRepository', () => {
         _id: new Types.ObjectId('5f8d04b3b54764421b7156c1'),
       };
 
-      (ContactModel.findByIdAndDelete as jest.Mock).mockResolvedValue(mockDeletedContact);
+      mockFindByIdAndDelete.mockResolvedValue(mockDeletedContact);
 
       const result = await contactRepository.delete('5f8d04b3b54764421b7156c1');
 
       expect(result).toBe(true);
-      expect(ContactModel.findByIdAndDelete).toHaveBeenCalledWith('5f8d04b3b54764421b7156c1');
+      expect(mockFindByIdAndDelete).toHaveBeenCalledWith('5f8d04b3b54764421b7156c1');
     });
 
     it('should return false if contact not found', async () => {
-      (ContactModel.findByIdAndDelete as jest.Mock).mockResolvedValue(null);
+      mockFindByIdAndDelete.mockResolvedValue(null);
 
       const result = await contactRepository.delete('invalid-id');
 
@@ -169,14 +192,14 @@ describe('ContactRepository', () => {
         },
       ];
 
-      (ContactModel.find as jest.Mock).mockReturnValue({
+      mockFind.mockReturnValue({
         sort: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockContacts),
       });
 
-      (ContactModel.countDocuments as jest.Mock).mockResolvedValue(2);
+      mockCountDocuments.mockResolvedValue(2);
 
       const result = await contactRepository.list(1, 20);
 
@@ -195,25 +218,25 @@ describe('ContactRepository', () => {
         },
       ];
 
-      (ContactModel.find as jest.Mock).mockReturnValue({
+      mockFind.mockReturnValue({
         sort: jest.fn().mockReturnThis(),
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
         lean: jest.fn().mockResolvedValue(mockContacts),
       });
 
-      (ContactModel.countDocuments as jest.Mock).mockResolvedValue(1);
+      mockCountDocuments.mockResolvedValue(1);
 
       const result = await contactRepository.list(1, 20, { status: 'new' });
 
-      expect(ContactModel.find).toHaveBeenCalledWith({ status: 'new' });
+      expect(mockFind).toHaveBeenCalledWith({ status: 'new' });
       expect(result.contacts).toHaveLength(1);
     });
   });
 
   describe('getStats', () => {
     it('should return contact statistics', async () => {
-      (ContactModel.countDocuments as jest.Mock)
+      mockCountDocuments
         .mockResolvedValueOnce(10) // total
         .mockResolvedValueOnce(5) // new
         .mockResolvedValueOnce(3) // read
@@ -230,4 +253,3 @@ describe('ContactRepository', () => {
     });
   });
 });
-

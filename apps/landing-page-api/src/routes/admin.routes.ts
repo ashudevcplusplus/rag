@@ -1,11 +1,14 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   listContacts,
   getContactStats,
   updateContactStatus,
-} from '../controllers/contact.controller';
-import { listSubscribers, getNewsletterStats } from '../controllers/newsletter.controller';
-import { authenticateAdmin } from '../middleware/auth.middleware';
+} from "../controllers/contact.controller";
+import {
+  listSubscribers,
+  getNewsletterStats,
+} from "../controllers/newsletter.controller";
+import { authenticateAdmin } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -13,13 +16,12 @@ const router = Router();
 router.use(authenticateAdmin);
 
 // Contact admin endpoints
-router.get('/contacts', listContacts);
-router.get('/contacts/stats', getContactStats);
-router.patch('/contacts/:id', updateContactStatus);
+router.get("/contacts", listContacts);
+router.get("/contacts/stats", getContactStats);
+router.patch("/contacts/:id", updateContactStatus);
 
 // Newsletter admin endpoints
-router.get('/newsletter', listSubscribers);
-router.get('/newsletter/stats', getNewsletterStats);
+router.get("/newsletter", listSubscribers);
+router.get("/newsletter/stats", getNewsletterStats);
 
 export default router;
-

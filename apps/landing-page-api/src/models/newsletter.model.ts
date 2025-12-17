@@ -1,7 +1,8 @@
-import { Schema, model, Document } from 'mongoose';
-import { INewsletter } from '../schemas/newsletter.schema';
+import { Schema, model, Document } from "mongoose";
+import { INewsletter } from "../schemas/newsletter.schema";
 
-export interface INewsletterDocument extends Omit<INewsletter, '_id'>, Document {}
+export interface INewsletterDocument
+  extends Omit<INewsletter, "_id">, Document {}
 
 const newsletterSchema = new Schema<INewsletterDocument>(
   {
@@ -26,14 +27,16 @@ const newsletterSchema = new Schema<INewsletterDocument>(
   },
   {
     timestamps: true,
-    collection: 'newsletter_subscribers',
-  }
+    collection: "newsletter_subscribers",
+  },
 );
 
 // Indexes
+// Note: email already has a unique index from the schema definition
 newsletterSchema.index({ isSubscribed: 1 });
-newsletterSchema.index({ email: 1 });
 newsletterSchema.index({ subscribedAt: -1 });
 
-export const NewsletterModel = model<INewsletterDocument>('Newsletter', newsletterSchema);
-
+export const NewsletterModel = model<INewsletterDocument>(
+  "Newsletter",
+  newsletterSchema,
+);

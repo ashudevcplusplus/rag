@@ -2,7 +2,11 @@ export class AppError extends Error {
   public statusCode: number;
   public isOperational: boolean;
 
-  constructor(statusCode: number, message: string, isOperational: boolean = true) {
+  constructor(
+    statusCode: number,
+    message: string,
+    isOperational: boolean = true,
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
@@ -31,4 +35,3 @@ export function getErrorMessage(error: unknown): string {
   }
   return String(error);
 }
-

@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { authenticateAdmin } from '../../../src/middleware/auth.middleware';
 
 // Mock logger
 jest.mock('../../../src/utils/logger', () => ({
@@ -11,6 +10,21 @@ jest.mock('../../../src/utils/logger', () => ({
   },
 }));
 
+// Mock CONFIG to control values in tests
+const mockConfig = {
+  NODE_ENV: 'development',
+  ADMIN_API_KEY: 'test-admin-key-123',
+  PORT: 8001,
+  MONGODB_URI: 'mongodb://localhost/test',
+  CORS_ORIGIN: 'http://localhost:5173',
+};
+
+jest.mock('../../../src/config', () => ({
+  CONFIG: mockConfig,
+}));
+
+import { authenticateAdmin } from '../../../src/middleware/auth.middleware';
+
 describe('authenticateAdmin', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
@@ -18,7 +32,9 @@ describe('authenticateAdmin', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.ADMIN_API_KEY = 'test-admin-key-123';
+    // Reset config values for each test
+    mockConfig.NODE_ENV = 'development';
+    mockConfig.ADMIN_API_KEY = 'test-admin-key-123';
 
     mockRequest = {
       headers: {},
@@ -32,10 +48,6 @@ describe('authenticateAdmin', () => {
     };
 
     mockNext = jest.fn();
-  });
-
-  afterEach(() => {
-    delete process.env.ADMIN_API_KEY;
   });
 
   it('should allow request with valid API key', () => {
@@ -80,8 +92,8 @@ describe('authenticateAdmin', () => {
   });
 
   it('should allow request in development when no API key is configured', () => {
-    delete process.env.ADMIN_API_KEY;
-    process.env.NODE_ENV = 'development';
+    mockConfig.ADMIN_API_KEY = '';
+    mockConfig.NODE_ENV = 'development';
 
     authenticateAdmin(
       mockRequest as Request,
@@ -93,8 +105,8 @@ describe('authenticateAdmin', () => {
   });
 
   it('should reject request in production when no API key is configured', () => {
-    delete process.env.ADMIN_API_KEY;
-    process.env.NODE_ENV = 'production';
+    mockConfig.ADMIN_API_KEY = '';
+    mockConfig.NODE_ENV = 'production';
 
     authenticateAdmin(
       mockRequest as Request,

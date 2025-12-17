@@ -1,17 +1,17 @@
-import { Request, Response } from 'express';
-import { database } from '../config/database';
+import { Request, Response } from "express";
+import { database } from "../config/database";
 
 /**
  * Health check endpoint
  * GET /health
  */
 export const healthCheck = (_req: Request, res: Response): void => {
-  const dbStatus = database.isConnectionActive() ? 'connected' : 'disconnected';
+  const dbStatus = database.isConnectionActive() ? "connected" : "disconnected";
 
   res.json({
-    status: 'ok',
+    status: "ok",
     timestamp: new Date().toISOString(),
-    service: 'landing-page-api',
+    service: "landing-page-api",
     database: dbStatus,
   });
 };
@@ -21,7 +21,7 @@ export const healthCheck = (_req: Request, res: Response): void => {
  * GET /health/live
  */
 export const liveness = (_req: Request, res: Response): void => {
-  res.json({ status: 'alive' });
+  res.json({ status: "alive" });
 };
 
 /**
@@ -30,9 +30,10 @@ export const liveness = (_req: Request, res: Response): void => {
  */
 export const readiness = (_req: Request, res: Response): void => {
   if (database.isConnectionActive()) {
-    res.json({ status: 'ready' });
+    res.json({ status: "ready" });
   } else {
-    res.status(503).json({ status: 'not ready', reason: 'database not connected' });
+    res
+      .status(503)
+      .json({ status: "not ready", reason: "database not connected" });
   }
 };
-

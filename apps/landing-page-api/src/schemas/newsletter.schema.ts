@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // TypeScript Interface
 export interface INewsletter {
@@ -13,8 +13,7 @@ export interface INewsletter {
 
 // Zod Validation Schema for subscribing
 export const subscribeNewsletterSchema = z.object({
-  email: z.string().email('Invalid email address').toLowerCase().trim(),
+  email: z.string().email("Invalid email address").toLowerCase().trim(),
 });
 
 export type SubscribeNewsletterDTO = z.infer<typeof subscribeNewsletterSchema>;
-
