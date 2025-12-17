@@ -2,10 +2,10 @@
   "name": "landing-page-api",
   "version": "1.0.0",
   "description": "Landing page backend API",
-  "main": "dist/src/server.js",
+  "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/src/server.js",
+    "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only --poll src/server.ts",
     "test": "jest",
     "test:unit": "jest test/unit",
