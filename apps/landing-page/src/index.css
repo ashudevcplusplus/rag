@@ -9,11 +9,24 @@
 
   body {
     @apply bg-slate-950 text-white antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, sans-serif;
   }
 
   ::selection {
     @apply bg-primary-500/30 text-white;
+  }
+
+  /* Respect user's reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -103,11 +116,50 @@
     @apply absolute rounded-full blur-3xl opacity-30;
     animation: float 6s ease-in-out infinite;
   }
+
+  /* Noise texture overlay for visual depth */
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  /* Touch-friendly button sizes */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Mobile-optimized containers */
+  .mobile-padding {
+    @apply px-4 xs:px-6 sm:px-8;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Improved text scaling for mobile */
+  .text-responsive-hero {
+    @apply text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl;
+  }
+
+  .text-responsive-section {
+    @apply text-2xl xs:text-3xl sm:text-4xl lg:text-5xl;
+  }
+
+  /* Hide on mobile, show on desktop */
+  .mobile-hidden {
+    @apply hidden sm:block;
+  }
+
+  /* Smooth appearance for mobile menu */
+  .mobile-menu-enter {
+    @apply transition-all duration-300 ease-out;
   }
 }
 

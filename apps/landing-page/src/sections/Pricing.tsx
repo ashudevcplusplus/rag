@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Check, Sparkles, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useScrollTo } from '../lib/useScrollTo';
 
 const plans = [
   {
@@ -68,29 +69,31 @@ const itemVariants = {
 };
 
 export function Pricing() {
+  const { scrollTo } = useScrollTo();
+
   return (
-    <section id="pricing" className="py-32 relative">
+    <section id="pricing" className="py-16 sm:py-24 lg:py-32 relative">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent-950/30 to-transparent" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8 relative">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-16 lg:mb-20"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full glass mb-4 sm:mb-6">
             <Zap className="w-4 h-4 text-accent-400" />
-            <span className="text-sm font-medium text-slate-300">Simple Pricing</span>
+            <span className="text-xs sm:text-sm font-medium text-slate-300">Simple Pricing</span>
           </div>
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
+          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
             <span className="text-white">Choose Your </span>
             <span className="gradient-text">Perfect Plan</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-lg text-slate-400">
+          <p className="max-w-2xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 px-2">
             Start free for 14 days. No credit card required.
             Scale up as your needs grow.
           </p>
@@ -102,15 +105,17 @@ export function Pricing() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid lg:grid-cols-3 gap-8 max-w-5xl mx-auto"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto"
         >
-          {plans.map((plan) => (
+          {plans.map((plan, index) => (
             <motion.div
               key={plan.name}
               variants={itemVariants}
               className={cn(
                 'relative group',
-                plan.popular && 'lg:-translate-y-4'
+                plan.popular && 'sm:-translate-y-4',
+                /* Center the popular card on tablet (2-col grid) */
+                index === 1 && 'sm:col-span-2 lg:col-span-1 sm:max-w-md sm:mx-auto lg:max-w-none'
               )}
             >
               {/* Popular Badge */}
@@ -133,55 +138,55 @@ export function Pricing() {
               >
                 <div
                   className={cn(
-                    'h-full rounded-2xl p-8',
+                    'h-full rounded-2xl p-6 sm:p-8',
                     plan.popular ? 'bg-slate-900' : ''
                   )}
                 >
                   {/* Plan Info */}
-                  <div className="mb-8">
-                    <h3 className="text-xl font-semibold text-white mb-2">
+                  <div className="mb-6 sm:mb-8">
+                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
                       {plan.name}
                     </h3>
-                    <p className="text-slate-400 text-sm">{plan.description}</p>
+                    <p className="text-slate-400 text-xs sm:text-sm">{plan.description}</p>
                   </div>
 
                   {/* Price */}
-                  <div className="mb-8">
+                  <div className="mb-6 sm:mb-8">
                     {plan.price !== null ? (
                       <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-white">
+                        <span className="text-3xl sm:text-4xl font-bold text-white">
                           ${plan.price}
                         </span>
-                        <span className="text-slate-400">/month</span>
+                        <span className="text-slate-400 text-sm">/month</span>
                       </div>
                     ) : (
-                      <div className="text-4xl font-bold text-white">Custom</div>
+                      <div className="text-3xl sm:text-4xl font-bold text-white">Custom</div>
                     )}
                   </div>
 
                   {/* CTA */}
-                  <a
-                    href="#"
+                  <button
+                    onClick={() => scrollTo('contact')}
                     className={cn(
-                      'block w-full py-3 rounded-xl text-center font-semibold transition-all duration-300',
+                      'block w-full py-3 min-h-[48px] rounded-xl text-center font-semibold transition-all duration-300 flex items-center justify-center',
                       plan.popular
                         ? 'btn-primary'
                         : 'btn-secondary'
                     )}
                   >
-                    <span className="relative z-10">
-                      {plan.price !== null ? 'Start Free Trial' : 'Contact Sales'}
+                    <span className="relative z-10 text-sm sm:text-base">
+                      {plan.price !== null ? 'Get Started' : 'Contact Us'}
                     </span>
-                  </a>
+                  </button>
 
                   {/* Features */}
-                  <div className="mt-8 space-y-4">
+                  <div className="mt-6 sm:mt-8 space-y-3 sm:space-y-4">
                     {plan.features.map((feature) => (
                       <div key={feature} className="flex items-start gap-3">
                         <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary-500/20 flex items-center justify-center mt-0.5">
                           <Check className="w-3 h-3 text-primary-400" />
                         </div>
-                        <span className="text-slate-300 text-sm">{feature}</span>
+                        <span className="text-slate-300 text-xs sm:text-sm">{feature}</span>
                       </div>
                     ))}
                   </div>
@@ -191,23 +196,19 @@ export function Pricing() {
           ))}
         </motion.div>
 
-        {/* FAQ Teaser */}
+        {/* Contact Teaser */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="text-center mt-16"
+          className="text-center mt-10 sm:mt-16"
         >
-          <p className="text-slate-400">
+          <p className="text-sm sm:text-base text-slate-400">
             Have questions?{' '}
-            <a href="#" className="text-primary-400 hover:text-primary-300 font-medium">
-              Check our FAQ
-            </a>{' '}
-            or{' '}
-            <a href="#" className="text-primary-400 hover:text-primary-300 font-medium">
-              contact sales
-            </a>
+            <button onClick={() => scrollTo('contact')} className="text-primary-400 hover:text-primary-300 font-medium">
+              Get in touch with us
+            </button>
           </p>
         </motion.div>
       </div>

@@ -1,0 +1,43 @@
+services:
+  # Landing Page MongoDB (isolated database)
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=landing_db
+    volumes:
+      - mongodb_landing_storage:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Landing Page API
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      - PORT=8001
+      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/landing_db?authSource=admin
+      - CORS_ORIGIN=http://localhost:5173,http://localhost:3000
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  mongodb_landing_storage:
+

@@ -39,9 +39,9 @@ export function ProductDemo() {
       initial={{ opacity: 0, y: 60 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.6 }}
-      className="mt-20 relative"
+      className="mt-10 sm:mt-16 lg:mt-20 relative"
     >
-      <div className="relative rounded-2xl overflow-hidden glass p-1">
+      <div className="relative rounded-xl sm:rounded-2xl overflow-hidden glass p-0.5 sm:p-1">
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 via-transparent to-accent-500/20 pointer-events-none" />
         
@@ -195,12 +195,9 @@ export function ProductDemo() {
                   transition={{ delay: 1.1 }}
                   className="p-4 rounded-xl bg-slate-800/50 border border-white/5"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="w-4 h-4 text-primary-400" />
-                      <span className="text-sm font-medium text-white">Recent Documents</span>
-                    </div>
-                    <span className="text-xs text-primary-400 cursor-pointer hover:underline">View all</span>
+                  <div className="flex items-center gap-2 mb-4">
+                    <FolderOpen className="w-4 h-4 text-primary-400" />
+                    <span className="text-sm font-medium text-white">Recent Documents</span>
                   </div>
                   <div className="space-y-3">
                     {recentDocuments.map((doc, i) => (
