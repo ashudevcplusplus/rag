@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Play, Zap, Shield, Cpu } from 'lucide-react';
 import { ProductDemo } from '../components/ProductDemo';
+import { useScrollTo } from '../lib/useScrollTo';
 
 const stats = [
   { value: '99.9%', label: 'Accuracy Rate' },
@@ -16,23 +17,25 @@ const floatingIcons = [
 ];
 
 export function Hero() {
+  const { scrollTo } = useScrollTo();
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center pt-20 pb-32 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative min-h-screen flex items-center justify-center pt-20 xs:pt-24 pb-16 sm:pb-32 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8">
         <div className="text-center">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8"
+            className="inline-flex items-center gap-2 px-3 xs:px-4 py-2 rounded-full glass mb-6 sm:mb-8"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
             </span>
-            <span className="text-sm font-medium text-slate-300">
-              Introducing NexusAI v2.0 — Now with GPT-4 Integration
+            <span className="text-xs xs:text-sm font-medium text-slate-300">
+              <span className="hidden xs:inline">Introducing </span>NexusAI v2.0 — <span className="hidden sm:inline">Now with </span>GPT-4
             </span>
           </motion.div>
 
@@ -41,7 +44,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6"
+            className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 sm:mb-6 leading-tight"
           >
             <span className="block text-white">Transform Your Data Into</span>
             <span className="gradient-text">Intelligent Insights</span>
@@ -52,7 +55,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="max-w-2xl mx-auto text-lg sm:text-xl text-slate-400 mb-10"
+            className="max-w-2xl mx-auto text-base xs:text-lg sm:text-xl text-slate-400 mb-8 sm:mb-10 px-2"
           >
             Harness the power of advanced AI to analyze, understand, and extract
             valuable insights from your documents in seconds. Experience the future
@@ -64,18 +67,18 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+            className="flex flex-col xs:flex-row items-center justify-center gap-3 sm:gap-4 mb-10 sm:mb-16"
           >
-            <a href="#" className="btn-primary group">
+            <button onClick={() => scrollTo('pricing')} className="btn-primary group w-full xs:w-auto min-h-[48px] flex items-center justify-center">
               <span className="relative z-10 flex items-center gap-2">
-                Start Free Trial
+                Get Started
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </span>
-            </a>
-            <a href="#" className="btn-secondary group">
+            </button>
+            <button onClick={() => scrollTo('how-it-works')} className="btn-secondary group w-full xs:w-auto min-h-[48px] flex items-center justify-center">
               <Play className="w-4 h-4 mr-2" />
-              Watch Demo
-            </a>
+              See How It Works
+            </button>
           </motion.div>
 
           {/* Stats */}
@@ -83,7 +86,7 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 xs:gap-6 sm:gap-8 max-w-3xl mx-auto"
           >
             {stats.map((stat, index) => (
               <motion.div
@@ -91,12 +94,12 @@ export function Hero() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                className="text-center"
+                className="text-center p-3 xs:p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/5"
               >
-                <div className="text-3xl sm:text-4xl font-bold gradient-text mb-1">
+                <div className="text-2xl xs:text-3xl sm:text-4xl font-bold gradient-text mb-1">
                   {stat.value}
                 </div>
-                <div className="text-sm text-slate-500">{stat.label}</div>
+                <div className="text-xs xs:text-sm text-slate-500">{stat.label}</div>
               </motion.div>
             ))}
           </motion.div>

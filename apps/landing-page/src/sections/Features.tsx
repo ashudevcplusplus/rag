@@ -67,25 +67,25 @@ const itemVariants = {
 
 export function Features() {
   return (
-    <section id="features" className="py-32 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className="py-16 sm:py-24 lg:py-32 relative">
+      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-16 lg:mb-20"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full glass mb-4 sm:mb-6">
             <Sparkles className="w-4 h-4 text-primary-400" />
-            <span className="text-sm font-medium text-slate-300">Powerful Features</span>
+            <span className="text-xs sm:text-sm font-medium text-slate-300">Powerful Features</span>
           </div>
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
+          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
             <span className="text-white">Everything You Need to </span>
             <span className="gradient-text">Unlock Your Data</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-lg text-slate-400">
+          <p className="max-w-2xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 px-2">
             Our comprehensive suite of AI-powered tools gives you complete control
             over your document intelligence workflow.
           </p>
@@ -97,7 +97,7 @@ export function Features() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid xs:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
         >
           {features.map((feature) => (
             <motion.div
@@ -105,22 +105,22 @@ export function Features() {
               variants={itemVariants}
               className="group relative"
             >
-              <div className="card-glow rounded-2xl h-full">
-                <div className="relative z-10 p-8 rounded-2xl glass h-full transition-all duration-300 group-hover:bg-white/10">
+              <div className="card-glow rounded-xl sm:rounded-2xl h-full">
+                <div className="relative z-10 p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl glass h-full transition-all duration-300 group-hover:bg-white/10">
                   {/* Icon */}
-                  <div className="mb-6 relative">
+                  <div className="mb-4 sm:mb-6 relative">
                     <div
                       className={cn(
-                        'w-14 h-14 rounded-xl flex items-center justify-center',
+                        'w-12 sm:w-14 h-12 sm:h-14 rounded-lg sm:rounded-xl flex items-center justify-center',
                         'bg-gradient-to-br',
                         feature.gradient
                       )}
                     >
-                      <feature.icon className="w-7 h-7 text-white" />
+                      <feature.icon className="w-6 sm:w-7 h-6 sm:h-7 text-white" />
                     </div>
                     <div
                       className={cn(
-                        'absolute inset-0 rounded-xl blur-xl opacity-40',
+                        'absolute inset-0 rounded-lg sm:rounded-xl blur-xl opacity-40',
                         'bg-gradient-to-br',
                         feature.gradient
                       )}
@@ -128,30 +128,12 @@ export function Features() {
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-xl font-semibold text-white mb-3">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-2 sm:mb-3">
                     {feature.title}
                   </h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-xs sm:text-sm lg:text-base text-slate-400 leading-relaxed">
                     {feature.description}
                   </p>
-
-                  {/* Hover Arrow */}
-                  <div className="mt-6 flex items-center text-sm font-medium text-primary-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Learn more
-                    <svg
-                      className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
                 </div>
               </div>
             </motion.div>
@@ -164,25 +146,25 @@ export function Features() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mt-20"
+          className="mt-12 sm:mt-16 lg:mt-20"
         >
-          <div className="relative rounded-3xl overflow-hidden glass">
+          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden glass">
             <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-transparent to-accent-500/10" />
-            <div className="relative p-8 sm:p-12 lg:p-16">
-              <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="relative p-5 xs:p-6 sm:p-10 lg:p-16">
+              <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                 <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 mb-6">
-                    <Lock className="w-4 h-4 text-primary-400" />
-                    <span className="text-sm font-medium text-primary-300">Enterprise Ready</span>
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 mb-4 sm:mb-6">
+                    <Lock className="w-3 sm:w-4 h-3 sm:h-4 text-primary-400" />
+                    <span className="text-xs sm:text-sm font-medium text-primary-300">Enterprise Ready</span>
                   </div>
-                  <h3 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+                  <h3 className="text-xl xs:text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6">
                     Built for Scale, Designed for Security
                   </h3>
-                  <p className="text-lg text-slate-400 mb-8">
+                  <p className="text-sm sm:text-base lg:text-lg text-slate-400 mb-6 sm:mb-8">
                     From startups to Fortune 500 companies, our platform scales with your needs
                     while maintaining the highest security standards.
                   </p>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
                     {[
                       { value: '99.99%', label: 'Uptime SLA' },
                       { value: '<100ms', label: 'API Response' },
@@ -190,23 +172,23 @@ export function Features() {
                       { value: '256-bit', label: 'Encryption' },
                     ].map((stat) => (
                       <div key={stat.label}>
-                        <div className="text-2xl font-bold text-white">{stat.value}</div>
-                        <div className="text-sm text-slate-500">{stat.label}</div>
+                        <div className="text-lg xs:text-xl sm:text-2xl font-bold text-white">{stat.value}</div>
+                        <div className="text-xs sm:text-sm text-slate-500">{stat.label}</div>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="relative">
-                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 p-8">
-                    <div className="h-full rounded-xl border border-white/10 bg-slate-900/50 flex items-center justify-center">
+                <div className="relative hidden sm:block">
+                  <div className="aspect-square rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 p-4 sm:p-6 lg:p-8">
+                    <div className="h-full rounded-lg sm:rounded-xl border border-white/10 bg-slate-900/50 flex items-center justify-center">
                       <div className="text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-                          <Shield className="w-12 h-12 text-white" />
+                        <div className="w-16 sm:w-20 lg:w-24 h-16 sm:h-20 lg:h-24 mx-auto mb-4 sm:mb-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+                          <Shield className="w-8 sm:w-10 lg:w-12 h-8 sm:h-10 lg:h-12 text-white" />
                         </div>
-                        <div className="text-xl font-semibold text-white mb-2">
+                        <div className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-1 sm:mb-2">
                           Enterprise Grade
                         </div>
-                        <div className="text-sm text-slate-400">
+                        <div className="text-xs sm:text-sm text-slate-400">
                           Security & Compliance
                         </div>
                       </div>
