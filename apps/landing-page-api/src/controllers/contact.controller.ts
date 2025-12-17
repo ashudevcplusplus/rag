@@ -35,7 +35,8 @@ export const listContacts = asyncHandler(async (req: Request, res: Response): Pr
   const limit = parseInt(req.query.limit as string) || 20;
   const status = req.query.status as string | undefined;
 
-  const result = await contactRepository.list(page, limit, { status });
+  const filters = status ? { status } : undefined;
+  const result = await contactRepository.list(page, limit, filters);
 
   res.json(result);
 });

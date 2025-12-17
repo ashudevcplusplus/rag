@@ -63,7 +63,8 @@ export const listSubscribers = asyncHandler(async (req: Request, res: Response):
   const isSubscribed =
     req.query.active !== undefined ? req.query.active === 'true' : undefined;
 
-  const result = await newsletterRepository.list(page, limit, { isSubscribed });
+  const filters = isSubscribed !== undefined ? { isSubscribed } : undefined;
+  const result = await newsletterRepository.list(page, limit, filters);
 
   res.json(result);
 });
