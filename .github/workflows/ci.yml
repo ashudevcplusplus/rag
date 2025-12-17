@@ -204,6 +204,7 @@ jobs:
 
       - name: Build ${{ matrix.service }} Docker image
         uses: docker/build-push-action@v5
+        timeout-minutes: 30
         with:
           context: ./${{ matrix.service }}
           push: false
