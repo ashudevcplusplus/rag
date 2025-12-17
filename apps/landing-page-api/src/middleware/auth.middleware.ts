@@ -17,7 +17,8 @@ export const authenticateAdmin = (
 
   // If no admin API key is configured, allow in development only
   if (!adminApiKey) {
-    if (CONFIG.NODE_ENV === "production") {
+    // Check runtime NODE_ENV directly to handle cases where it changes after module load
+    if (process.env.NODE_ENV === "production") {
       logger.error("Admin API key not configured in production");
       res.status(500).json({ error: "Admin authentication not configured" });
       return;
