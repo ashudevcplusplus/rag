@@ -21,7 +21,6 @@ build/
 
 # TypeScript / JavaScript build artifacts
 *.js.map
-*.tsbuildinfo
 # Compiled JS files (keep jest.config.js, eslint.config.cjs)
 api/test/**/*.js
 api/src/**/*.js
@@ -108,4 +107,30 @@ docs/PRODUCTION_*.txt
 docs/EVOLUTION_*.txt
 docs/BEFORE_*.txt
 docs/PHASE_*.txt
+
+# SST (Serverless Stack)
+.sst/
+.sst.local/
+.sst/platform/
+.sst/stage/
+
+# Vite
+.vite/
+.vite-cache/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# TypeScript build info
+*.tsbuildinfo
+.tsbuildinfo
+
+# Package manager stores and caches
+.pnpm-store/
+.pnpm-debug.log*
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
 
