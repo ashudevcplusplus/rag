@@ -12,7 +12,11 @@ export const authenticateAdmin = (
   next: NextFunction,
 ): void => {
   // Get API key from header or environment
-  const apiKey = req.headers["x-api-key"] as string;
+  // Handle case where header could be string or string[]
+  const apiKeyHeader = req.headers["x-api-key"];
+  const apiKey = Array.isArray(apiKeyHeader)
+    ? apiKeyHeader[0]
+    : (apiKeyHeader as string | undefined);
   const adminApiKey = CONFIG.ADMIN_API_KEY || process.env.ADMIN_API_KEY;
 
   // If no admin API key is configured, allow in development only
@@ -46,7 +50,7 @@ export const authenticateAdmin = (
     logger.warn("Admin authentication failed: Invalid API key", {
       path: req.path,
       ip: req.ip,
-      apiKeyPrefix: apiKey.substring(0, 8) + "...",
+      apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + "..." : "missing",
     });
     res.status(401).json({ error: "Invalid API key" });
     return;

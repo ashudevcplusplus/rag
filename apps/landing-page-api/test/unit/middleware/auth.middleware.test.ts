@@ -91,9 +91,9 @@ describe('authenticateAdmin', () => {
     expect(mockNext).not.toHaveBeenCalled();
   });
 
-  it('should allow request in development when no API key is configured', () => {
-    mockConfig.ADMIN_API_KEY = '';
-    mockConfig.NODE_ENV = 'development';
+  it('should handle string array header by using first value', () => {
+    // Simulate case where multiple x-api-key headers are sent
+    mockRequest.headers = { 'x-api-key': ['test-admin-key-123', 'another-key'] };
 
     authenticateAdmin(
       mockRequest as Request,
@@ -101,24 +101,53 @@ describe('authenticateAdmin', () => {
       mockNext as NextFunction
     );
 
+    // Should use first value and authenticate successfully
     expect(mockNext).toHaveBeenCalled();
+    expect(mockResponse.status).not.toHaveBeenCalled();
+  });
+
+  it('should allow request in development when no API key is configured', () => {
+    mockConfig.ADMIN_API_KEY = '';
+    // Set process.env.NODE_ENV since authenticateAdmin checks it directly
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
+    try {
+      authenticateAdmin(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext as NextFunction
+      );
+
+      expect(mockNext).toHaveBeenCalled();
+    } finally {
+      // Restore original NODE_ENV
+      process.env.NODE_ENV = originalEnv;
+    }
   });
 
   it('should reject request in production when no API key is configured', () => {
     mockConfig.ADMIN_API_KEY = '';
-    mockConfig.NODE_ENV = 'production';
+    // Set process.env.NODE_ENV since authenticateAdmin checks it directly
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
 
-    authenticateAdmin(
-      mockRequest as Request,
-      mockResponse as Response,
-      mockNext as NextFunction
-    );
+    try {
+      authenticateAdmin(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext as NextFunction
+      );
 
-    expect(mockResponse.status).toHaveBeenCalledWith(500);
-    expect(mockResponse.json).toHaveBeenCalledWith({
-      error: 'Admin authentication not configured',
-    });
-    expect(mockNext).not.toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Admin authentication not configured',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+    } finally {
+      // Restore original NODE_ENV
+      process.env.NODE_ENV = originalEnv;
+    }
   });
 });
 

@@ -37,8 +37,14 @@ export const submitContact = asyncHandler(
  */
 export const listContacts = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    // Parse and validate pagination parameters
+    const pageParam = parseInt(req.query.page as string);
+    const limitParam = parseInt(req.query.limit as string);
+    
+    // Ensure positive values, default to 1 and 20 if invalid or negative
+    const page = pageParam > 0 ? pageParam : 1;
+    const limit = limitParam > 0 ? limitParam : 20;
+    
     const status = req.query.status as string | undefined;
 
     const filters = status ? { status } : undefined;

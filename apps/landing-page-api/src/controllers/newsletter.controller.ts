@@ -63,8 +63,14 @@ export const unsubscribe = asyncHandler(
  */
 export const listSubscribers = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
+    // Parse and validate pagination parameters
+    const pageParam = parseInt(req.query.page as string);
+    const limitParam = parseInt(req.query.limit as string);
+    
+    // Ensure positive values, default to 1 and 50 if invalid or negative
+    const page = pageParam > 0 ? pageParam : 1;
+    const limit = limitParam > 0 ? limitParam : 50;
+    
     const isSubscribed =
       req.query.active !== undefined ? req.query.active === "true" : undefined;
 
