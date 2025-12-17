@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Star, Quote } from 'lucide-react';
+import { useScrollTo } from '../lib/useScrollTo';
 
 const testimonials = [
   {
@@ -68,22 +69,24 @@ const itemVariants = {
 };
 
 export function Testimonials() {
+  const { scrollTo } = useScrollTo();
+
   return (
-    <section id="testimonials" className="py-32 relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="testimonials" className="py-16 sm:py-24 lg:py-32 relative">
+      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-16 lg:mb-20"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
+          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
             <span className="text-white">Loved by Teams </span>
             <span className="gradient-text">Worldwide</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-lg text-slate-400">
+          <p className="max-w-2xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 px-2">
             See what industry leaders are saying about their experience with NexusAI.
           </p>
         </motion.div>
@@ -94,7 +97,7 @@ export function Testimonials() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
         >
           {testimonials.map((testimonial, index) => (
             <motion.div
@@ -102,34 +105,34 @@ export function Testimonials() {
               variants={itemVariants}
               className={`group ${index === 1 ? 'lg:translate-y-8' : ''} ${index === 4 ? 'lg:translate-y-8' : ''}`}
             >
-              <div className="relative h-full p-6 rounded-2xl glass transition-all duration-300 hover:bg-white/10">
+              <div className="relative h-full p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl glass transition-all duration-300 hover:bg-white/10">
                 {/* Quote Icon */}
-                <div className="absolute -top-3 -left-3 w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-white/10 flex items-center justify-center">
-                  <Quote className="w-4 h-4 text-primary-400" />
+                <div className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-white/10 flex items-center justify-center">
+                  <Quote className="w-3 sm:w-4 h-3 sm:h-4 text-primary-400" />
                 </div>
 
                 {/* Stars */}
-                <div className="flex items-center gap-1 mb-4">
+                <div className="flex items-center gap-0.5 sm:gap-1 mb-3 sm:mb-4 pt-2">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                    <Star key={i} className="w-3 sm:w-4 h-3 sm:h-4 fill-yellow-500 text-yellow-500" />
                   ))}
                 </div>
 
                 {/* Content */}
-                <p className="text-slate-300 leading-relaxed mb-6">
+                <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed mb-4 sm:mb-6">
                   "{testimonial.content}"
                 </p>
 
                 {/* Author */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <div
-                    className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center text-white font-semibold`}
+                    className={`w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center text-white text-sm sm:text-base font-semibold flex-shrink-0`}
                   >
                     {testimonial.avatar}
                   </div>
-                  <div>
-                    <div className="font-semibold text-white">{testimonial.author}</div>
-                    <div className="text-sm text-slate-400">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-white text-sm sm:text-base truncate">{testimonial.author}</div>
+                    <div className="text-xs sm:text-sm text-slate-400 truncate">
                       {testimonial.role}, {testimonial.company}
                     </div>
                   </div>
@@ -139,26 +142,20 @@ export function Testimonials() {
           ))}
         </motion.div>
 
-        {/* Company Logos */}
+        {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-20"
+          className="mt-12 sm:mt-16 lg:mt-20 text-center"
         >
-          <p className="text-center text-sm text-slate-500 mb-8">
-            TRUSTED BY LEADING COMPANIES
+          <p className="text-sm sm:text-base text-slate-400 mb-6">
+            Join thousands of satisfied customers
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 sm:gap-12 opacity-50">
-            {['TechVentures', 'BioGenetics', 'GlobalTrade', 'SecureBank', 'StartupFlow', 'ServicePro'].map(
-              (company) => (
-                <div key={company} className="text-xl font-bold text-slate-400">
-                  {company}
-                </div>
-              )
-            )}
-          </div>
+          <button onClick={() => scrollTo('pricing')} className="btn-primary inline-flex min-h-[48px] items-center">
+            <span className="relative z-10">Get Started Today</span>
+          </button>
         </motion.div>
       </div>
     </section>
