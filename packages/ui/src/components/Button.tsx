@@ -1,7 +1,7 @@
 import React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../utils';
-import { Loader2 } from 'lucide-react';
+import { Spinner } from './Spinner';
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
@@ -44,10 +44,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || isLoading}
+        aria-busy={isLoading ? true : undefined}
+        aria-disabled={disabled || isLoading ? true : undefined}
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Spinner size="sm" className="text-current" />
         ) : leftIcon ? (
           leftIcon
         ) : null}
