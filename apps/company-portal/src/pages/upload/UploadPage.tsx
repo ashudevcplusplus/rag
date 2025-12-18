@@ -19,6 +19,7 @@ import {
   Button,
   EmptyState,
   ProgressBar,
+  Select,
 } from '@rag/ui';
 import {
   projectsApi,
@@ -355,10 +356,10 @@ export function UploadPage() {
               }
             />
           ) : (
-            <select
+            <Select
+              aria-label="Select project"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
             >
               <option value="">Select a project...</option>
               {projects.map((project) => (
@@ -366,7 +367,7 @@ export function UploadPage() {
                   {project.name} ({project.fileCount || 0} files)
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </CardContent>
       </Card>

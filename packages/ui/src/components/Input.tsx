@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId, useMemo } from 'react';
 import { cn } from '../utils';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -11,7 +11,14 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, hint, leftIcon, rightIcon, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const reactId = useId();
+    const inputId = id ?? `input-${reactId}`;
+    const hintId = useMemo(() => (hint ? `${inputId}-hint` : undefined), [hint, inputId]);
+    const errorId = useMemo(() => (error ? `${inputId}-error` : undefined), [error, inputId]);
+    const describedBy = useMemo(() => {
+      const ids = [errorId, hintId].filter(Boolean);
+      return ids.length > 0 ? ids.join(' ') : undefined;
+    }, [errorId, hintId]);
 
     return (
       <div className="w-full">
@@ -42,6 +49,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
               className
             )}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
+            aria-errormessage={errorId}
             {...props}
           />
           {rightIcon && (
@@ -50,8 +60,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
         </div>
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-        {hint && !error && <p className="mt-1 text-sm text-gray-500">{hint}</p>}
+        {error && (
+          <p id={errorId} className="mt-1 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+        {hint && !error && (
+          <p id={hintId} className="mt-1 text-sm text-gray-500">
+            {hint}
+          </p>
+        )}
       </div>
     );
   }
@@ -67,7 +85,14 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, hint, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const reactId = useId();
+    const inputId = id ?? `textarea-${reactId}`;
+    const hintId = useMemo(() => (hint ? `${inputId}-hint` : undefined), [hint, inputId]);
+    const errorId = useMemo(() => (error ? `${inputId}-error` : undefined), [error, inputId]);
+    const describedBy = useMemo(() => {
+      const ids = [errorId, hintId].filter(Boolean);
+      return ids.length > 0 ? ids.join(' ') : undefined;
+    }, [errorId, hintId]);
 
     return (
       <div className="w-full">
@@ -90,10 +115,21 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
             className
           )}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          aria-errormessage={errorId}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-        {hint && !error && <p className="mt-1 text-sm text-gray-500">{hint}</p>}
+        {error && (
+          <p id={errorId} className="mt-1 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+        {hint && !error && (
+          <p id={hintId} className="mt-1 text-sm text-gray-500">
+            {hint}
+          </p>
+        )}
       </div>
     );
   }
