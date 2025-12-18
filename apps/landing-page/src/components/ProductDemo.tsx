@@ -5,10 +5,10 @@ import {
   Settings,
   Upload,
   MessageSquare,
-  Sparkles,
   ChevronDown,
   Send
 } from 'lucide-react';
+import { Logo } from './Logo';
 
 const sidebarItems = [
   { icon: Bot, label: 'Chatbots', active: true },
@@ -38,28 +38,23 @@ export function ProductDemo() {
           {/* Window Chrome */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border-b border-white/[0.05]">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-white/10" />
-              <div className="w-3 h-3 rounded-full bg-white/10" />
-              <div className="w-3 h-3 rounded-full bg-white/10" />
+              <div className="w-3 h-3 rounded-full bg-red-500/60 hover:bg-red-500 transition-colors" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/60 hover:bg-yellow-500 transition-colors" />
+              <div className="w-3 h-3 rounded-full bg-green-500/60 hover:bg-green-500 transition-colors" />
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05]">
               <Bot className="w-3.5 h-3.5 text-primary-400" />
-              <span className="text-xs text-slate-400">NexusAI Dashboard</span>
+              <span className="text-xs text-slate-400">Oprag.ai Dashboard</span>
             </div>
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
-            </div>
+            <Logo size="sm" showText={false} animated={false} />
           </div>
 
           {/* Main Content */}
           <div className="flex min-h-[420px]">
             {/* Sidebar */}
             <div className="hidden sm:flex flex-col w-48 border-r border-white/[0.05] bg-slate-900/50 p-3">
-              <div className="flex items-center gap-2 px-3 py-2 mb-4">
-                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-                  <Bot className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-white">NexusAI</span>
+              <div className="px-3 py-2 mb-4">
+                <Logo size="sm" />
               </div>
               
               <nav className="space-y-1">
@@ -69,7 +64,7 @@ export function ProductDemo() {
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
                       item.active 
                         ? 'bg-primary-500/10 text-white border border-primary-500/20' 
-                        : 'text-slate-400'
+                        : 'text-slate-400 hover:bg-white/[0.02]'
                     }`}
                   >
                     <item.icon className="w-4 h-4" />
@@ -79,7 +74,7 @@ export function ProductDemo() {
               </nav>
 
               <div className="mt-auto pt-4 border-t border-white/[0.05]">
-                <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary-500 text-white text-sm font-medium">
+                <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-sm font-medium transition-colors">
                   <Upload className="w-3.5 h-3.5" />
                   New Chatbot
                 </button>
@@ -95,7 +90,7 @@ export function ProductDemo() {
                   <p className="text-xs text-slate-500">3 chatbots, 2 active</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05] text-xs text-slate-400">
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05] text-xs text-slate-400 hover:bg-white/[0.05] transition-colors">
                     <Settings className="w-3 h-3" />
                     Config
                   </button>
@@ -110,7 +105,8 @@ export function ProductDemo() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.8 + i * 0.1 }}
-                    className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.03] transition-colors cursor-pointer"
+                    whileHover={{ x: 4 }}
+                    className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] hover:border-white/[0.08] transition-all cursor-pointer"
                   >
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 flex items-center justify-center">
                       <MessageSquare className="w-5 h-5 text-primary-400" />
@@ -119,10 +115,10 @@ export function ProductDemo() {
                       <div className="font-medium text-white text-sm">{bot.name}</div>
                       <div className="text-xs text-slate-500">{bot.messages} messages</div>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs ${
+                    <div className={`px-2.5 py-1 rounded-full text-xs font-medium ${
                       bot.status === 'active' 
-                        ? 'bg-green-500/10 text-green-400' 
-                        : 'bg-yellow-500/10 text-yellow-400'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                        : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                     }`}>
                       {bot.status}
                     </div>
@@ -146,34 +142,20 @@ export function ProductDemo() {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-slate-900/50">
-                    <div className="text-xs text-slate-500 mb-1">LLM Model</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">GPT-4 Turbo</span>
-                      <ChevronDown className="w-3 h-3 text-slate-500" />
+                  {[
+                    { label: 'LLM Model', value: 'GPT-4 Turbo' },
+                    { label: 'Embeddings', value: 'text-embedding-3' },
+                    { label: 'Chunk Size', value: '512 tokens' },
+                    { label: 'Overlap', value: '50 tokens' },
+                  ].map((config) => (
+                    <div key={config.label} className="p-3 rounded-lg bg-slate-900/50 hover:bg-slate-900/70 transition-colors">
+                      <div className="text-xs text-slate-500 mb-1">{config.label}</div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-white">{config.value}</span>
+                        <ChevronDown className="w-3 h-3 text-slate-500" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-900/50">
-                    <div className="text-xs text-slate-500 mb-1">Embeddings</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">text-embedding-3</span>
-                      <ChevronDown className="w-3 h-3 text-slate-500" />
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-900/50">
-                    <div className="text-xs text-slate-500 mb-1">Chunk Size</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">512 tokens</span>
-                      <ChevronDown className="w-3 h-3 text-slate-500" />
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-900/50">
-                    <div className="text-xs text-slate-500 mb-1">Overlap</div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">50 tokens</span>
-                      <ChevronDown className="w-3 h-3 text-slate-500" />
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 {/* Chat Preview */}
@@ -187,7 +169,7 @@ export function ProductDemo() {
                         readOnly
                       />
                     </div>
-                    <button className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center">
+                    <button className="w-8 h-8 rounded-lg bg-primary-500 hover:bg-primary-400 flex items-center justify-center transition-colors">
                       <Send className="w-4 h-4 text-white" />
                     </button>
                   </div>

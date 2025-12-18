@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Sparkles, Twitter, Github, Linkedin } from 'lucide-react';
+import { Twitter, Github, Linkedin } from 'lucide-react';
 import { useScrollTo } from '../lib/useScrollTo';
+import { Logo } from '../components/Logo';
 
 const footerLinks = {
   Product: [
@@ -15,9 +16,9 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { icon: Twitter, label: 'Twitter' },
-  { icon: Github, label: 'GitHub' },
-  { icon: Linkedin, label: 'LinkedIn' },
+  { icon: Twitter, label: 'Twitter', href: '#' },
+  { icon: Github, label: 'GitHub', href: '#' },
+  { icon: Linkedin, label: 'LinkedIn', href: '#' },
 ];
 
 export function Footer() {
@@ -37,27 +38,25 @@ export function Footer() {
             >
               <button 
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                className="flex items-center gap-2 mb-4"
+                className="mb-4"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-lg font-semibold text-white">NexusAI</span>
+                <Logo size="md" />
               </button>
               <p className="text-sm text-slate-400 leading-relaxed mb-6 max-w-xs">
-                Transform your documents into intelligent insights with AI.
+                Build AI chatbots with complete flexibility. Your LLM, your embeddings, your rules.
               </p>
               
               {/* Social Links */}
               <div className="flex items-center gap-3">
                 {socialLinks.map((social) => (
-                  <button
+                  <a
                     key={social.label}
-                    className="w-9 h-9 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-slate-400 hover:text-white hover:border-white/[0.1] transition-all"
+                    href={social.href}
+                    className="w-9 h-9 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-slate-400 hover:text-white hover:border-white/[0.1] hover:bg-white/[0.05] transition-all"
                     aria-label={social.label}
                   >
                     <social.icon className="w-4 h-4" />
-                  </button>
+                  </a>
                 ))}
               </div>
             </motion.div>
@@ -103,7 +102,7 @@ export function Footer() {
               <input
                 type="email"
                 placeholder="Email"
-                className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/[0.03] border border-white/[0.06] text-white placeholder-slate-500 focus:outline-none focus:border-primary-500/50"
+                className="flex-1 px-3 py-2 text-sm rounded-lg bg-white/[0.03] border border-white/[0.06] text-white placeholder-slate-500 focus:outline-none focus:border-primary-500/50 transition-colors"
               />
               <button className="px-4 py-2 text-sm font-medium rounded-lg bg-primary-500 text-white hover:bg-primary-400 transition-colors">
                 Join
@@ -115,7 +114,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-white/[0.05]">
           <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} NexusAI. All rights reserved.
+            © {new Date().getFullYear()} Oprag.ai. All rights reserved.
           </p>
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

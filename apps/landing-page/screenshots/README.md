@@ -1,50 +1,85 @@
-# Landing Page Screenshots
+# Oprag.ai Landing Page Screenshots
 
-Screenshots showcasing the NexusAI Chatbot Builder landing page.
+This directory contains screenshots of the Oprag.ai landing page design.
 
-## 1. Hero Section
-Main hero with "Build AI Chatbots Your Way" messaging, highlighting LLM flexibility, embedding providers, and custom RAG config.
+## Screenshots Overview
 
-![Hero Section](./01-hero-section.png)
+### 1. Hero Section (`01-hero-section.png`)
+The main hero section featuring:
+- Oprag.ai logo with gradient icon design
+- Main headline: "Build AI Chatbots Your Way"
+- Feature highlights (Build AI Chatbots, Choose Any LLM, Custom RAG Config)
+- CTA buttons with hover animations
+- Animated stats counter showing LLM models, embedding providers, uptime, and setup time
 
----
+### 2. Product Demo (`02-product-demo.png`)
+Interactive dashboard preview showing:
+- Oprag.ai branded sidebar with chatbots, knowledge, and settings
+- Chatbot list with status indicators
+- Configuration panel with LLM model, embeddings, chunk size, and overlap settings
 
-## 2. Product Demo - Chatbot Dashboard
-Interactive product demo showing the chatbot management interface with configuration options for LLM models, embeddings, chunk size, and overlap.
+### 3. Features Section (`03-features.png`)
+Six feature cards with hover animations:
+- Multiple LLM Providers
+- Flexible Embeddings
+- Custom Chunk Config
+- Simple File Upload
+- Instant Chatbots
+- Enterprise Security
 
-![Product Demo](./02-scroll-progress.png)
+### 4. Providers Showcase (`04-providers.png`)
+Grid of supported AI providers:
+- OpenAI, Anthropic, Google AI, Cohere, Mistral, Voyage AI
 
----
+### 5. How It Works (`05-how-it-works.png`)
+4-step process flow:
+1. Upload Knowledge
+2. Configure Your Stack
+3. Train Your Chatbot
+4. Deploy & Share
 
-## 3. Features Section
-Key features: Multiple LLM Providers, Flexible Embeddings, Custom Chunk Config, Simple File Upload, Instant Chatbots, Enterprise Security.
+Includes YAML configuration example with `oprag.yaml` format.
 
-![Features](./03-features-hover.png)
+### 6. Testimonials (`06-testimonials.png`)
+Customer testimonials featuring:
+- 6 testimonial cards with ratings
+- Quotes about LLM flexibility, chunking optimization, and quick deployment
 
----
+### 7. Pricing (`07-pricing.png`)
+Three pricing tiers:
+- Starter ($29/mo) - For individuals
+- Professional ($99/mo) - Most Popular with animated badge
+- Enterprise (Custom) - For organizations
 
-## 4. Supported Providers
-Provider showcase with OpenAI, Anthropic, Google AI, Cohere, Mistral, and Voyage AI. Includes example YAML configuration.
+Features monthly/yearly toggle with 20% discount indicator.
 
-![Providers](./04-pricing-monthly.png)
+### 8. Contact (`08-contact.png`)
+Contact section with:
+- Email and location information
+- Contact form with name, email, company, and message fields
+- Quick navigation links
 
----
+### 9. Mobile View (`09-mobile-hero.png`)
+Mobile-responsive design showing hero section on iPhone viewport.
 
-## 5. How It Works
-4-step flow: Upload Knowledge → Configure Stack → Train Chatbot → Deploy & Share. Includes detailed config example.
+## Design Highlights
 
-![How It Works](./05-pricing-yearly.png)
+- **Branding**: Oprag.ai with gradient logo icon
+- **Color Palette**: Primary indigo/violet with accent purple
+- **Typography**: DM Sans and Sora fonts
+- **Animations**: Framer Motion powered micro-interactions
+- **Accessibility**: Skip to content link, proper focus states
+- **Scroll Progress**: Gradient progress bar at top
 
----
+## Capturing New Screenshots
 
-## 6. Testimonials
-Customer testimonials highlighting model flexibility, RAG tuning, and cost optimization benefits.
+```bash
+# Start the dev server
+npm run dev
 
-![Testimonials](./06-testimonials-hover.png)
+# Run the screenshot script
+node scripts/capture-screenshots.mjs
 
----
-
-## 7. Mobile Responsive View
-Mobile-optimized layout with the same chatbot builder messaging.
-
-![Mobile View](./07-mobile-hero.png)
+# Or with custom port
+BASE_URL=http://localhost:3456 node scripts/capture-screenshots.mjs
+```

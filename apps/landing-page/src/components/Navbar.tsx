@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sparkles } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useScrollTo } from '../lib/useScrollTo';
+import { Logo } from './Logo';
 
 const navLinks = [
   { name: 'Features', target: 'features' },
@@ -48,18 +49,11 @@ export function Navbar() {
             {/* Logo */}
             <motion.button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center gap-2.5 group cursor-pointer focus:outline-none"
+              className="flex items-center cursor-pointer focus:outline-none"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div className="relative">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-              </div>
-              <span className="text-lg font-semibold text-white">
-                NexusAI
-              </span>
+              <Logo size="md" />
             </motion.button>
 
             {/* Desktop Navigation */}
@@ -79,7 +73,7 @@ export function Navbar() {
             <div className="hidden md:flex items-center">
               <button 
                 onClick={() => scrollTo('pricing')} 
-                className="px-5 py-2.5 text-sm font-medium text-white bg-white/[0.05] border border-white/[0.08] rounded-full hover:bg-white/[0.08] hover:border-white/[0.12] transition-all duration-300"
+                className="px-5 py-2.5 text-sm font-medium text-white bg-primary-500 rounded-full hover:bg-primary-400 transition-all duration-300 hover:shadow-lg hover:shadow-primary-500/25"
               >
                 Get Started
               </button>

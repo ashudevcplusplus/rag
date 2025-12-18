@@ -1,43 +1,54 @@
 import { motion } from 'framer-motion';
-import { Star, Quote } from 'lucide-react';
-import { useScrollTo } from '../lib/useScrollTo';
+import { Star } from 'lucide-react';
 
 const testimonials = [
   {
-    content: "We built a support chatbot in 20 minutes using our docs. The ability to choose Claude over GPT-4 was a game-changer for our use case.",
+    quote: "Oprag.ai gave us the freedom to use Claude for our enterprise chatbot while keeping our embedding pipeline on OpenAI. Perfect flexibility.",
     author: 'Sarah Chen',
     role: 'CTO',
     company: 'TechFlow',
+    avatar: 'SC',
+    gradient: 'from-blue-500/20 to-cyan-500/20',
   },
   {
-    content: "The chunking configuration made all the difference. We fine-tuned overlap settings and saw a 40% improvement in retrieval accuracy.",
-    author: 'Michael Torres',
-    role: 'ML Engineer',
+    quote: "The chunking configuration was a game-changer. We optimized our chunk overlap and saw a 40% improvement in answer relevance.",
+    author: 'Michael Roberts',
+    role: 'AI Engineer',
     company: 'DataScale',
+    avatar: 'MR',
+    gradient: 'from-purple-500/20 to-pink-500/20',
   },
   {
-    content: "Finally, a platform that lets us use our own embedding provider. We switched to Voyage AI and cut our costs by 60%.",
-    author: 'Jennifer Walsh',
-    role: 'VP Engineering',
-    company: 'CloudOps',
-  },
-  {
-    content: "No-code chatbot building with enterprise-grade flexibility. Our team deployed 5 customer-facing bots in a single week.",
-    author: 'Robert Kim',
+    quote: "We went from idea to production chatbot in under 2 hours. Just uploaded our docs, picked GPT-4, and deployed. Incredible.",
+    author: 'Emily Watson',
     role: 'Product Lead',
-    company: 'Nextera',
+    company: 'InnovateCo',
+    avatar: 'EW',
+    gradient: 'from-green-500/20 to-emerald-500/20',
   },
   {
-    content: "The multi-model support is incredible. We use GPT-4 for complex queries and Mistral for simple ones to optimize costs.",
-    author: 'Alex Rivera',
-    role: 'AI Architect',
-    company: 'InnovateLabs',
+    quote: "Being able to switch between LLM providers without code changes saved us thousands in testing different models.",
+    author: 'James Park',
+    role: 'VP Engineering',
+    company: 'CloudFirst',
+    avatar: 'JP',
+    gradient: 'from-orange-500/20 to-amber-500/20',
   },
   {
-    content: "Uploaded 500+ documents and had a working knowledge base chatbot the same day. The RAG pipeline just works.",
-    author: 'Emily Chang',
-    role: 'Knowledge Manager',
-    company: 'GlobalServe',
+    quote: "Our customer support team loves their new AI assistant. Setup was so simple even our non-technical staff could configure it.",
+    author: 'Lisa Martinez',
+    role: 'Customer Success',
+    company: 'SupportPro',
+    avatar: 'LM',
+    gradient: 'from-red-500/20 to-rose-500/20',
+  },
+  {
+    quote: "The ability to use Cohere embeddings with Anthropic's Claude is exactly what we needed. Oprag.ai makes it effortless.",
+    author: 'David Kim',
+    role: 'ML Engineer',
+    company: 'AILabs',
+    avatar: 'DK',
+    gradient: 'from-indigo-500/20 to-violet-500/20',
   },
 ];
 
@@ -55,8 +66,6 @@ const itemVariants = {
 };
 
 export function Testimonials() {
-  const { scrollTo } = useScrollTo();
-
   return (
     <section id="testimonials" className="py-24 sm:py-32 lg:py-40 relative">
       <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
@@ -66,18 +75,18 @@ export function Testimonials() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16 lg:mb-20"
+          className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            <span className="text-white">Teams love the </span>
-            <span className="gradient-text">flexibility</span>
+            <span className="text-white">Loved by </span>
+            <span className="gradient-text">builders</span>
           </h2>
           <p className="max-w-xl mx-auto text-lg text-slate-400">
-            See why developers and teams choose NexusAI for their chatbot needs.
+            See how teams are building smarter AI chatbots with Oprag.ai
           </p>
         </motion.div>
 
-        {/* Testimonials Grid */}
+        {/* Testimonial Grid */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -85,59 +94,41 @@ export function Testimonials() {
           viewport={{ once: true }}
           className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {testimonials.map((testimonial, index) => (
+          {testimonials.map((testimonial) => (
             <motion.div
               key={testimonial.author}
               variants={itemVariants}
-              className={`group ${index === 1 || index === 4 ? 'lg:translate-y-6' : ''}`}
+              whileHover={{ y: -4, scale: 1.01 }}
+              className="group relative"
             >
-              <div className="relative h-full p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] transition-all duration-500 hover:bg-white/[0.04] hover:border-white/[0.08]">
-                {/* Quote Icon */}
-                <Quote className="w-8 h-8 text-primary-500/20 mb-4" />
-
+              <div className="relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03] transition-all duration-500 h-full flex flex-col">
                 {/* Stars */}
-                <div className="flex items-center gap-0.5 mb-4">
+                <div className="flex gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-primary-400 text-primary-400" />
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
 
-                {/* Content */}
-                <p className="text-slate-300 leading-relaxed mb-6">
-                  "{testimonial.content}"
-                </p>
+                {/* Quote */}
+                <blockquote className="text-slate-300 leading-relaxed mb-6 flex-grow">
+                  "{testimonial.quote}"
+                </blockquote>
 
                 {/* Author */}
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500/20 to-accent-500/20 flex items-center justify-center text-white text-sm font-medium">
-                    {testimonial.author.split(' ').map(n => n[0]).join('')}
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center`}>
+                    <span className="text-sm font-medium text-white">{testimonial.avatar}</span>
                   </div>
                   <div>
                     <div className="font-medium text-white text-sm">{testimonial.author}</div>
                     <div className="text-xs text-slate-500">
-                      {testimonial.role}, {testimonial.company}
+                      {testimonial.role} at {testimonial.company}
                     </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-16 text-center"
-        >
-          <p className="text-slate-400 mb-6">
-            Join hundreds of teams building smarter chatbots
-          </p>
-          <button onClick={() => scrollTo('pricing')} className="btn-primary">
-            <span className="relative z-10">Start Building Free</span>
-          </button>
         </motion.div>
       </div>
     </section>

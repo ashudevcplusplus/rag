@@ -82,16 +82,22 @@ export function Contact() {
                 Contact Information
               </h3>
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
+                <motion.div 
+                  whileHover={{ x: 4 }}
+                  className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all cursor-default"
+                >
                   <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
                     <Mail className="w-5 h-5 text-primary-400" />
                   </div>
                   <div>
                     <div className="text-sm text-slate-400">Email</div>
-                    <div className="text-white">hello@nexusai.com</div>
+                    <div className="text-white">hello@oprag.ai</div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
+                </motion.div>
+                <motion.div 
+                  whileHover={{ x: 4 }}
+                  className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-all cursor-default"
+                >
                   <div className="w-10 h-10 rounded-xl bg-accent-500/10 flex items-center justify-center">
                     <MapPin className="w-5 h-5 text-accent-400" />
                   </div>
@@ -99,7 +105,7 @@ export function Contact() {
                     <div className="text-sm text-slate-400">Location</div>
                     <div className="text-white">San Francisco, CA</div>
                   </div>
-                </div>
+                </motion.div>
               </div>
             </div>
 
@@ -115,7 +121,7 @@ export function Contact() {
                   <button
                     key={link.label}
                     onClick={() => scrollTo(link.target)}
-                    className="block text-slate-300 hover:text-white transition-colors"
+                    className="block text-slate-300 hover:text-primary-400 transition-colors"
                   >
                     → {link.label}
                   </button>
@@ -223,9 +229,11 @@ export function Contact() {
                     />
                   </div>
                   
-                  <button
+                  <motion.button
                     type="submit"
                     disabled={isSubmitting}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                     className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
@@ -236,7 +244,7 @@ export function Contact() {
                         <Send className="w-4 h-4" />
                       </span>
                     )}
-                  </button>
+                  </motion.button>
                 </form>
               )}
             </div>

@@ -1,5 +1,6 @@
 import { Navbar } from './components/Navbar';
 import { ScrollProgress } from './components/ScrollProgress';
+import { SectionDivider } from './components/SectionDivider';
 import { Hero } from './sections/Hero';
 import { Features } from './sections/Features';
 import { HowItWorks } from './sections/HowItWorks';
@@ -37,10 +38,10 @@ function App() {
 
       {/* Minimal dot grid */}
       <div 
-        className="fixed inset-0 pointer-events-none opacity-[0.03]"
+        className="fixed inset-0 pointer-events-none opacity-[0.02]"
         style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.5) 1px, transparent 0)`,
-          backgroundSize: '48px 48px',
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)`,
+          backgroundSize: '40px 40px',
         }}
       />
 
@@ -48,10 +49,15 @@ function App() {
         <Navbar />
         <main id="main-content">
           <Hero />
+          <SectionDivider className="max-w-6xl mx-auto" />
           <Features />
+          <SectionDivider className="max-w-6xl mx-auto" />
           <HowItWorks />
+          <SectionDivider className="max-w-6xl mx-auto" />
           <Testimonials />
+          <SectionDivider className="max-w-6xl mx-auto" />
           <Pricing />
+          <SectionDivider className="max-w-6xl mx-auto" />
           <Contact />
           <CTA />
         </main>
