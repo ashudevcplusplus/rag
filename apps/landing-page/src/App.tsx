@@ -22,39 +22,38 @@ function App() {
 
       {/* Scroll Progress Indicator */}
       <ScrollProgress />
-      {/* Background effects - hidden on mobile for performance */}
-      <div className="fixed inset-0 pointer-events-none hidden sm:block">
-        <div className="floating-orb w-[400px] sm:w-[500px] lg:w-[600px] h-[400px] sm:h-[500px] lg:h-[600px] bg-primary-500 -top-64 -left-64" />
-        <div className="floating-orb w-[350px] sm:w-[400px] lg:w-[500px] h-[350px] sm:h-[400px] lg:h-[500px] bg-accent-500 top-1/2 -right-48" style={{ animationDelay: '-3s' }} />
-        <div className="floating-orb w-[300px] sm:w-[350px] lg:w-[400px] h-[300px] sm:h-[350px] lg:h-[400px] bg-primary-600 bottom-0 left-1/3" style={{ animationDelay: '-1.5s' }} />
+
+      {/* Minimal elegant background */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900" />
+        
+        {/* Subtle accent glow - top */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-radial from-primary-500/8 to-transparent rounded-full blur-3xl" />
+        
+        {/* Subtle accent glow - bottom right */}
+        <div className="absolute -bottom-32 -right-32 w-[600px] h-[600px] bg-gradient-radial from-accent-500/6 to-transparent rounded-full blur-3xl" />
       </div>
 
-      {/* Mobile-optimized gradient background */}
-      <div className="fixed inset-0 pointer-events-none sm:hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-950/50 via-slate-950 to-accent-950/30" />
-      </div>
-
-      {/* Grid pattern overlay */}
+      {/* Minimal dot grid */}
       <div 
-        className="fixed inset-0 pointer-events-none opacity-10 sm:opacity-20"
+        className="fixed inset-0 pointer-events-none opacity-[0.03]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.5) 1px, transparent 0)`,
+          backgroundSize: '48px 48px',
         }}
       />
-
-      {/* Noise texture overlay for depth */}
-      <div className="noise-overlay" />
 
       <div className="relative z-10">
         <Navbar />
         <main id="main-content">
           <Hero />
-        <Features />
-        <HowItWorks />
-        <Testimonials />
-        <Pricing />
-        <Contact />
-        <CTA />
+          <Features />
+          <HowItWorks />
+          <Testimonials />
+          <Pricing />
+          <Contact />
+          <CTA />
         </main>
         <Footer />
       </div>
