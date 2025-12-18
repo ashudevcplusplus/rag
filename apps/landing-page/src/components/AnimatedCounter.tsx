@@ -9,7 +9,12 @@ interface AnimatedCounterProps {
 export function AnimatedCounter({ value, className = '' }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
-  const [displayValue, setDisplayValue] = useState('0');
+  
+  // Check if value is animatable (starts with a number)
+  const isAnimatable = /^[\d.]+/.test(value);
+  
+  // Initialize with the actual value for non-animatable values to avoid flash
+  const [displayValue, setDisplayValue] = useState(isAnimatable ? '0' : value);
 
   useEffect(() => {
     if (!isInView) return;
