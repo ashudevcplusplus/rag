@@ -1,15 +1,21 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Play, Bot, Blocks, Sparkles } from 'lucide-react';
 import { ProductDemo } from '../components/ProductDemo';
 import { ScrollIndicator } from '../components/ScrollIndicator';
 import { AnimatedCounter } from '../components/AnimatedCounter';
 import { useScrollTo } from '../lib/useScrollTo';
 
 const stats = [
-  { value: '99.9%', label: 'Accuracy' },
-  { value: '10x', label: 'Faster' },
-  { value: '500K+', label: 'Documents' },
-  { value: '24/7', label: 'Available' },
+  { value: '10+', label: 'LLM Models' },
+  { value: '5+', label: 'Embedding Providers' },
+  { value: '99.9%', label: 'Uptime' },
+  { value: '< 2min', label: 'Setup Time' },
+];
+
+const highlights = [
+  { icon: Bot, text: 'Build AI Chatbots' },
+  { icon: Blocks, text: 'Choose Any LLM' },
+  { icon: Sparkles, text: 'Custom RAG Config' },
 ];
 
 export function Hero() {
@@ -31,34 +37,52 @@ export function Hero() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
             </span>
             <span className="text-sm text-slate-400">
-              Now with GPT-4 Integration
+              Your LLM, Your Embeddings, Your Rules
             </span>
           </motion.div>
 
-          {/* Main Heading - Clean and Bold */}
+          {/* Main Heading */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1]"
           >
-            <span className="text-white">Transform Your Data</span>
+            <span className="text-white">Build AI Chatbots</span>
             <br />
-            <span className="gradient-text">Into Intelligence</span>
+            <span className="gradient-text">Your Way</span>
           </motion.h1>
 
-          {/* Subtitle - Refined */}
+          {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="max-w-xl mx-auto text-lg sm:text-xl text-slate-400 mb-10 leading-relaxed"
+            className="max-w-2xl mx-auto text-lg sm:text-xl text-slate-400 mb-8 leading-relaxed"
           >
-            Advanced AI that understands, analyzes, and extracts insights 
-            from your documents in seconds.
+            Upload your knowledge files, choose your LLM and embedding provider, 
+            configure chunking — and deploy intelligent chatbots in minutes.
           </motion.p>
 
-          {/* CTA Buttons - Minimal */}
+          {/* Feature Highlights */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.25 }}
+            className="flex flex-wrap items-center justify-center gap-4 mb-10"
+          >
+            {highlights.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.02] border border-white/[0.05]"
+              >
+                <item.icon className="w-4 h-4 text-primary-400" />
+                <span className="text-sm text-slate-300">{item.text}</span>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* CTA Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -70,7 +94,7 @@ export function Hero() {
               className="btn-primary group w-full sm:w-auto"
             >
               <span className="relative z-10 flex items-center gap-2">
-                Get Started
+                Start Building Free
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
               </span>
             </button>
@@ -79,11 +103,11 @@ export function Hero() {
               className="btn-secondary group w-full sm:w-auto"
             >
               <Play className="w-4 h-4 mr-2 opacity-70" />
-              Watch Demo
+              See How It Works
             </button>
           </motion.div>
 
-          {/* Stats - Clean Grid */}
+          {/* Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

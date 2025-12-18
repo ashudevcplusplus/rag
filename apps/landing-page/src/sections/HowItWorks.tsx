@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Upload, Cpu, Search, Lightbulb, ArrowRight } from 'lucide-react';
+import { Upload, Settings, Bot, Rocket, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useScrollTo } from '../lib/useScrollTo';
 
@@ -7,26 +7,26 @@ const steps = [
   {
     icon: Upload,
     number: '01',
-    title: 'Upload Documents',
-    description: 'Drag and drop your files or connect data sources. Supports PDFs, Word, images, and 50+ formats.',
+    title: 'Upload Knowledge',
+    description: 'Drag and drop your files — PDFs, docs, CSVs, or paste URLs. We process 50+ formats automatically.',
   },
   {
-    icon: Cpu,
+    icon: Settings,
     number: '02',
-    title: 'AI Processing',
-    description: 'Our AI models analyze, extract, and structure your data with industry-leading accuracy.',
+    title: 'Configure Your Stack',
+    description: 'Select your LLM, embedding provider, chunk size, and overlap settings. Full control, zero code.',
   },
   {
-    icon: Search,
+    icon: Bot,
     number: '03',
-    title: 'Semantic Search',
-    description: 'Ask questions in natural language. Our AI understands context and finds relevant info instantly.',
+    title: 'Train Your Chatbot',
+    description: 'Our RAG pipeline indexes your content with your chosen embeddings for accurate retrieval.',
   },
   {
-    icon: Lightbulb,
+    icon: Rocket,
     number: '04',
-    title: 'Get Insights',
-    description: 'Receive summaries, analytics, and recommendations that drive smarter decisions.',
+    title: 'Deploy & Share',
+    description: 'Get an instant API endpoint or embed the chatbot on your site. Start conversations immediately.',
   },
 ];
 
@@ -48,11 +48,11 @@ export function HowItWorks() {
           className="text-center mb-16 lg:mb-20"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            <span className="text-white">How it </span>
-            <span className="gradient-text">works</span>
+            <span className="text-white">From files to chatbot </span>
+            <span className="gradient-text">in minutes</span>
           </h2>
           <p className="max-w-xl mx-auto text-lg text-slate-400">
-            Get started in minutes. From raw documents to actionable insights effortlessly.
+            No coding required. Upload your knowledge, configure your AI, and deploy.
           </p>
         </motion.div>
 
@@ -114,6 +114,62 @@ export function HowItWorks() {
           </div>
         </div>
 
+        {/* Example Config Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mt-20"
+        >
+          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-8 sm:p-10">
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  Complete flexibility, zero complexity
+                </h3>
+                <p className="text-slate-400 mb-6 leading-relaxed">
+                  Configure every aspect of your RAG pipeline through an intuitive interface. 
+                  Change models, adjust chunking strategies, and optimize retrieval — all without touching code.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    'Choose from 10+ LLM models',
+                    'Select embedding providers (OpenAI, Cohere, etc.)',
+                    'Configure chunk size & overlap',
+                    'Adjust retrieval parameters',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-slate-300">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary-400" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="rounded-xl bg-slate-900/80 border border-white/[0.05] p-6 font-mono text-sm">
+                <div className="flex items-center gap-2 mb-4 text-slate-500">
+                  <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                  <span className="ml-2 text-xs">config.yaml</span>
+                </div>
+                <div className="space-y-2 text-slate-400">
+                  <div><span className="text-slate-500"># LLM Configuration</span></div>
+                  <div><span className="text-primary-400">model:</span> <span className="text-accent-300">"claude-3-sonnet"</span></div>
+                  <div><span className="text-primary-400">temperature:</span> <span className="text-green-400">0.7</span></div>
+                  <div className="pt-2"><span className="text-slate-500"># Embedding Settings</span></div>
+                  <div><span className="text-primary-400">embedding_model:</span> <span className="text-accent-300">"voyage-large-2"</span></div>
+                  <div className="pt-2"><span className="text-slate-500"># Chunking Strategy</span></div>
+                  <div><span className="text-primary-400">chunk_size:</span> <span className="text-green-400">1024</span></div>
+                  <div><span className="text-primary-400">chunk_overlap:</span> <span className="text-green-400">128</span></div>
+                  <div><span className="text-primary-400">splitter:</span> <span className="text-accent-300">"recursive"</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -123,7 +179,7 @@ export function HowItWorks() {
           className="text-center mt-16"
         >
           <button onClick={() => scrollTo('pricing')} className="btn-primary">
-            <span className="relative z-10">Get Started Now</span>
+            <span className="relative z-10">Start Building Free</span>
           </button>
         </motion.div>
       </div>

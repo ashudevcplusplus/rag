@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Bot, Blocks, Sliders } from 'lucide-react';
 import { useScrollTo } from '../lib/useScrollTo';
+
+const features = [
+  { icon: Bot, text: 'Unlimited chatbots' },
+  { icon: Blocks, text: '10+ LLM models' },
+  { icon: Sliders, text: 'Custom RAG config' },
+];
 
 export function CTA() {
   const { scrollTo } = useScrollTo();
@@ -38,21 +44,34 @@ export function CTA() {
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-                  Ready to transform your
+                  Build your AI chatbot
                   <br />
-                  document workflow?
+                  in minutes, not months
                 </h2>
-                <p className="max-w-lg mx-auto text-lg text-white/80 mb-10">
-                  Join thousands of companies using NexusAI to unlock 
-                  the power of their documents.
+                <p className="max-w-lg mx-auto text-lg text-white/80 mb-8">
+                  Upload your knowledge files, pick your models, and deploy. 
+                  Full flexibility, zero code required.
                 </p>
+
+                {/* Feature Pills */}
+                <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+                  {features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm"
+                    >
+                      <feature.icon className="w-4 h-4 text-white/80" />
+                      <span className="text-sm text-white/90">{feature.text}</span>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
                     onClick={() => scrollTo('pricing')}
                     className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-primary-600 font-semibold rounded-full hover:bg-white/90 transition-all duration-300"
                   >
-                    Start Free Trial
+                    Start Building Free
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                   <button
@@ -62,6 +81,10 @@ export function CTA() {
                     Talk to Sales
                   </button>
                 </div>
+
+                <p className="mt-6 text-sm text-white/60">
+                  No credit card required • Free tier available
+                </p>
               </motion.div>
             </div>
           </div>

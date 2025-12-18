@@ -7,29 +7,31 @@ import { useScrollTo } from '../lib/useScrollTo';
 const plans = [
   {
     name: 'Starter',
-    description: 'Perfect for small teams',
-    price: 49,
+    description: 'For individuals & small projects',
+    price: 29,
     features: [
-      '5,000 documents/month',
-      'Basic semantic search',
+      '3 chatbots',
+      '10,000 messages/month',
+      '100MB knowledge storage',
+      '3 LLM models',
+      '2 embedding providers',
       'Email support',
-      '5 team members',
-      'API access',
     ],
   },
   {
     name: 'Professional',
-    description: 'For growing teams',
-    price: 149,
+    description: 'For teams & growing businesses',
+    price: 99,
     popular: true,
     features: [
-      '50,000 documents/month',
-      'Advanced AI analysis',
+      'Unlimited chatbots',
+      '100,000 messages/month',
+      '5GB knowledge storage',
+      'All LLM models',
+      'All embedding providers',
+      'Custom chunk configs',
+      'API access',
       'Priority support',
-      'Unlimited team members',
-      'Custom integrations',
-      'Analytics dashboard',
-      'Custom workflows',
     ],
   },
   {
@@ -37,13 +39,14 @@ const plans = [
     description: 'For large organizations',
     price: null,
     features: [
-      'Unlimited documents',
-      'Custom AI models',
-      'Dedicated support',
+      'Everything in Pro',
+      'Unlimited messages',
+      'Unlimited storage',
+      'Custom LLM integration',
+      'Bring your own keys',
       'SSO & SCIM',
-      'On-premise option',
+      'Dedicated support',
       'SLA guarantee',
-      'Custom training',
     ],
   },
 ];
@@ -82,11 +85,11 @@ export function Pricing() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            <span className="text-white">Simple, transparent </span>
-            <span className="gradient-text">pricing</span>
+            <span className="text-white">Start free, </span>
+            <span className="gradient-text">scale as you grow</span>
           </h2>
           <p className="max-w-xl mx-auto text-lg text-slate-400 mb-8">
-            Start free for 14 days. No credit card required.
+            No credit card required. Build your first chatbot in minutes.
           </p>
 
           {/* Billing Toggle */}
@@ -192,7 +195,7 @@ export function Pricing() {
                         : 'bg-white/[0.05] text-white border border-white/[0.08] hover:bg-white/[0.08]'
                     )}
                   >
-                    {plan.price !== null ? 'Get Started' : 'Contact Sales'}
+                    {plan.price !== null ? 'Start Free Trial' : 'Contact Sales'}
                   </button>
 
                   {/* Features */}

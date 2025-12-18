@@ -4,40 +4,40 @@ import { useScrollTo } from '../lib/useScrollTo';
 
 const testimonials = [
   {
-    content: "NexusAI transformed how we handle legal documents. What took days now takes minutes.",
+    content: "We built a support chatbot in 20 minutes using our docs. The ability to choose Claude over GPT-4 was a game-changer for our use case.",
     author: 'Sarah Chen',
-    role: 'General Counsel',
-    company: 'TechVentures',
+    role: 'CTO',
+    company: 'TechFlow',
   },
   {
-    content: "The semantic search is incredible. I ask complex questions and get instant, relevant answers.",
-    author: 'Dr. Michael Torres',
-    role: 'Head of Research',
-    company: 'BioGenetics Lab',
+    content: "The chunking configuration made all the difference. We fine-tuned overlap settings and saw a 40% improvement in retrieval accuracy.",
+    author: 'Michael Torres',
+    role: 'ML Engineer',
+    company: 'DataScale',
   },
   {
-    content: "We processed 100K contracts in a week and identified $2M in opportunities. Immediate ROI.",
+    content: "Finally, a platform that lets us use our own embedding provider. We switched to Voyage AI and cut our costs by 60%.",
     author: 'Jennifer Walsh',
-    role: 'VP Operations',
-    company: 'GlobalTrade',
+    role: 'VP Engineering',
+    company: 'CloudOps',
   },
   {
-    content: "Security was our top concern. SOC 2 compliance gave us the confidence to move forward.",
+    content: "No-code chatbot building with enterprise-grade flexibility. Our team deployed 5 customer-facing bots in a single week.",
     author: 'Robert Kim',
-    role: 'CISO',
-    company: 'SecureBank',
+    role: 'Product Lead',
+    company: 'Nextera',
   },
   {
-    content: "API integration was seamless. We had NexusAI powering our workflow within a day.",
+    content: "The multi-model support is incredible. We use GPT-4 for complex queries and Mistral for simple ones to optimize costs.",
     author: 'Alex Rivera',
-    role: 'Lead Engineer',
-    company: 'StartupFlow',
+    role: 'AI Architect',
+    company: 'InnovateLabs',
   },
   {
-    content: "Support response times dropped 60%. Customer satisfaction is at an all-time high.",
+    content: "Uploaded 500+ documents and had a working knowledge base chatbot the same day. The RAG pipeline just works.",
     author: 'Emily Chang',
-    role: 'CS Director',
-    company: 'ServicePro',
+    role: 'Knowledge Manager',
+    company: 'GlobalServe',
   },
 ];
 
@@ -69,11 +69,11 @@ export function Testimonials() {
           className="text-center mb-16 lg:mb-20"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            <span className="text-white">Loved by teams </span>
-            <span className="gradient-text">worldwide</span>
+            <span className="text-white">Teams love the </span>
+            <span className="gradient-text">flexibility</span>
           </h2>
           <p className="max-w-xl mx-auto text-lg text-slate-400">
-            See what industry leaders are saying about NexusAI.
+            See why developers and teams choose NexusAI for their chatbot needs.
           </p>
         </motion.div>
 
@@ -133,10 +133,10 @@ export function Testimonials() {
           className="mt-16 text-center"
         >
           <p className="text-slate-400 mb-6">
-            Join thousands of satisfied customers
+            Join hundreds of teams building smarter chatbots
           </p>
           <button onClick={() => scrollTo('pricing')} className="btn-primary">
-            <span className="relative z-10">Start Free Trial</span>
+            <span className="relative z-10">Start Building Free</span>
           </button>
         </motion.div>
       </div>
