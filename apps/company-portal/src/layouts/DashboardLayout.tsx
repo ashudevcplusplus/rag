@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -15,7 +15,7 @@ import {
   Command,
   RefreshCw,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button, Avatar, Modal } from '@rag/ui';
 import { useAuthStore } from '../store/auth.store';
 import { useAppStore } from '../store/app.store';
@@ -33,10 +33,15 @@ const navigation = [
 
 export function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, company, logout } = useAuthStore();
-  const { sidebarOpen, toggleSidebar } = useAppStore();
+  const { sidebarOpen, toggleSidebar, setSidebarOpen } = useAppStore();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const isMac = useMemo(() => navigator.platform.toUpperCase().includes('MAC'), []);
+  const modKeyLabel = isMac ? '⌘' : 'Ctrl';
 
   const handleLogout = () => {
     logout();
@@ -55,7 +60,6 @@ export function DashboardLayout() {
         return;
       }
 
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
 
       // Cmd/Ctrl + K - Quick search
@@ -88,7 +92,7 @@ export function DashboardLayout() {
         setShowShortcuts(false);
       }
     },
-    [navigate]
+    [isMac, navigate]
   );
 
   useEffect(() => {
@@ -96,8 +100,47 @@ export function DashboardLayout() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Close menus/modals on navigation; close sidebar on mobile after navigating
+  useEffect(() => {
+    setUserMenuOpen(false);
+    setShowShortcuts(false);
+
+    const isMobile = window.matchMedia('(max-width: 1023px)').matches;
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, sidebarOpen, setSidebarOpen]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return;
+
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [userMenuOpen]);
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Skip link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:px-4 focus:py-2 focus:bg-white focus:text-gray-900 focus:rounded-lg focus:shadow-lg"
+      >
+        Skip to content
+      </a>
+
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -108,6 +151,7 @@ export function DashboardLayout() {
 
       {/* Sidebar */}
       <aside
+        id="sidebar"
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -124,6 +168,9 @@ export function DashboardLayout() {
             <button
               onClick={toggleSidebar}
               className="lg:hidden p-1 rounded-lg hover:bg-gray-100"
+              aria-label="Close sidebar"
+              aria-controls="sidebar"
+              aria-expanded={sidebarOpen}
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -168,10 +215,13 @@ export function DashboardLayout() {
 
           {/* User menu */}
           <div className="p-3 border-t border-gray-200">
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
+                aria-label="Open user menu"
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
               >
                 <Avatar
                   name={user ? `${user.firstName} ${user.lastName}` : 'User'}
@@ -187,10 +237,15 @@ export function DashboardLayout() {
               </button>
 
               {userMenuOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                <div
+                  className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
+                  role="menu"
+                  aria-label="User menu"
+                >
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    role="menuitem"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign out
@@ -210,6 +265,9 @@ export function DashboardLayout() {
             <button
               onClick={toggleSidebar}
               className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              aria-label="Open sidebar"
+              aria-controls="sidebar"
+              aria-expanded={sidebarOpen}
             >
               <Menu className="w-5 h-5 text-gray-500" />
             </button>
@@ -221,11 +279,12 @@ export function DashboardLayout() {
               <button
                 onClick={() => navigate('/search')}
                 className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                aria-label="Open search"
               >
                 <Search className="w-4 h-4" />
                 <span>Search...</span>
                 <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-white rounded border border-gray-200">
-                  ⌘K
+                  {modKeyLabel}K
                 </kbd>
               </button>
 
@@ -242,7 +301,8 @@ export function DashboardLayout() {
               <button
                 onClick={() => setShowShortcuts(true)}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Keyboard shortcuts (⌘/)"
+                title={`Keyboard shortcuts (${modKeyLabel}/)`}
+                aria-label="Keyboard shortcuts"
               >
                 <Command className="w-4 h-4" />
               </button>
@@ -251,7 +311,7 @@ export function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main id="main-content" tabIndex={-1} className="p-4 sm:p-6 lg:p-8 focus:outline-none">
           <Outlet />
         </main>
       </div>
@@ -296,7 +356,7 @@ export function DashboardLayout() {
                 <span className="text-sm text-gray-600">Quick Search</span>
                 <div className="flex items-center gap-1">
                   <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
-                    ⌘
+                    {modKeyLabel}
                   </kbd>
                   <span className="text-gray-400">+</span>
                   <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
@@ -308,7 +368,7 @@ export function DashboardLayout() {
                 <span className="text-sm text-gray-600">Show Shortcuts</span>
                 <div className="flex items-center gap-1">
                   <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
-                    ⌘
+                    {modKeyLabel}
                   </kbd>
                   <span className="text-gray-400">+</span>
                   <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
@@ -326,7 +386,7 @@ export function DashboardLayout() {
           </div>
 
           <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">
-            On Windows/Linux, use Ctrl instead of ⌘
+            {isMac ? 'On Windows/Linux, use Ctrl instead of ⌘' : 'On macOS, use ⌘ instead of Ctrl'}
           </p>
         </div>
       </Modal>

@@ -37,6 +37,9 @@ export function SearchPage() {
   const { companyId } = useAuthStore();
   const { incrementSearchCount, addActivity } = useAppStore();
 
+  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const modEnterLabel = isMac ? '⌘+Enter' : 'Ctrl+Enter';
+
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(10);
   const [useRerank, setUseRerank] = useState(false);
@@ -187,7 +190,7 @@ export function SearchPage() {
         <CardContent className="p-6">
           <form onSubmit={handleSearch} className="space-y-4">
             <Textarea
-              placeholder="Enter your search query... (Ctrl+Enter to search)"
+              placeholder={`Enter your search query... (${modEnterLabel} to search)`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -450,7 +453,7 @@ export function SearchPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600">•</span>
-                Press Ctrl+Enter to quickly search
+                Press {modEnterLabel} to quickly search
               </li>
             </ul>
           </CardContent>
