@@ -103,10 +103,11 @@ export function Features() {
             <motion.div
               key={feature.title}
               variants={itemVariants}
+              whileHover={{ y: -4 }}
               className="group relative"
             >
               <div className="card-glow rounded-xl sm:rounded-2xl h-full">
-                <div className="relative z-10 p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl glass h-full transition-all duration-300 group-hover:bg-white/10">
+                <div className="relative z-10 p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl glass h-full transition-all duration-300 group-hover:bg-white/10 group-hover:shadow-lg group-hover:shadow-primary-500/10">
                   {/* Icon */}
                   <div className="mb-4 sm:mb-6 relative">
                     <div

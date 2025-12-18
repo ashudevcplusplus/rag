@@ -103,9 +103,10 @@ export function Testimonials() {
             <motion.div
               key={testimonial.author}
               variants={itemVariants}
+              whileHover={{ y: -4 }}
               className={`group ${index === 1 ? 'lg:translate-y-8' : ''} ${index === 4 ? 'lg:translate-y-8' : ''}`}
             >
-              <div className="relative h-full p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl glass transition-all duration-300 hover:bg-white/10">
+              <div className="relative h-full p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl glass transition-all duration-300 hover:bg-white/10 hover:shadow-lg hover:shadow-primary-500/10">
                 {/* Quote Icon */}
                 <div className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-white/10 flex items-center justify-center">
                   <Quote className="w-3 sm:w-4 h-3 sm:h-4 text-primary-400" />

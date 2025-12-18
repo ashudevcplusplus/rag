@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Sparkles, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -70,6 +71,12 @@ const itemVariants = {
 
 export function Pricing() {
   const { scrollTo } = useScrollTo();
+  const [isYearly, setIsYearly] = useState(false);
+
+  const getPrice = (monthlyPrice: number | null) => {
+    if (monthlyPrice === null) return null;
+    return isYearly ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
+  };
 
   return (
     <section id="pricing" className="py-16 sm:py-24 lg:py-32 relative">
@@ -97,6 +104,42 @@ export function Pricing() {
             Start free for 14 days. No credit card required.
             Scale up as your needs grow.
           </p>
+
+          {/* Billing Toggle */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="flex items-center justify-center gap-4 mt-8"
+          >
+            <span className={cn(
+              "text-sm font-medium transition-colors",
+              !isYearly ? "text-white" : "text-slate-400"
+            )}>
+              Monthly
+            </span>
+            <button
+              onClick={() => setIsYearly(!isYearly)}
+              className="relative w-14 h-7 rounded-full bg-slate-800 border border-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              aria-label={isYearly ? "Switch to monthly billing" : "Switch to yearly billing"}
+            >
+              <motion.div
+                animate={{ x: isYearly ? 28 : 4 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="absolute top-1 w-5 h-5 rounded-full bg-gradient-to-r from-primary-500 to-accent-500"
+              />
+            </button>
+            <span className={cn(
+              "text-sm font-medium transition-colors flex items-center gap-2",
+              isYearly ? "text-white" : "text-slate-400"
+            )}>
+              Yearly
+              <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                Save 20%
+              </span>
+            </span>
+          </motion.div>
         </motion.div>
 
         {/* Pricing Cards */}
@@ -154,10 +197,17 @@ export function Pricing() {
                   <div className="mb-6 sm:mb-8">
                     {plan.price !== null ? (
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl sm:text-4xl font-bold text-white">
-                          ${plan.price}
+                        <motion.span 
+                          key={isYearly ? 'yearly' : 'monthly'}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="text-3xl sm:text-4xl font-bold text-white"
+                        >
+                          ${getPrice(plan.price)}
+                        </motion.span>
+                        <span className="text-slate-400 text-sm">
+                          /{isYearly ? 'month, billed yearly' : 'month'}
                         </span>
-                        <span className="text-slate-400 text-sm">/month</span>
                       </div>
                     ) : (
                       <div className="text-3xl sm:text-4xl font-bold text-white">Custom</div>

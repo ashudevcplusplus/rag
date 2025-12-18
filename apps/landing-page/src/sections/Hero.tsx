@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Play, Zap, Shield, Cpu } from 'lucide-react';
 import { ProductDemo } from '../components/ProductDemo';
+import { ScrollIndicator } from '../components/ScrollIndicator';
+import { AnimatedCounter } from '../components/AnimatedCounter';
 import { useScrollTo } from '../lib/useScrollTo';
 
 const stats = [
@@ -94,10 +96,10 @@ export function Hero() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                className="text-center p-3 xs:p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/5"
+                className="text-center p-3 xs:p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-300"
               >
                 <div className="text-2xl xs:text-3xl sm:text-4xl font-bold gradient-text mb-1">
-                  {stat.value}
+                  <AnimatedCounter value={stat.value} />
                 </div>
                 <div className="text-xs xs:text-sm text-slate-500">{stat.label}</div>
               </motion.div>
@@ -133,6 +135,9 @@ export function Hero() {
 
         {/* Product Demo */}
         <ProductDemo />
+
+        {/* Scroll Indicator */}
+        <ScrollIndicator />
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import { Navbar } from './components/Navbar';
+import { ScrollProgress } from './components/ScrollProgress';
 import { Hero } from './sections/Hero';
 import { Features } from './sections/Features';
 import { HowItWorks } from './sections/HowItWorks';
@@ -11,6 +12,16 @@ import { Footer } from './sections/Footer';
 function App() {
   return (
     <div className="min-h-screen bg-slate-950 overflow-hidden">
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:bg-primary-500 focus:text-white focus:rounded-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
+      {/* Scroll Progress Indicator */}
+      <ScrollProgress />
       {/* Background effects - hidden on mobile for performance */}
       <div className="fixed inset-0 pointer-events-none hidden sm:block">
         <div className="floating-orb w-[400px] sm:w-[500px] lg:w-[600px] h-[400px] sm:h-[500px] lg:h-[600px] bg-primary-500 -top-64 -left-64" />
@@ -36,13 +47,15 @@ function App() {
 
       <div className="relative z-10">
         <Navbar />
-        <Hero />
+        <main id="main-content">
+          <Hero />
         <Features />
         <HowItWorks />
         <Testimonials />
         <Pricing />
         <Contact />
         <CTA />
+        </main>
         <Footer />
       </div>
     </div>

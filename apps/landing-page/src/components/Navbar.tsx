@@ -44,20 +44,26 @@ export function Navbar() {
             )}
           >
             {/* Logo */}
-            <button 
+            <motion.button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center gap-2 group cursor-pointer"
+              className="flex items-center gap-2 group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-xl"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <div className="relative">
+              <motion.div 
+                className="relative"
+                whileHover={{ rotate: [0, -10, 10, -5, 0] }}
+                transition={{ duration: 0.5 }}
+              >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-              </div>
+              </motion.div>
               <span className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
                 NexusAI
               </span>
-            </button>
+            </motion.button>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-1">
