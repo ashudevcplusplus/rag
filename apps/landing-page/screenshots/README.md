@@ -1,50 +1,50 @@
-# UI Improvement Screenshots
+# Landing Page Screenshots
 
-Screenshots demonstrating all the new UI features implemented in this PR.
+Screenshots showcasing the NexusAI Chatbot Builder landing page.
 
-## 1. Hero Section with Animated Stats
-The stats now animate counting up when they come into view.
+## 1. Hero Section
+Main hero with "Build AI Chatbots Your Way" messaging, highlighting LLM flexibility, embedding providers, and custom RAG config.
 
 ![Hero Section](./01-hero-section.png)
 
 ---
 
-## 2. Scroll Progress Indicator
-A gradient progress bar at the top shows scroll position as user scrolls down the page.
+## 2. Product Demo - Chatbot Dashboard
+Interactive product demo showing the chatbot management interface with configuration options for LLM models, embeddings, chunk size, and overlap.
 
-![Scroll Progress](./02-scroll-progress.png)
-
----
-
-## 3. Features Section with Card Hover Effects
-Cards lift up with subtle shadows on hover for better interactivity feedback.
-
-![Features Hover](./03-features-hover.png)
+![Product Demo](./02-scroll-progress.png)
 
 ---
 
-## 4. Pricing Section - Monthly Billing
-Default view showing monthly pricing.
+## 3. Features Section
+Key features: Multiple LLM Providers, Flexible Embeddings, Custom Chunk Config, Simple File Upload, Instant Chatbots, Enterprise Security.
 
-![Pricing Monthly](./04-pricing-monthly.png)
-
----
-
-## 5. Pricing Section - Yearly Billing (20% Discount)
-Toggle switches between monthly and yearly with animated price change.
-
-![Pricing Yearly](./05-pricing-yearly.png)
+![Features](./03-features-hover.png)
 
 ---
 
-## 6. Testimonials with Hover Effects
-Testimonial cards lift on hover with shadow effects.
+## 4. Supported Providers
+Provider showcase with OpenAI, Anthropic, Google AI, Cohere, Mistral, and Voyage AI. Includes example YAML configuration.
 
-![Testimonials Hover](./06-testimonials-hover.png)
+![Providers](./04-pricing-monthly.png)
+
+---
+
+## 5. How It Works
+4-step flow: Upload Knowledge → Configure Stack → Train Chatbot → Deploy & Share. Includes detailed config example.
+
+![How It Works](./05-pricing-yearly.png)
+
+---
+
+## 6. Testimonials
+Customer testimonials highlighting model flexibility, RAG tuning, and cost optimization benefits.
+
+![Testimonials](./06-testimonials-hover.png)
 
 ---
 
 ## 7. Mobile Responsive View
-Mobile-optimized layout with proper spacing and touch-friendly elements.
+Mobile-optimized layout with the same chatbot builder messaging.
 
-![Mobile Hero](./07-mobile-hero.png)
+![Mobile View](./07-mobile-hero.png)
