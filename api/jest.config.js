@@ -8,6 +8,10 @@ module.exports = {
     '^.+\\.ts$': 'ts-jest',
   },
   setupFilesAfterEnv: ['<rootDir>/test/setupTests.ts'],
+  // Map workspace packages to their source
+  moduleNameMapper: {
+    '^@rag/text-utils$': '<rootDir>/../packages/text-utils/src/index.ts',
+  },
 
   // Coverage configuration
   collectCoverageFrom: [
