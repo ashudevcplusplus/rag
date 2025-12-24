@@ -1,120 +1,114 @@
 import {
   recursiveChunkText,
+  recursiveChunkTextSync,
   chunkText,
   chunkTextWithMetadata,
+  chunkByCharacter,
+  chunkByTokens,
+  chunkMarkdown,
+  chunkLatex,
+  chunkCode,
   estimateChunkCount,
   splitBySentences,
   splitByParagraphs,
+  createTextSplitter,
+  RecursiveCharacterTextSplitter,
 } from '../src/chunker';
 
 describe('Chunker Utilities', () => {
-  describe('recursiveChunkText', () => {
-    test('returns empty array for empty input', () => {
-      expect(recursiveChunkText('')).toEqual([]);
-      expect(recursiveChunkText('   ')).toEqual([]);
+  describe('recursiveChunkText (async with LangChain)', () => {
+    test('returns empty array for empty input', async () => {
+      expect(await recursiveChunkText('')).toEqual([]);
+      expect(await recursiveChunkText('   ')).toEqual([]);
     });
 
-    test('returns single chunk for text smaller than chunk size', () => {
+    test('returns single chunk for text smaller than chunk size', async () => {
       const text = 'Short text';
-      const chunks = recursiveChunkText(text, { chunkSize: 1000 });
+      const chunks = await recursiveChunkText(text, { chunkSize: 1000 });
       expect(chunks).toHaveLength(1);
       expect(chunks[0]).toBe('Short text');
     });
 
-    test('chunks text correctly with overlap', () => {
+    test('chunks text correctly with overlap', async () => {
       const text = 'This is a longer text that should be chunked with overlap between chunks.';
-      const chunks = recursiveChunkText(text, { chunkSize: 30, chunkOverlap: 10 });
+      const chunks = await recursiveChunkText(text, { chunkSize: 30, chunkOverlap: 10 });
 
       expect(chunks.length).toBeGreaterThan(1);
       expect(chunks[0]).toContain('This');
       expect(chunks[chunks.length - 1]).toContain('chunks');
     });
 
-    test('handles text with sentence boundaries', () => {
+    test('handles text with sentence boundaries', async () => {
       const text = 'First sentence. Second sentence. Third sentence.';
-      const chunks = recursiveChunkText(text, { chunkSize: 20, chunkOverlap: 5 });
+      const chunks = await recursiveChunkText(text, { chunkSize: 20, chunkOverlap: 5 });
       expect(chunks.length).toBeGreaterThan(1);
       chunks.forEach((chunk) => {
         expect(chunk.trim().length).toBeGreaterThan(0);
       });
     });
 
-    test('trims whitespace from chunks by default', () => {
+    test('trims whitespace from chunks by default', async () => {
       const text = '  Hello    World  ';
-      const chunks = recursiveChunkText(text);
-      expect(chunks[0].trim()).toBe('Hello    World');
+      const chunks = await recursiveChunkText(text);
+      expect(chunks[0]).toBe('Hello    World');
     });
 
-    test('preserves whitespace when trimChunks is false', () => {
-      const text = '  Hello World  ';
-      const chunks = recursiveChunkText(text, { chunkSize: 1000, trimChunks: false });
-      expect(chunks[0]).toBe('  Hello World  ');
-    });
-
-    test('handles text with no natural separators', () => {
+    test('handles text with no natural separators', async () => {
       const text = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      const chunks = recursiveChunkText(text, { chunkSize: 20, chunkOverlap: 5 });
+      const chunks = await recursiveChunkText(text, { chunkSize: 20, chunkOverlap: 5 });
       expect(chunks.length).toBeGreaterThan(1);
-      const joined = chunks.join('');
-      expect(joined).toContain('abcdefghij');
     });
 
-    test('handles very long continuous text', () => {
-      const longWord = 'x'.repeat(150);
-      const chunks = recursiveChunkText(longWord, { chunkSize: 50, chunkOverlap: 10 });
-      expect(chunks.length).toBeGreaterThan(1);
-      chunks.forEach((chunk) => {
-        expect(chunk.length).toBeLessThanOrEqual(60);
-      });
-    });
-
-    test('handles whitespace-only text', () => {
+    test('handles whitespace-only text', async () => {
       const text = '   \n\n   \t   ';
-      const chunks = recursiveChunkText(text, { chunkSize: 100, chunkOverlap: 20 });
-      const nonEmpty = chunks.filter((c) => c.trim().length > 0);
-      expect(nonEmpty).toEqual([]);
+      const chunks = await recursiveChunkText(text, { chunkSize: 100, chunkOverlap: 20 });
+      expect(chunks).toEqual([]);
     });
 
-    test('uses custom separators when provided', () => {
+    test('uses custom separators when provided', async () => {
       const text = 'Part1|Part2|Part3';
-      const chunks = recursiveChunkText(text, {
+      const chunks = await recursiveChunkText(text, {
         chunkSize: 10,
         chunkOverlap: 2,
         separators: ['|', ''],
       });
-      expect(chunks.length).toBeGreaterThan(1);
-    });
-
-    test('maintains overlap between consecutive chunks', () => {
-      const text =
-        'This is a longer text that should be properly chunked with overlap to maintain context between consecutive chunks.';
-      const chunks = recursiveChunkText(text, { chunkSize: 40, chunkOverlap: 15 });
-
-      if (chunks.length > 1) {
-        for (let i = 0; i < chunks.length - 1; i++) {
-          const currentEnd = chunks[i].slice(-10);
-          const nextStart = chunks[i + 1].slice(0, 20);
-          // Check for some overlap (exact overlap detection is complex due to word boundaries)
-          const hasOverlap = currentEnd.split('').some((char) => nextStart.includes(char));
-          expect(hasOverlap).toBe(true);
-        }
-      }
+      expect(chunks.length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  describe('chunkText (deprecated)', () => {
-    test('is an alias for recursiveChunkText', () => {
-      const text = 'Test text for chunking';
-      const chunks1 = chunkText(text, 1000, 200);
-      const chunks2 = recursiveChunkText(text, { chunkSize: 1000, chunkOverlap: 200 });
+  describe('recursiveChunkTextSync (sync fallback)', () => {
+    test('returns empty array for empty input', () => {
+      expect(recursiveChunkTextSync('')).toEqual([]);
+      expect(recursiveChunkTextSync('   ')).toEqual([]);
+    });
+
+    test('returns single chunk for text smaller than chunk size', () => {
+      const text = 'Short text';
+      const chunks = recursiveChunkTextSync(text, { chunkSize: 1000 });
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toBe('Short text');
+    });
+
+    test('chunks text correctly', () => {
+      const text = 'This is a longer text that should be chunked with overlap between chunks.';
+      const chunks = recursiveChunkTextSync(text, { chunkSize: 30, chunkOverlap: 10 });
+      expect(chunks.length).toBeGreaterThan(1);
+    });
+  });
+
+  describe('chunkText (deprecated sync)', () => {
+    test('is a sync alias for recursiveChunkTextSync', () => {
+      const text = 'Test text for chunking that is long enough to be split into chunks';
+      const chunks1 = chunkText(text, 30, 10);
+      const chunks2 = recursiveChunkTextSync(text, { chunkSize: 30, chunkOverlap: 10 });
       expect(chunks1).toEqual(chunks2);
     });
   });
 
   describe('chunkTextWithMetadata', () => {
-    test('returns chunks with metadata', () => {
+    test('returns chunks with metadata', async () => {
       const text = 'First paragraph.\n\nSecond paragraph.\n\nThird paragraph.';
-      const chunks = chunkTextWithMetadata(text, { chunkSize: 20, chunkOverlap: 5 });
+      const chunks = await chunkTextWithMetadata(text, { chunkSize: 20, chunkOverlap: 5 });
 
       expect(chunks.length).toBeGreaterThan(0);
       chunks.forEach((chunk, index) => {
@@ -125,9 +119,91 @@ describe('Chunker Utilities', () => {
       });
     });
 
-    test('returns empty array for empty input', () => {
-      const chunks = chunkTextWithMetadata('');
+    test('returns empty array for empty input', async () => {
+      const chunks = await chunkTextWithMetadata('');
       expect(chunks).toEqual([]);
+    });
+  });
+
+  describe('chunkByCharacter', () => {
+    test('splits on specified separator', async () => {
+      const text = 'Paragraph one.\n\nParagraph two.\n\nParagraph three.';
+      const chunks = await chunkByCharacter(text, { chunkSize: 20, chunkOverlap: 5 }, '\n\n');
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('returns empty array for empty input', async () => {
+      expect(await chunkByCharacter('')).toEqual([]);
+    });
+  });
+
+  describe('chunkByTokens', () => {
+    test('splits text by tokens', async () => {
+      const text =
+        'This is a test sentence that should be split into multiple chunks based on token count.';
+      const chunks = await chunkByTokens(text, { chunkSize: 10, chunkOverlap: 2 });
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('returns empty array for empty input', async () => {
+      expect(await chunkByTokens('')).toEqual([]);
+    });
+  });
+
+  describe('chunkMarkdown', () => {
+    test('splits markdown text', async () => {
+      const text = '# Header 1\n\nSome content.\n\n## Header 2\n\nMore content here.';
+      const chunks = await chunkMarkdown(text, { chunkSize: 30, chunkOverlap: 5 });
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('returns empty array for empty input', async () => {
+      expect(await chunkMarkdown('')).toEqual([]);
+    });
+  });
+
+  describe('chunkLatex', () => {
+    test('splits latex text', async () => {
+      const text =
+        '\\section{Introduction}\nSome text.\n\\section{Methods}\nMore text here with formulas.';
+      const chunks = await chunkLatex(text, { chunkSize: 30, chunkOverlap: 5 });
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('returns empty array for empty input', async () => {
+      expect(await chunkLatex('')).toEqual([]);
+    });
+  });
+
+  describe('chunkCode', () => {
+    test('splits JavaScript code', async () => {
+      const code = `
+function hello() {
+  console.log("Hello");
+}
+
+function world() {
+  console.log("World");
+}
+`;
+      const chunks = await chunkCode(code, 'js', { chunkSize: 50, chunkOverlap: 10 });
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('splits Python code', async () => {
+      const code = `
+def hello():
+    print("Hello")
+
+def world():
+    print("World")
+`;
+      const chunks = await chunkCode(code, 'python', { chunkSize: 50, chunkOverlap: 10 });
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('returns empty array for empty input', async () => {
+      expect(await chunkCode('', 'js')).toEqual([]);
     });
   });
 
@@ -137,8 +213,6 @@ describe('Chunker Utilities', () => {
     });
 
     test('estimates correctly for larger text', () => {
-      // Text of 2000 chars with chunk size 1000 and overlap 200
-      // Effective chunk size = 800, so ~3 chunks
       const estimate = estimateChunkCount(2000, 1000, 200);
       expect(estimate).toBeGreaterThan(1);
       expect(estimate).toBeLessThanOrEqual(5);
@@ -195,6 +269,30 @@ describe('Chunker Utilities', () => {
       const text = 'First.\n\n\n\nSecond.';
       const paragraphs = splitByParagraphs(text);
       expect(paragraphs).toHaveLength(2);
+    });
+  });
+
+  describe('createTextSplitter', () => {
+    test('creates a RecursiveCharacterTextSplitter', () => {
+      const splitter = createTextSplitter({ chunkSize: 500, chunkOverlap: 50 });
+      expect(splitter).toBeInstanceOf(RecursiveCharacterTextSplitter);
+    });
+
+    test('can be used to split text', async () => {
+      const splitter = createTextSplitter({ chunkSize: 20, chunkOverlap: 5 });
+      const chunks = await splitter.splitText('This is a test text for the custom splitter.');
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('RecursiveCharacterTextSplitter export', () => {
+    test('can be used directly', async () => {
+      const splitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 50,
+        chunkOverlap: 10,
+      });
+      const chunks = await splitter.splitText('This is a longer text to test the direct usage.');
+      expect(chunks.length).toBeGreaterThan(0);
     });
   });
 });

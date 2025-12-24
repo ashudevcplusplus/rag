@@ -1,10 +1,22 @@
+import {
+  RecursiveCharacterTextSplitter,
+  CharacterTextSplitter,
+  TokenTextSplitter,
+  MarkdownTextSplitter,
+  LatexTextSplitter,
+  SupportedTextSplitterLanguages,
+} from '@langchain/textsplitters';
 import type { ChunkOptions, TextChunk } from './types';
 
-/**
- * Default separators for recursive text splitting
- * Ordered from most semantic (paragraph) to least semantic (character)
- */
-const DEFAULT_SEPARATORS = ['\n\n', '\n', '. ', ' ', ''];
+// Re-export LangChain splitters for direct access
+export {
+  RecursiveCharacterTextSplitter,
+  CharacterTextSplitter,
+  TokenTextSplitter,
+  MarkdownTextSplitter,
+  LatexTextSplitter,
+  SupportedTextSplitterLanguages,
+} from '@langchain/textsplitters';
 
 /**
  * Default chunk size in characters
@@ -17,18 +29,13 @@ const DEFAULT_CHUNK_SIZE = 1000;
 const DEFAULT_CHUNK_OVERLAP = 200;
 
 /**
- * Minimum percentage of requested overlap to maintain
- */
-const MIN_OVERLAP_RATIO = 0.8;
-
-/**
- * Recursive Character Text Splitter
+ * Recursive Character Text Splitter using LangChain
  *
  * Splits text attempting to keep paragraphs and sentences together.
  * This prevents context from being cut in half and maintains semantic integrity.
  * Ensures proper overlap between consecutive chunks.
  *
- * Inspired by LangChain's RecursiveCharacterTextSplitter.
+ * Uses LangChain's RecursiveCharacterTextSplitter under the hood.
  *
  * @param text - The text to split into chunks
  * @param options - Configuration options for chunking
@@ -36,14 +43,17 @@ const MIN_OVERLAP_RATIO = 0.8;
  *
  * @example
  * ```ts
- * const chunks = recursiveChunkText(longDocument, { chunkSize: 500, chunkOverlap: 50 });
+ * const chunks = await recursiveChunkText(longDocument, { chunkSize: 500, chunkOverlap: 50 });
  * ```
  */
-export function recursiveChunkText(text: string, options: ChunkOptions = {}): string[] {
+export async function recursiveChunkText(
+  text: string,
+  options: ChunkOptions = {}
+): Promise<string[]> {
   const {
     chunkSize = DEFAULT_CHUNK_SIZE,
     chunkOverlap = DEFAULT_CHUNK_OVERLAP,
-    separators = DEFAULT_SEPARATORS,
+    separators,
     trimChunks = true,
   } = options;
 
@@ -51,77 +61,85 @@ export function recursiveChunkText(text: string, options: ChunkOptions = {}): st
   if (!text || text.trim().length === 0) return [];
   if (text.length <= chunkSize) return [trimChunks ? text.trim() : text];
 
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize,
+    chunkOverlap,
+    separators: separators || ['\n\n', '\n', '. ', ' ', ''],
+  });
+
+  const chunks = await splitter.splitText(text);
+
+  if (trimChunks) {
+    return chunks.map((chunk) => chunk.trim()).filter((chunk) => chunk.length > 0);
+  }
+
+  return chunks;
+}
+
+/**
+ * Synchronous version of recursiveChunkText for backwards compatibility
+ *
+ * @deprecated Use the async version `recursiveChunkText` for better performance
+ */
+export function recursiveChunkTextSync(text: string, options: ChunkOptions = {}): string[] {
+  const {
+    chunkSize = DEFAULT_CHUNK_SIZE,
+    chunkOverlap = DEFAULT_CHUNK_OVERLAP,
+    separators,
+    trimChunks = true,
+  } = options;
+
+  // Handle edge cases
+  if (!text || text.trim().length === 0) return [];
+  if (text.length <= chunkSize) return [trimChunks ? text.trim() : text];
+
+  // Fallback to simple implementation for sync operation
+  const seps = separators || ['\n\n', '\n', '. ', ' ', ''];
   const finalChunks: string[] = [];
   let currentChunk: string[] = [];
   let currentLength = 0;
-  let overlapText = ''; // Track overlap text from previous chunk
+  let overlapText = '';
 
-  /**
-   * Extract overlap from the end of a chunk, attempting to break at word boundaries
-   */
   const extractOverlap = (chunkText: string): string => {
     if (chunkText.length <= chunkOverlap) {
       return chunkText;
     }
-
-    // Start from the ideal position
     let overlapStart = chunkText.length - chunkOverlap;
-
-    // Calculate minimum acceptable overlap
-    const minOverlap = Math.floor(chunkOverlap * MIN_OVERLAP_RATIO);
-    const maxSearchBack = chunkOverlap - minOverlap;
-
-    // Search forward from the ideal start position to find a word boundary
-    const searchWindow = Math.min(30, maxSearchBack);
+    const minOverlap = Math.floor(chunkOverlap * 0.8);
+    const searchWindow = Math.min(30, chunkOverlap - minOverlap);
     for (let i = overlapStart; i < chunkText.length && i < overlapStart + searchWindow; i++) {
       if (chunkText[i] === ' ' || chunkText[i] === '\n' || chunkText[i] === '\t') {
         overlapStart = i + 1;
-        // Ensure we still have minimum overlap
         if (chunkText.length - overlapStart < minOverlap) {
           overlapStart = chunkText.length - chunkOverlap;
         }
         break;
       }
     }
-
     return chunkText.substring(overlapStart);
   };
 
-  /**
-   * Merge accumulated small pieces into valid chunks
-   */
   const mergeCurrent = (): void => {
     if (currentChunk.length > 0) {
       const doc = currentChunk.join('');
       if (doc.trim().length > 0) {
-        // Prepend overlap from previous chunk to current chunk
         const fullChunk = overlapText + doc;
         finalChunks.push(trimChunks ? fullChunk.trim() : fullChunk);
-
-        // Extract overlap from the END of this chunk for the next chunk
         overlapText = extractOverlap(fullChunk);
       }
-
-      // Reset for next chunk (but keep overlapText)
       currentChunk = [];
       currentLength = 0;
     }
   };
 
-  /**
-   * Recursive split function
-   */
   const split = (textToSplit: string, separatorIndex: number): void => {
-    if (separatorIndex >= separators.length) {
-      // No more separators, force split by character if needed
+    if (separatorIndex >= seps.length) {
       if (textToSplit.length > chunkSize) {
-        // Force split the text into chunkSize pieces with overlap
         let startPos = 0;
         while (startPos < textToSplit.length) {
           const availableSize = chunkSize - overlapText.length;
           const endPos = Math.min(startPos + availableSize, textToSplit.length);
           const piece = textToSplit.substring(startPos, endPos);
-
           if (piece.length > 0) {
             if (currentLength + piece.length > availableSize) {
               mergeCurrent();
@@ -132,8 +150,6 @@ export function recursiveChunkText(text: string, options: ChunkOptions = {}): st
               mergeCurrent();
             }
           }
-
-          // Move forward by chunkSize - overlap to ensure overlap
           startPos += chunkSize - chunkOverlap;
         }
       } else if (textToSplit.length > 0) {
@@ -147,20 +163,15 @@ export function recursiveChunkText(text: string, options: ChunkOptions = {}): st
       return;
     }
 
-    const separator = separators[separatorIndex];
+    const separator = seps[separatorIndex];
     const splits = separator === '' ? [textToSplit] : textToSplit.split(separator);
 
     splits.forEach((s, i) => {
-      // Restore separator unless it's the last element or separator is empty
       const segment = s + (separator !== '' && i < splits.length - 1 ? separator : '');
-
       if (segment.length === 0) return;
-
       if (segment.length > chunkSize) {
-        // If this single segment is too big, recurse down to next separator
         split(segment, separatorIndex + 1);
       } else {
-        // Account for overlap text when checking chunk size
         const availableSize = chunkSize - overlapText.length;
         if (currentLength + segment.length > availableSize) {
           mergeCurrent();
@@ -172,36 +183,145 @@ export function recursiveChunkText(text: string, options: ChunkOptions = {}): st
   };
 
   split(text, 0);
-  mergeCurrent(); // Flush remainder
+  mergeCurrent();
 
   return finalChunks;
 }
 
 /**
- * Chunk text into smaller pieces with metadata
+ * Chunk text using LangChain's CharacterTextSplitter
+ * Splits on a single character/separator
+ *
+ * @param text - The text to split
+ * @param options - Chunking options
+ * @param separator - The separator to split on (default: '\n\n')
+ * @returns Array of text chunks
+ */
+export async function chunkByCharacter(
+  text: string,
+  options: ChunkOptions = {},
+  separator: string = '\n\n'
+): Promise<string[]> {
+  const { chunkSize = DEFAULT_CHUNK_SIZE, chunkOverlap = DEFAULT_CHUNK_OVERLAP } = options;
+
+  if (!text || text.trim().length === 0) return [];
+
+  const splitter = new CharacterTextSplitter({
+    chunkSize,
+    chunkOverlap,
+    separator,
+  });
+
+  return splitter.splitText(text);
+}
+
+/**
+ * Chunk text by tokens using LangChain's TokenTextSplitter
+ * Better for LLM context windows as it counts tokens, not characters
+ *
+ * @param text - The text to split
+ * @param options - Chunking options (chunkSize is in tokens)
+ * @returns Array of text chunks
+ */
+export async function chunkByTokens(
+  text: string,
+  options: { chunkSize?: number; chunkOverlap?: number } = {}
+): Promise<string[]> {
+  const { chunkSize = 500, chunkOverlap = 50 } = options;
+
+  if (!text || text.trim().length === 0) return [];
+
+  const splitter = new TokenTextSplitter({
+    chunkSize,
+    chunkOverlap,
+  });
+
+  return splitter.splitText(text);
+}
+
+/**
+ * Chunk Markdown text using LangChain's MarkdownTextSplitter
+ * Aware of Markdown structure (headers, code blocks, etc.)
+ *
+ * @param text - The Markdown text to split
+ * @param options - Chunking options
+ * @returns Array of text chunks
+ */
+export async function chunkMarkdown(text: string, options: ChunkOptions = {}): Promise<string[]> {
+  const { chunkSize = DEFAULT_CHUNK_SIZE, chunkOverlap = DEFAULT_CHUNK_OVERLAP } = options;
+
+  if (!text || text.trim().length === 0) return [];
+
+  const splitter = new MarkdownTextSplitter({
+    chunkSize,
+    chunkOverlap,
+  });
+
+  return splitter.splitText(text);
+}
+
+/**
+ * Chunk LaTeX text using LangChain's LatexTextSplitter
+ *
+ * @param text - The LaTeX text to split
+ * @param options - Chunking options
+ * @returns Array of text chunks
+ */
+export async function chunkLatex(text: string, options: ChunkOptions = {}): Promise<string[]> {
+  const { chunkSize = DEFAULT_CHUNK_SIZE, chunkOverlap = DEFAULT_CHUNK_OVERLAP } = options;
+
+  if (!text || text.trim().length === 0) return [];
+
+  const splitter = new LatexTextSplitter({
+    chunkSize,
+    chunkOverlap,
+  });
+
+  return splitter.splitText(text);
+}
+
+/**
+ * Chunk code using LangChain's RecursiveCharacterTextSplitter with language support
+ *
+ * @param text - The code to split
+ * @param language - The programming language
+ * @param options - Chunking options
+ * @returns Array of code chunks
+ */
+export async function chunkCode(
+  text: string,
+  language: (typeof SupportedTextSplitterLanguages)[number],
+  options: ChunkOptions = {}
+): Promise<string[]> {
+  const { chunkSize = DEFAULT_CHUNK_SIZE, chunkOverlap = DEFAULT_CHUNK_OVERLAP } = options;
+
+  if (!text || text.trim().length === 0) return [];
+
+  const splitter = RecursiveCharacterTextSplitter.fromLanguage(language, {
+    chunkSize,
+    chunkOverlap,
+  });
+
+  return splitter.splitText(text);
+}
+
+/**
+ * Chunk text with metadata using LangChain
  *
  * @param text - The text to split into chunks
  * @param options - Configuration options for chunking
  * @returns Array of text chunks with metadata
- *
- * @example
- * ```ts
- * const chunks = chunkTextWithMetadata(document);
- * chunks.forEach(chunk => {
- *   console.log(`Chunk ${chunk.metadata.index}: ${chunk.content.slice(0, 50)}...`);
- * });
- * ```
  */
-export function chunkTextWithMetadata(text: string, options: ChunkOptions = {}): TextChunk[] {
-  const chunks = recursiveChunkText(text, options);
+export async function chunkTextWithMetadata(
+  text: string,
+  options: ChunkOptions = {}
+): Promise<TextChunk[]> {
+  const chunks = await recursiveChunkText(text, options);
 
   let currentPos = 0;
   return chunks.map((content, index) => {
-    // Find the actual position of this chunk in the original text
     const startPos = text.indexOf(content.slice(0, 50), currentPos);
     const endPos = startPos + content.length;
-
-    // Update current position for next search (accounting for overlap)
     currentPos = Math.max(currentPos, startPos + 1);
 
     return {
@@ -218,8 +338,9 @@ export function chunkTextWithMetadata(text: string, options: ChunkOptions = {}):
 
 /**
  * Chunk text into smaller pieces for embedding
+ * Backwards compatible wrapper using synchronous implementation
  *
- * @deprecated Use recursiveChunkText for better context preservation
+ * @deprecated Use recursiveChunkText (async) for better results with LangChain
  * @param text - The text to chunk
  * @param chunkSize - Maximum size of each chunk
  * @param overlap - Overlap between consecutive chunks
@@ -230,7 +351,7 @@ export function chunkText(
   chunkSize: number = DEFAULT_CHUNK_SIZE,
   overlap: number = DEFAULT_CHUNK_OVERLAP
 ): string[] {
-  return recursiveChunkText(text, { chunkSize, chunkOverlap: overlap });
+  return recursiveChunkTextSync(text, { chunkSize, chunkOverlap: overlap });
 }
 
 /**
@@ -259,10 +380,7 @@ export function estimateChunkCount(
  */
 export function splitBySentences(text: string): string[] {
   if (!text || text.trim().length === 0) return [];
-
-  // Split by sentence-ending punctuation followed by space or end of string
   const sentences = text.split(/(?<=[.!?])\s+/);
-
   return sentences.filter((s) => s.trim().length > 0).map((s) => s.trim());
 }
 
@@ -274,8 +392,24 @@ export function splitBySentences(text: string): string[] {
  */
 export function splitByParagraphs(text: string): string[] {
   if (!text || text.trim().length === 0) return [];
-
   const paragraphs = text.split(/\n\s*\n/);
-
   return paragraphs.filter((p) => p.trim().length > 0).map((p) => p.trim());
+}
+
+/**
+ * Create a custom LangChain text splitter with specific configuration
+ *
+ * @param options - Splitter configuration
+ * @returns Configured RecursiveCharacterTextSplitter instance
+ */
+export function createTextSplitter(options: {
+  chunkSize?: number;
+  chunkOverlap?: number;
+  separators?: string[];
+}): RecursiveCharacterTextSplitter {
+  return new RecursiveCharacterTextSplitter({
+    chunkSize: options.chunkSize ?? DEFAULT_CHUNK_SIZE,
+    chunkOverlap: options.chunkOverlap ?? DEFAULT_CHUNK_OVERLAP,
+    separators: options.separators ?? ['\n\n', '\n', '. ', ' ', ''],
+  });
 }

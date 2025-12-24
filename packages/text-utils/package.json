@@ -17,6 +17,8 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@langchain/textsplitters": "^1.0.1",
+    "langchain": "^1.2.3",
     "pdf-parse": "^1.1.1"
   },
   "devDependencies": {

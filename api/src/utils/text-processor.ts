@@ -7,21 +7,45 @@
  * @module text-processor
  */
 
-// Re-export everything from @rag/text-utils for backwards compatibility
+// Import sync version and re-export as recursiveChunkText for backwards compatibility
+import { recursiveChunkTextSync } from '@rag/text-utils';
+
+// Re-export sync version as the default for backwards compatibility
+export { recursiveChunkTextSync as recursiveChunkText };
+
+// Re-export everything else from @rag/text-utils
 export {
-  // Chunking utilities
-  recursiveChunkText,
+  // Chunking utilities - async versions (LangChain-powered)
+  recursiveChunkText as recursiveChunkTextAsync,
+  recursiveChunkTextSync,
   chunkText,
   chunkTextWithMetadata,
+  // Specialized chunkers (async, LangChain-powered)
+  chunkByCharacter,
+  chunkByTokens,
+  chunkMarkdown,
+  chunkLatex,
+  chunkCode,
+  // Utility functions
   estimateChunkCount,
   splitBySentences,
   splitByParagraphs,
+  createTextSplitter,
+  // LangChain splitters
+  RecursiveCharacterTextSplitter,
+  CharacterTextSplitter,
+  TokenTextSplitter,
+  MarkdownTextSplitter,
+  LatexTextSplitter,
+  SupportedTextSplitterLanguages,
   // Extraction utilities
   extractText,
   extractTextWithMetadata,
   extractTextFromBuffer,
   isTextMimeType,
   isSupportedMimeType,
+  getExtensionFromMimeType,
+  getMimeTypeFromExtension,
   // Normalization utilities
   normalizeWhitespace,
   collapseWhitespace,
