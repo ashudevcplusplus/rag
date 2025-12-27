@@ -18,4 +18,12 @@ echo "📦 Running text-utils checks..."
 pnpm --filter @rag/text-utils test || exit 1
 pnpm --filter @rag/text-utils typecheck || exit 1
 
+echo "📦 Typechecking packages..."
+pnpm --filter @rag/api-client typecheck || exit 1
+pnpm --filter @rag/types typecheck || exit 1
+
+echo "🖥️ Typechecking frontend apps..."
+pnpm --filter @rag/company-portal typecheck || exit 1
+pnpm --filter @rag/landing-page typecheck || exit 1
+
 echo "✅ All pre-commit checks passed!"
