@@ -145,6 +145,8 @@ services:
       - NODE_ENV=development
       - PORT=8001
       - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/landing_db?authSource=admin
+      # Allow CORS from the landing page frontend
+      - CORS_ORIGIN=http://localhost:3001,http://localhost:5173
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
@@ -173,7 +175,8 @@ services:
       - api
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://api:8000
+      # Use localhost since API calls are made from the browser, not from within Docker
+      - VITE_API_URL=http://localhost:8000
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
@@ -192,7 +195,8 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://landing-page-api:8001
+      # Use localhost since API calls are made from the browser, not from within Docker
+      - VITE_API_URL=http://localhost:8001
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
