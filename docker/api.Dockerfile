@@ -26,8 +26,8 @@ COPY packages/utils/package.json ./packages/utils/
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/ui/package.json ./packages/ui/
 
-# Install dependencies (use --no-frozen-lockfile for dev flexibility)
-RUN pnpm install
+# Install dependencies (skip lifecycle scripts like husky which need .git)
+RUN pnpm install --ignore-scripts
 
 # Copy source files
 COPY api/src/ ./api/src/

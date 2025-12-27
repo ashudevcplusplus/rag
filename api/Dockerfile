@@ -60,8 +60,8 @@ COPY packages/utils/package.json ./packages/utils/
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/ui/package.json ./packages/ui/
 
-# Install production dependencies only (skip husky prepare script in Docker)
-RUN HUSKY=0 pnpm install --frozen-lockfile --prod
+# Install production dependencies only (skip lifecycle scripts like husky)
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy built files and packages source (needed for workspace resolution)
 COPY --from=builder /app/api/dist ./api/dist
