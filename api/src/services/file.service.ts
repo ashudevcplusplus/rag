@@ -6,7 +6,7 @@ import { indexingQueue } from '../queue/queue.client';
 import { publishFileCleanup, publishProjectStats } from '../utils/async-events.util';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
-import { ProcessingStatus, FileCleanupReason } from '../types/enums';
+import { ProcessingStatus, FileCleanupReason, EventSource } from '../types/enums';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 
@@ -53,7 +53,11 @@ export class FileService {
       }
 
       // One-line event publishing
-      void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.DUPLICATE });
+      void publishFileCleanup({
+        source: EventSource.FILE_SERVICE_UPLOAD,
+        filePath: file.path,
+        reason: FileCleanupReason.DUPLICATE,
+      });
 
       logger.info('Duplicate file detected', {
         companyId,
@@ -91,7 +95,11 @@ export class FileService {
           });
         }
 
-        void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.ERROR });
+        void publishFileCleanup({
+          source: EventSource.FILE_SERVICE_UPLOAD,
+          filePath: file.path,
+          reason: FileCleanupReason.ERROR,
+        });
 
         logger.warn('File rejected: no extractable text content', {
           companyId,
@@ -126,7 +134,11 @@ export class FileService {
         });
       }
 
-      void publishFileCleanup({ filePath: file.path, reason: FileCleanupReason.ERROR });
+      void publishFileCleanup({
+        source: EventSource.FILE_SERVICE_UPLOAD,
+        filePath: file.path,
+        reason: FileCleanupReason.ERROR,
+      });
 
       logger.warn('File rejected: text extraction failed', {
         companyId,
@@ -157,7 +169,12 @@ export class FileService {
     });
 
     // One-line event publishing for project stats (storage update happens after indexing completes)
-    void publishProjectStats({ projectId, fileCount: 1, totalSize: file.size });
+    void publishProjectStats({
+      source: EventSource.FILE_SERVICE_UPLOAD,
+      projectId,
+      fileCount: 1,
+      totalSize: file.size,
+    });
 
     // Add to Queue
     const job = await indexingQueue.add(

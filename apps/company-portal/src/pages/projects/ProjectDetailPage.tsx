@@ -31,7 +31,7 @@ import {
   Badge,
 } from '@rag/ui';
 import { projectsApi, filesApi, type FilePreviewResponse } from '@rag/api-client';
-import { formatBytes, formatRelativeTime, formatDate } from '@rag/utils';
+import { formatBytes, formatRelativeTime, formatDate, removeChunkOverlap } from '@rag/utils';
 import type { FileMetadata } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
@@ -491,7 +491,7 @@ export function ProjectDetailPage() {
             {/* Content */}
             {previewData.content ? (
               <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                {previewData.chunks.map((chunk, index) => (
+                {removeChunkOverlap(previewData.chunks).map((chunk, index) => (
                   <div
                     key={index}
                     className="group relative p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"

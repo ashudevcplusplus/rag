@@ -3,10 +3,8 @@ import { IProjectMember } from '../schemas/project-member.schema';
 import { ProjectRole } from '../types/enums';
 
 export interface IProjectMemberDocument
-  extends Omit<
-      IProjectMember,
-      '_id' | 'projectId' | 'userId' | 'addedBy' | 'createdAt' | 'updatedAt'
-    >,
+  extends
+    Omit<IProjectMember, '_id' | 'projectId' | 'userId' | 'addedBy' | 'createdAt' | 'updatedAt'>,
     Document {
   projectId: Types.ObjectId;
   userId: Types.ObjectId;

@@ -2,12 +2,18 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/test/unit', '<rootDir>/test/integration'],
+  // Use 50% of available CPUs for parallel test execution
+  maxWorkers: '50%',
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   testPathIgnorePatterns: ['<rootDir>/test/e2e'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
   setupFilesAfterEnv: ['<rootDir>/test/setupTests.ts'],
+  // Map workspace packages to their source
+  moduleNameMapper: {
+    '^@rag/text-utils$': '<rootDir>/../packages/text-utils/src/index.ts',
+  },
 
   // Coverage configuration
   collectCoverageFrom: [

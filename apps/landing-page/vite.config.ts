@@ -9,6 +9,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: true, // Bind to all interfaces (required for Docker)
+    port: 3001,
+    watch: {
+      usePolling: true, // Required for Docker on macOS
+    },
+  },
   build: {
     rollupOptions: {
       output: {
