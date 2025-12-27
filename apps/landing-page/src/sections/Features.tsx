@@ -1,93 +1,98 @@
 import { motion } from 'framer-motion';
-import { 
-  FileSearch, 
-  Brain, 
-  Zap, 
-  Shield, 
-  BarChart3, 
-  Globe,
-  Sparkles,
-  Lock
+import {
+  Bot,
+  Blocks,
+  Settings2,
+  Upload,
+  Zap,
+  Shield,
 } from 'lucide-react';
-import { cn } from '../lib/utils';
 
 const features = [
   {
-    icon: FileSearch,
-    title: 'Intelligent Document Search',
-    description: 'Find exactly what you need with AI-powered semantic search across all your documents.',
-    gradient: 'from-blue-500 to-cyan-500',
+    icon: Blocks,
+    title: 'Multiple LLM Providers',
+    description: 'Choose from OpenAI, Anthropic, Google AI, Mistral, and more. Switch providers without changing code.',
+    gradient: 'from-blue-500/20 to-cyan-500/20',
+    iconColor: 'text-blue-400',
   },
   {
-    icon: Brain,
-    title: 'Advanced AI Analysis',
-    description: 'Leverage cutting-edge machine learning to extract insights, summaries, and key entities.',
-    gradient: 'from-purple-500 to-pink-500',
+    icon: Bot,
+    title: 'Flexible Embeddings',
+    description: 'Use OpenAI, Cohere, Voyage AI, or any compatible embedding model. Mix and match with your LLM.',
+    gradient: 'from-violet-500/20 to-purple-500/20',
+    iconColor: 'text-violet-400',
+  },
+  {
+    icon: Settings2,
+    title: 'Custom Chunk Config',
+    description: 'Fine-tune chunk size and overlap to optimize retrieval for your specific documents and use case.',
+    gradient: 'from-amber-500/20 to-orange-500/20',
+    iconColor: 'text-amber-400',
+  },
+  {
+    icon: Upload,
+    title: 'Simple File Upload',
+    description: 'Just drag and drop your documents. PDFs, Markdown, Word, text files — we handle them all.',
+    gradient: 'from-green-500/20 to-emerald-500/20',
+    iconColor: 'text-green-400',
   },
   {
     icon: Zap,
-    title: 'Lightning Fast Processing',
-    description: 'Process thousands of documents in minutes with our optimized parallel processing engine.',
-    gradient: 'from-yellow-500 to-orange-500',
+    title: 'Instant Chatbots',
+    description: 'From file upload to deployed chatbot in minutes. No ML expertise required.',
+    gradient: 'from-rose-500/20 to-pink-500/20',
+    iconColor: 'text-rose-400',
   },
   {
     icon: Shield,
     title: 'Enterprise Security',
-    description: 'Bank-grade encryption and compliance with SOC 2, HIPAA, and GDPR standards.',
-    gradient: 'from-green-500 to-emerald-500',
+    description: 'SOC 2 compliant with data encryption at rest and in transit. Your data stays yours.',
+    gradient: 'from-slate-500/20 to-slate-400/20',
+    iconColor: 'text-slate-400',
   },
-  {
-    icon: BarChart3,
-    title: 'Rich Analytics',
-    description: 'Visualize trends, patterns, and anomalies with interactive dashboards and reports.',
-    gradient: 'from-red-500 to-rose-500',
-  },
-  {
-    icon: Globe,
-    title: 'Multi-Language Support',
-    description: 'Analyze documents in 50+ languages with automatic translation and context preservation.',
-    gradient: 'from-indigo-500 to-violet-500',
-  },
+];
+
+const providers = [
+  { name: 'OpenAI', type: 'LLM & Embeddings' },
+  { name: 'Anthropic', type: 'LLM' },
+  { name: 'Google AI', type: 'LLM & Embeddings' },
+  { name: 'Cohere', type: 'LLM & Embeddings' },
+  { name: 'Mistral', type: 'LLM' },
+  { name: 'Voyage AI', type: 'Embeddings' },
 ];
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.1 },
   },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
 export function Features() {
   return (
-    <section id="features" className="py-16 sm:py-24 lg:py-32 relative">
-      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8">
+    <section id="features" className="py-24 sm:py-32 lg:py-40 relative">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10 sm:mb-16 lg:mb-20"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full glass mb-4 sm:mb-6">
-            <Sparkles className="w-4 h-4 text-primary-400" />
-            <span className="text-xs sm:text-sm font-medium text-slate-300">Powerful Features</span>
-          </div>
-          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
-            <span className="text-white">Everything You Need to </span>
-            <span className="gradient-text">Unlock Your Data</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+            <span className="text-white">Full flexibility </span>
+            <span className="gradient-text">to build your way</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 px-2">
-            Our comprehensive suite of AI-powered tools gives you complete control
-            over your document intelligence workflow.
+          <p className="max-w-2xl mx-auto text-lg text-slate-400">
+            No more vendor lock-in. Choose the best LLM, embeddings, and configuration for your needs.
           </p>
         </motion.div>
 
@@ -97,106 +102,61 @@ export function Features() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid xs:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-20"
         >
           {features.map((feature) => (
             <motion.div
               key={feature.title}
               variants={itemVariants}
+              whileHover={{ y: -4, scale: 1.01 }}
               className="group relative"
             >
-              <div className="card-glow rounded-xl sm:rounded-2xl h-full">
-                <div className="relative z-10 p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl glass h-full transition-all duration-300 group-hover:bg-white/10">
-                  {/* Icon */}
-                  <div className="mb-4 sm:mb-6 relative">
-                    <div
-                      className={cn(
-                        'w-12 sm:w-14 h-12 sm:h-14 rounded-lg sm:rounded-xl flex items-center justify-center',
-                        'bg-gradient-to-br',
-                        feature.gradient
-                      )}
-                    >
-                      <feature.icon className="w-6 sm:w-7 h-6 sm:h-7 text-white" />
-                    </div>
-                    <div
-                      className={cn(
-                        'absolute inset-0 rounded-lg sm:rounded-xl blur-xl opacity-40',
-                        'bg-gradient-to-br',
-                        feature.gradient
-                      )}
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-2 sm:mb-3">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm lg:text-base text-slate-400 leading-relaxed">
-                    {feature.description}
-                  </p>
+              <div className="relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03] transition-all duration-500 h-full">
+                {/* Icon */}
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                  <feature.icon className={`w-6 h-6 ${feature.iconColor}`} />
                 </div>
+                
+                <h3 className="text-lg font-semibold text-white mb-3 group-hover:text-primary-300 transition-colors">
+                  {feature.title}
+                </h3>
+                
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
             </motion.div>
           ))}
         </motion.div>
 
-        {/* Bottom Feature Highlight */}
+        {/* Providers Showcase */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mt-12 sm:mt-16 lg:mt-20"
+          className="relative"
         >
-          <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden glass">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-transparent to-accent-500/10" />
-            <div className="relative p-5 xs:p-6 sm:p-10 lg:p-16">
-              <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 border border-primary-500/20 mb-4 sm:mb-6">
-                    <Lock className="w-3 sm:w-4 h-3 sm:h-4 text-primary-400" />
-                    <span className="text-xs sm:text-sm font-medium text-primary-300">Enterprise Ready</span>
-                  </div>
-                  <h3 className="text-xl xs:text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6">
-                    Built for Scale, Designed for Security
-                  </h3>
-                  <p className="text-sm sm:text-base lg:text-lg text-slate-400 mb-6 sm:mb-8">
-                    From startups to Fortune 500 companies, our platform scales with your needs
-                    while maintaining the highest security standards.
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
-                    {[
-                      { value: '99.99%', label: 'Uptime SLA' },
-                      { value: '<100ms', label: 'API Response' },
-                      { value: 'SOC 2', label: 'Certified' },
-                      { value: '256-bit', label: 'Encryption' },
-                    ].map((stat) => (
-                      <div key={stat.label}>
-                        <div className="text-lg xs:text-xl sm:text-2xl font-bold text-white">{stat.value}</div>
-                        <div className="text-xs sm:text-sm text-slate-500">{stat.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="relative hidden sm:block">
-                  <div className="aspect-square rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 p-4 sm:p-6 lg:p-8">
-                    <div className="h-full rounded-lg sm:rounded-xl border border-white/10 bg-slate-900/50 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="w-16 sm:w-20 lg:w-24 h-16 sm:h-20 lg:h-24 mx-auto mb-4 sm:mb-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-                          <Shield className="w-8 sm:w-10 lg:w-12 h-8 sm:h-10 lg:h-12 text-white" />
-                        </div>
-                        <div className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-1 sm:mb-2">
-                          Enterprise Grade
-                        </div>
-                        <div className="text-xs sm:text-sm text-slate-400">
-                          Security & Compliance
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="text-center mb-10">
+            <h3 className="text-xl font-semibold text-white mb-2">Supported Providers</h3>
+            <p className="text-slate-400">Integrate with the best AI providers in the industry</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {providers.map((provider, index) => (
+              <motion.div
+                key={provider.name}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -2, scale: 1.02 }}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.04] transition-all cursor-default"
+              >
+                <span className="text-sm font-medium text-white">{provider.name}</span>
+                <span className="text-xs text-slate-500">{provider.type}</span>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
       </div>

@@ -1,171 +1,161 @@
 import { motion } from 'framer-motion';
-import { Upload, Cpu, Search, Lightbulb } from 'lucide-react';
-import { cn } from '../lib/utils';
-import { useScrollTo } from '../lib/useScrollTo';
+import { Upload, Settings, Brain, Share2 } from 'lucide-react';
 
 const steps = [
   {
-    icon: Upload,
     number: '01',
-    title: 'Upload Your Documents',
-    description: 'Drag and drop your files or connect your existing data sources. We support PDFs, Word docs, images, and 50+ formats.',
-    color: 'primary',
+    icon: Upload,
+    title: 'Upload Knowledge',
+    description: 'Drag and drop your documents — PDFs, docs, markdown, or text files. We handle the parsing.',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10',
+    borderColor: 'border-blue-500/20',
   },
   {
-    icon: Cpu,
     number: '02',
-    title: 'AI Processing',
-    description: 'Our advanced AI models analyze, extract, and structure your data with industry-leading accuracy.',
-    color: 'accent',
+    icon: Settings,
+    title: 'Configure Your Stack',
+    description: 'Choose your LLM (GPT-4, Claude, Gemini...), embedding model, chunk size, and overlap settings.',
+    color: 'text-violet-400',
+    bgColor: 'bg-violet-500/10',
+    borderColor: 'border-violet-500/20',
   },
   {
-    icon: Search,
     number: '03',
-    title: 'Semantic Search',
-    description: 'Ask questions in natural language. Our AI understands context and finds relevant information instantly.',
-    color: 'primary',
+    icon: Brain,
+    title: 'Train Your Chatbot',
+    description: 'We automatically process your documents, create embeddings, and set up your RAG pipeline.',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-500/10',
+    borderColor: 'border-amber-500/20',
   },
   {
-    icon: Lightbulb,
     number: '04',
-    title: 'Actionable Insights',
-    description: 'Get summaries, analytics, and recommendations that drive smarter business decisions.',
-    color: 'accent',
+    icon: Share2,
+    title: 'Deploy & Share',
+    description: 'Get an API endpoint or embed the chat widget on your site. Share with your team instantly.',
+    color: 'text-green-400',
+    bgColor: 'bg-green-500/10',
+    borderColor: 'border-green-500/20',
   },
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+};
+
 export function HowItWorks() {
-  const { scrollTo } = useScrollTo();
-
   return (
-    <section id="how-it-works" className="py-16 sm:py-24 lg:py-32 relative overflow-hidden">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary-950/50 to-transparent" />
-
-      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8 relative">
+    <section id="how-it-works" className="py-24 sm:py-32 lg:py-40 relative">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10 sm:mb-16 lg:mb-20"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
         >
-          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
-            <span className="text-white">How It </span>
-            <span className="gradient-text">Works</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+            <span className="text-white">From docs to chatbot </span>
+            <span className="gradient-text">in 4 steps</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 px-2">
-            Get started in minutes. Our streamlined workflow takes you from raw documents
-            to actionable insights effortlessly.
+          <p className="max-w-xl mx-auto text-lg text-slate-400">
+            Building an AI chatbot has never been simpler.
           </p>
         </motion.div>
 
         {/* Steps */}
-        <div className="relative">
-          {/* Connection Line */}
-          <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary-500/30 to-transparent -translate-y-1/2" />
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="relative"
+        >
+          {/* Connecting Line - Desktop */}
+          <div className="hidden lg:block absolute top-1/2 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-          <div className="grid xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
             {steps.map((step, index) => (
               <motion.div
-                key={step.number}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.15 }}
+                key={step.title}
+                variants={itemVariants}
+                whileHover={{ y: -4 }}
                 className="relative group"
               >
-                {/* Card */}
-                <div className="relative z-10 p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl glass transition-all duration-300 group-hover:bg-white/10 h-full">
-                  {/* Number Badge */}
-                  <div className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center">
-                    <span className="text-xs sm:text-sm font-bold text-slate-400">{step.number}</span>
-                  </div>
+                {/* Step Number */}
+                <div className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-slate-900 border border-white/10 z-10">
+                  <span className={`text-xs font-mono font-medium ${step.color}`}>
+                    {step.number}
+                  </span>
+                </div>
 
+                <div className={`relative p-6 pt-8 rounded-2xl bg-white/[0.02] border ${step.borderColor} hover:border-opacity-50 hover:bg-white/[0.03] transition-all duration-500 h-full`}>
                   {/* Icon */}
-                  <div className="mb-4 sm:mb-6">
-                    <div
-                      className={cn(
-                        'w-12 sm:w-14 lg:w-16 h-12 sm:h-14 lg:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center relative',
-                        step.color === 'primary'
-                          ? 'bg-primary-500/10 border border-primary-500/20'
-                          : 'bg-accent-500/10 border border-accent-500/20'
-                      )}
-                    >
-                      <step.icon
-                        className={cn(
-                          'w-6 sm:w-7 lg:w-8 h-6 sm:h-7 lg:h-8',
-                          step.color === 'primary' ? 'text-primary-400' : 'text-accent-400'
-                        )}
-                      />
-                      <motion.div
-                        animate={{
-                          scale: [1, 1.2, 1],
-                          opacity: [0.5, 0.2, 0.5],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                        className={cn(
-                          'absolute inset-0 rounded-xl sm:rounded-2xl',
-                          step.color === 'primary' ? 'bg-primary-500/20' : 'bg-accent-500/20'
-                        )}
-                      />
-                    </div>
+                  <div className={`w-14 h-14 rounded-xl ${step.bgColor} border ${step.borderColor} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                    <step.icon className={`w-7 h-7 ${step.color}`} />
                   </div>
-
-                  {/* Content */}
-                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white mb-2 sm:mb-3">
+                  
+                  <h3 className="text-lg font-semibold text-white mb-3">
                     {step.title}
                   </h3>
-                  <p className="text-xs sm:text-sm lg:text-base text-slate-400 leading-relaxed">
+                  
+                  <p className="text-slate-400 text-sm leading-relaxed">
                     {step.description}
                   </p>
                 </div>
 
-                {/* Arrow for desktop */}
+                {/* Arrow for desktop - between cards */}
                 {index < steps.length - 1 && (
-                  <div className="hidden lg:flex absolute top-1/2 -right-4 transform -translate-y-1/2 z-20">
-                    <motion.div
-                      animate={{ x: [0, 5, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                      className="w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center"
-                    >
-                      <svg
-                        className="w-4 h-4 text-primary-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
+                  <div className="hidden lg:flex absolute top-1/2 -right-3 transform -translate-y-1/2 z-20">
+                    <div className="w-6 h-6 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                    </motion.div>
+                    </div>
                   </div>
                 )}
               </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {/* CTA Button */}
+        {/* Example Config */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="text-center mt-10 sm:mt-16"
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="mt-16 max-w-xl mx-auto"
         >
-          <button onClick={() => scrollTo('pricing')} className="btn-primary inline-flex min-h-[48px] items-center">
-            <span className="relative z-10">Get Started Now</span>
-          </button>
+          <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-medium text-white">Example Configuration</span>
+              <span className="text-xs text-slate-500 font-mono">oprag.yaml</span>
+            </div>
+            <pre className="text-sm font-mono overflow-x-auto">
+              <code className="text-slate-400">
+                <span className="text-slate-500"># Your chatbot config</span>{'\n'}
+                <span className="text-primary-400">llm</span>: <span className="text-green-400">gpt-4-turbo</span>{'\n'}
+                <span className="text-primary-400">embeddings</span>: <span className="text-green-400">text-embedding-3-small</span>{'\n'}
+                <span className="text-primary-400">chunk_size</span>: <span className="text-amber-400">512</span>{'\n'}
+                <span className="text-primary-400">chunk_overlap</span>: <span className="text-amber-400">50</span>{'\n'}
+                <span className="text-primary-400">knowledge</span>:{'\n'}
+                {'  '}<span className="text-slate-500">- docs/</span>{'\n'}
+                {'  '}<span className="text-slate-500">- faq.md</span>
+              </code>
+            </pre>
+          </div>
         </motion.div>
       </div>
     </section>

@@ -1,55 +1,54 @@
 import { motion } from 'framer-motion';
-import { Star, Quote } from 'lucide-react';
-import { useScrollTo } from '../lib/useScrollTo';
+import { Star } from 'lucide-react';
 
 const testimonials = [
   {
-    content: "NexusAI has completely transformed how we handle legal documents. What used to take our team days now takes minutes. The accuracy is remarkable.",
+    quote: "Oprag.ai gave us the freedom to use Claude for our enterprise chatbot while keeping our embedding pipeline on OpenAI. Perfect flexibility.",
     author: 'Sarah Chen',
-    role: 'General Counsel',
-    company: 'TechVentures Inc.',
+    role: 'CTO',
+    company: 'TechFlow',
     avatar: 'SC',
-    gradient: 'from-blue-500 to-cyan-500',
+    gradient: 'from-blue-500/20 to-cyan-500/20',
   },
   {
-    content: "The semantic search feature is a game-changer. I can ask complex questions about our research papers and get instant, relevant answers. It's like having a research assistant that never sleeps.",
-    author: 'Dr. Michael Torres',
-    role: 'Head of Research',
-    company: 'BioGenetics Lab',
-    avatar: 'MT',
-    gradient: 'from-purple-500 to-pink-500',
+    quote: "The chunking configuration was a game-changer. We optimized our chunk overlap and saw a 40% improvement in answer relevance.",
+    author: 'Michael Roberts',
+    role: 'AI Engineer',
+    company: 'DataScale',
+    avatar: 'MR',
+    gradient: 'from-purple-500/20 to-pink-500/20',
   },
   {
-    content: "We processed over 100,000 customer contracts in a single week. The insights we gained helped us identify $2M in revenue opportunities. ROI was immediate.",
-    author: 'Jennifer Walsh',
-    role: 'VP of Operations',
-    company: 'GlobalTrade Co.',
-    avatar: 'JW',
-    gradient: 'from-orange-500 to-red-500',
+    quote: "We went from idea to production chatbot in under 2 hours. Just uploaded our docs, picked GPT-4, and deployed. Incredible.",
+    author: 'Emily Watson',
+    role: 'Product Lead',
+    company: 'InnovateCo',
+    avatar: 'EW',
+    gradient: 'from-green-500/20 to-emerald-500/20',
   },
   {
-    content: "Security was our top concern. NexusAI's enterprise features and SOC 2 compliance gave us the confidence to move forward. Implementation was seamless.",
-    author: 'Robert Kim',
-    role: 'CISO',
-    company: 'SecureBank Financial',
-    avatar: 'RK',
-    gradient: 'from-green-500 to-emerald-500',
+    quote: "Being able to switch between LLM providers without code changes saved us thousands in testing different models.",
+    author: 'James Park',
+    role: 'VP Engineering',
+    company: 'CloudFirst',
+    avatar: 'JP',
+    gradient: 'from-orange-500/20 to-amber-500/20',
   },
   {
-    content: "The API integration was incredibly smooth. We had NexusAI powering our document workflow within a day. Their developer docs are top-notch.",
-    author: 'Alex Rivera',
-    role: 'Lead Engineer',
-    company: 'StartupFlow',
-    avatar: 'AR',
-    gradient: 'from-indigo-500 to-violet-500',
+    quote: "Our customer support team loves their new AI assistant. Setup was so simple even our non-technical staff could configure it.",
+    author: 'Lisa Martinez',
+    role: 'Customer Success',
+    company: 'SupportPro',
+    avatar: 'LM',
+    gradient: 'from-red-500/20 to-rose-500/20',
   },
   {
-    content: "Our customer support team reduced response times by 60% using NexusAI to search our knowledge base. Customer satisfaction scores are at an all-time high.",
-    author: 'Emily Chang',
-    role: 'Customer Success Director',
-    company: 'ServicePro',
-    avatar: 'EC',
-    gradient: 'from-pink-500 to-rose-500',
+    quote: "The ability to use Cohere embeddings with Anthropic's Claude is exactly what we needed. Oprag.ai makes it effortless.",
+    author: 'David Kim',
+    role: 'ML Engineer',
+    company: 'AILabs',
+    avatar: 'DK',
+    gradient: 'from-indigo-500/20 to-violet-500/20',
   },
 ];
 
@@ -57,105 +56,79 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.08 },
   },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
 export function Testimonials() {
-  const { scrollTo } = useScrollTo();
-
   return (
-    <section id="testimonials" className="py-16 sm:py-24 lg:py-32 relative">
-      <div className="max-w-7xl mx-auto px-4 xs:px-6 sm:px-8 lg:px-8">
+    <section id="testimonials" className="py-24 sm:py-32 lg:py-40 relative">
+      <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10 sm:mb-16 lg:mb-20"
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
         >
-          <h2 className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
-            <span className="text-white">Loved by Teams </span>
-            <span className="gradient-text">Worldwide</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+            <span className="text-white">Loved by </span>
+            <span className="gradient-text">builders</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-sm sm:text-base lg:text-lg text-slate-400 px-2">
-            See what industry leaders are saying about their experience with NexusAI.
+          <p className="max-w-xl mx-auto text-lg text-slate-400">
+            See how teams are building smarter AI chatbots with Oprag.ai
           </p>
         </motion.div>
 
-        {/* Testimonials Grid */}
+        {/* Testimonial Grid */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {testimonials.map((testimonial, index) => (
+          {testimonials.map((testimonial) => (
             <motion.div
               key={testimonial.author}
               variants={itemVariants}
-              className={`group ${index === 1 ? 'lg:translate-y-8' : ''} ${index === 4 ? 'lg:translate-y-8' : ''}`}
+              whileHover={{ y: -4, scale: 1.01 }}
+              className="group relative"
             >
-              <div className="relative h-full p-4 sm:p-5 lg:p-6 rounded-xl sm:rounded-2xl glass transition-all duration-300 hover:bg-white/10">
-                {/* Quote Icon */}
-                <div className="absolute -top-2 -left-2 sm:-top-3 sm:-left-3 w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-primary-500/20 to-accent-500/20 border border-white/10 flex items-center justify-center">
-                  <Quote className="w-3 sm:w-4 h-3 sm:h-4 text-primary-400" />
-                </div>
-
+              <div className="relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] hover:bg-white/[0.03] transition-all duration-500 h-full flex flex-col">
                 {/* Stars */}
-                <div className="flex items-center gap-0.5 sm:gap-1 mb-3 sm:mb-4 pt-2">
+                <div className="flex gap-1 mb-4">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 sm:w-4 h-3 sm:h-4 fill-yellow-500 text-yellow-500" />
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
 
-                {/* Content */}
-                <p className="text-xs sm:text-sm lg:text-base text-slate-300 leading-relaxed mb-4 sm:mb-6">
-                  "{testimonial.content}"
-                </p>
+                {/* Quote */}
+                <blockquote className="text-slate-300 leading-relaxed mb-6 flex-grow">
+                  "{testimonial.quote}"
+                </blockquote>
 
                 {/* Author */}
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div
-                    className={`w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center text-white text-sm sm:text-base font-semibold flex-shrink-0`}
-                  >
-                    {testimonial.avatar}
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${testimonial.gradient} flex items-center justify-center`}>
+                    <span className="text-sm font-medium text-white">{testimonial.avatar}</span>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-white text-sm sm:text-base truncate">{testimonial.author}</div>
-                    <div className="text-xs sm:text-sm text-slate-400 truncate">
-                      {testimonial.role}, {testimonial.company}
+                  <div>
+                    <div className="font-medium text-white text-sm">{testimonial.author}</div>
+                    <div className="text-xs text-slate-500">
+                      {testimonial.role} at {testimonial.company}
                     </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-12 sm:mt-16 lg:mt-20 text-center"
-        >
-          <p className="text-sm sm:text-base text-slate-400 mb-6">
-            Join thousands of satisfied customers
-          </p>
-          <button onClick={() => scrollTo('pricing')} className="btn-primary inline-flex min-h-[48px] items-center">
-            <span className="relative z-10">Get Started Today</span>
-          </button>
         </motion.div>
       </div>
     </section>
