@@ -60,6 +60,28 @@ Page 2 content here.`;
       const chunks = chunkDocumentSync(text, { chunkSize: 30 });
       expect(chunks.length).toBeGreaterThan(0);
     });
+
+    it('should add whitespace separator when overlap does not end with whitespace', () => {
+      // Create text that will be split into chunks where overlap concatenation needs a space
+      const text = 'First paragraph ends here.\n\nSecond paragraph starts here.\n\nThird paragraph follows.';
+      const chunks = chunkDocumentSync(text, { chunkSize: 40, chunkOverlap: 10, preprocess: false });
+
+      // Check that chunks with overlap don't have malformed concatenation like "here.Second"
+      for (const chunk of chunks) {
+        // Should not have period immediately followed by capital letter without space
+        expect(chunk).not.toMatch(/\.[A-Z]/);
+      }
+    });
+
+    it('should not add extra whitespace when overlap already ends with whitespace', () => {
+      const text = 'Word one \n\nWord two \n\nWord three';
+      const chunks = chunkDocumentSync(text, { chunkSize: 20, chunkOverlap: 5, preprocess: false });
+
+      // Should not have double spaces
+      for (const chunk of chunks) {
+        expect(chunk).not.toMatch(/  /);
+      }
+    });
   });
 
   describe('chunkDocumentWithMetadata', () => {

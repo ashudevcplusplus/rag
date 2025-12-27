@@ -216,7 +216,9 @@ export function chunkDocumentSync(text: string, options: DocumentChunkOptions = 
     if (i === 0 || overlap === 0) return trimChunks ? chunk.trim() : chunk;
     const prev = chunks[i - 1];
     const overlapText = prev.slice(-overlap);
-    const result = overlapText + chunk;
+    // Add space separator if overlap doesn't end with whitespace and chunk doesn't start with whitespace
+    const needsSeparator = overlapText.length > 0 && !/\s$/.test(overlapText) && !/^\s/.test(chunk);
+    const result = needsSeparator ? overlapText + ' ' + chunk : overlapText + chunk;
     return trimChunks ? result.trim() : result;
   });
 }
