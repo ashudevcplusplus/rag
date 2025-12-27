@@ -421,23 +421,30 @@ export function preprocessText(text: string, options: PreprocessorOptions = {}):
         const prev = parts[i - 1];
         const curr = parts[i];
         
-        // Find potential duplicate text at start of current section
-        // We look for the first non-empty line
-        const firstLineMatch = curr.match(/^\s*([^\n]+)/);
-        if (firstLineMatch) {
-          const candidate = firstLineMatch[1];
-          // Only check if candidate is long enough (matches original regex {20,})
-          if (candidate.length >= 20) {
-             // Check if previous section ends with this candidate (ignoring trailing whitespace)
-             if (prev.trimEnd().endsWith(candidate)) {
-               // Remove the duplicate from the start of the current section
-               // We find where the candidate ends in the current section
-               const matchIndex = curr.indexOf(candidate);
-               if (matchIndex !== -1) {
-                 parts[i] = curr.substring(matchIndex + candidate.length);
-               }
-             }
+        // Get the end of previous section (trimmed, last 500 chars max for efficiency)
+        const prevTrimmed = prev.trimEnd();
+        const prevEnd = prevTrimmed.slice(-500);
+        
+        // Get the start of current section (trimmed, first 500 chars max)
+        const currTrimmed = curr.trimStart();
+        const currStart = currTrimmed.slice(0, 500);
+        
+        // Find the longest common overlap (suffix of prev == prefix of curr)
+        // Iterate from max possible down to minimum (20) - first match is longest
+        const maxLen = Math.min(prevEnd.length, currStart.length);
+        let overlapLen = 0;
+        for (let len = maxLen; len >= 20; len--) {
+          const suffix = prevEnd.slice(-len);
+          const prefix = currStart.slice(0, len);
+          if (suffix === prefix) {
+            overlapLen = len;
+            break; // Found longest overlap
           }
+        }
+        
+        // If we found an overlap >= 20 chars, remove it from the current section
+        if (overlapLen >= 20) {
+          parts[i] = curr.trimStart().slice(overlapLen);
         }
       }
       result = parts.join(marker);
