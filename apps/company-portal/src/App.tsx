@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { configureApiClient } from '@rag/api-client';
+import { Spinner } from '@rag/ui';
 import { useAuthStore } from './store/auth.store';
 
 // Layouts
@@ -25,8 +26,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <Spinner size="lg" />
+        <p className="text-sm font-medium text-gray-600">Loading your workspace…</p>
       </div>
     );
   }

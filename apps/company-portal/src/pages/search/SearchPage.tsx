@@ -22,6 +22,7 @@ import {
   Button,
   EmptyState,
   Badge,
+  Select,
 } from '@rag/ui';
 import { Textarea } from '@rag/ui';
 import { searchApi, projectsApi } from '@rag/api-client';
@@ -36,6 +37,9 @@ export function SearchPage() {
   const navigate = useNavigate();
   const { companyId } = useAuthStore();
   const { incrementSearchCount, addActivity } = useAppStore();
+
+  const isMac = navigator.platform.toUpperCase().includes('MAC');
+  const modEnterLabel = isMac ? '⌘+Enter' : 'Ctrl+Enter';
 
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(10);
@@ -187,7 +191,7 @@ export function SearchPage() {
         <CardContent className="p-6">
           <form onSubmit={handleSearch} className="space-y-4">
             <Textarea
-              placeholder="Enter your search query... (Ctrl+Enter to search)"
+              placeholder={`Enter your search query... (${modEnterLabel} to search)`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -200,32 +204,38 @@ export function SearchPage() {
                 {/* Project Filter */}
                 <div className="flex items-center gap-2">
                   <FolderOpen className="w-4 h-4 text-gray-400" />
-                  <select
-                    value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm bg-white"
-                  >
-                    <option value="">All Projects</option>
-                    {projects.map((project) => (
-                      <option key={project._id} value={project._id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-52">
+                    <Select
+                      uiSize="sm"
+                      aria-label="Project filter"
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                    >
+                      <option value="">All Projects</option>
+                      {projects.map((project) => (
+                        <option key={project._id} value={project._id}>
+                          {project.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-600">Results:</label>
-                  <select
-                    value={limit}
-                    onChange={(e) => setLimit(Number(e.target.value))}
-                    className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
+                  <div className="w-24">
+                    <Select
+                      uiSize="sm"
+                      aria-label="Results per page"
+                      value={String(limit)}
+                      onChange={(e) => setLimit(Number(e.target.value))}
+                    >
+                      <option value="5">5</option>
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                    </Select>
+                  </div>
                 </div>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -450,7 +460,7 @@ export function SearchPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600">•</span>
-                Press Ctrl+Enter to quickly search
+                Press {modEnterLabel} to quickly search
               </li>
             </ul>
           </CardContent>

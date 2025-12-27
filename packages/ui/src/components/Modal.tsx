@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useMemo, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../utils';
 import { Button } from './Button';
@@ -33,6 +33,31 @@ export const Modal: React.FC<ModalProps> = ({
   size = 'md',
   showCloseButton = true,
 }) => {
+  const reactId = useId();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  const { titleId, descriptionId } = useMemo(() => {
+    return {
+      titleId: title ? `modal-${reactId}-title` : undefined,
+      descriptionId: description ? `modal-${reactId}-description` : undefined,
+    };
+  }, [description, reactId, title]);
+
+  const getFocusableElements = (container: HTMLElement) => {
+    const selector = [
+      'a[href]',
+      'button:not([disabled])',
+      'textarea:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+    return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
+      (el) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden')
+    );
+  };
+
   // Handle escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -44,6 +69,57 @@ export const Modal: React.FC<ModalProps> = ({
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
+
+  // Focus management + simple focus trap
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+
+    // Focus the first focusable element (or the dialog itself)
+    window.setTimeout(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusables = getFocusableElements(dialog);
+      (focusables[0] ?? dialog).focus();
+    }, 0);
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      const focusables = getFocusableElements(dialog);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (!active || active === first || !dialog.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (!active || active === last || !dialog.contains(active)) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => {
+      document.removeEventListener('keydown', handleTab);
+      previouslyFocusedRef.current?.focus?.();
+      previouslyFocusedRef.current = null;
+    };
+  }, [isOpen]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -71,13 +147,16 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal container */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
+          ref={dialogRef}
           className={cn(
             'relative w-full bg-white rounded-xl shadow-xl transform transition-all',
             sizeClasses[size]
           )}
           role="dialog"
           aria-modal="true"
-          aria-labelledby={title ? 'modal-title' : undefined}
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          tabIndex={-1}
         >
           {/* Header */}
           {(title || showCloseButton) && (
@@ -85,14 +164,16 @@ export const Modal: React.FC<ModalProps> = ({
               <div>
                 {title && (
                   <h2
-                    id="modal-title"
+                    id={titleId}
                     className="text-lg font-semibold text-gray-900"
                   >
                     {title}
                   </h2>
                 )}
                 {description && (
-                  <p className="mt-1 text-sm text-gray-500">{description}</p>
+                  <p id={descriptionId} className="mt-1 text-sm text-gray-500">
+                    {description}
+                  </p>
                 )}
               </div>
               {showCloseButton && (
