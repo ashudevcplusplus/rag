@@ -1,0 +1,68 @@
+# =============================================================================
+# Docker Ignore - Speeds up Docker builds by excluding unnecessary files
+# =============================================================================
+
+# Dependencies (will be installed in container)
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+.next
+**/.next
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.Python
+env
+venv
+.venv
+*.egg-info
+
+# Testing
+coverage
+**/coverage
+.nyc_output
+**/.nyc_output
+
+# Logs
+*.log
+logs
+**/logs
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.*.local
+
+# Documentation (not needed in container)
+*.md
+!README.md
+docs
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+**/.cache
+
+# Misc
+*.tgz
+*.tar.gz
+.sst
+

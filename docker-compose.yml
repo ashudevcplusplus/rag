@@ -1,3 +1,14 @@
+# =============================================================================
+# RAG Production Docker Compose
+# =============================================================================
+# Production-ready configuration with optimized builds
+#
+# For DEVELOPMENT with hot-reload, use:
+#   make dev
+#   OR
+#   docker compose -f docker-compose.dev.yml up
+# =============================================================================
+
 services:
   qdrant:
     image: qdrant/qdrant:latest
@@ -9,25 +20,13 @@ services:
     volumes:
       - qdrant_storage:/qdrant/storage
 
-  embed:
-    build: ./embed
-    restart: unless-stopped
-    ports:
-      - "5001:5001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    volumes:
-      - ./embed:/app
-    command: uvicorn app:app --host 0.0.0.0 --port 5001 --reload
-
   redis:
     image: redis:alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
+    volumes:
+      - redis_storage:/data
 
   mongodb:
     image: mongo:7
@@ -40,6 +39,17 @@ services:
       - MONGO_INITDB_DATABASE=rag_db
     volumes:
       - mongodb_storage:/data/db
+
+  embed:
+    build: ./embed
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   api:
     build: ./api
@@ -57,29 +67,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/rag_db?authSource=admin
-      # Embeddings Configuration
-      # Provider options: 'inhouse' (default), 'openai', or 'gemini'
       - EMBEDDING_PROVIDER=inhouse
-      # Legacy: Set INHOUSE_EMBEDDINGS=false to use OpenAI (deprecated, use EMBEDDING_PROVIDER instead)
       - INHOUSE_EMBEDDINGS=true
-      
-      # OpenAI Embeddings Configuration (optional)
-      # - OPENAI_API_KEY=your-openai-api-key-here
-      # - OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-      
-      # Gemini Embeddings Configuration (optional)
-      # - GEMINI_API_KEY=your-google-api-key-here
-      # - GEMINI_EMBEDDING_MODEL=text-embedding-004
-      # Available models: text-embedding-004, text-embedding-005, gemini-embedding-001, multimodalembedding@001
-      # For gemini-embedding-001, you can specify output dimensionality (768, 1536, 3072)
-      # - GEMINI_EMBEDDING_DIMENSIONS=768
     volumes:
       - ./data:/app/data
-      - ./api:/app
-      - /app/node_modules
-    command: npm run dev
 
 volumes:
   qdrant_storage:
+  redis_storage:
   mongodb_storage:
-

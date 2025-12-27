@@ -92,6 +92,9 @@ Thumbs.db
 *.dll
 *.exe
 
+# SST (Serverless Stack)
+.sst/
+
 # Misc
 .cache/
 .temp/

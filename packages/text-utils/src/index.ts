@@ -58,6 +58,7 @@ export {
   isSupportedMimeType,
   getExtensionFromMimeType,
   getMimeTypeFromExtension,
+  type PDFExtractionOptions,
 } from './extractor';
 
 // ============================================================================
@@ -78,3 +79,38 @@ export {
   isMostlyAscii,
   generateContentHash,
 } from './normalizer';
+
+// ============================================================================
+// Text Preprocessing Utilities (Multi-format document cleanup)
+// ============================================================================
+export {
+  preprocessText,
+  createPreprocessor,
+  detectSourceFormat,
+  isTabularContent,
+  extractMetrics,
+  extractFinancialMetrics,
+  similarityRatio,
+  // Pre-built preprocessors
+  pdfPreprocessor,
+  htmlPreprocessor,
+  markdownPreprocessor,
+  emailPreprocessor,
+  codePreprocessor,
+  textPreprocessor,
+  type PreprocessorOptions,
+  type SourceFormat,
+} from './preprocessor';
+
+// ============================================================================
+// Document-Aware Chunking (Tables, Financial Docs, etc.)
+// ============================================================================
+export {
+  chunkDocument,
+  chunkDocumentSync,
+  chunkDocumentWithMetadata,
+  type DocumentType,
+  type DocumentChunkOptions,
+  type DocumentChunkMetadata,
+  type DocumentChunk,
+} from './document-chunker';

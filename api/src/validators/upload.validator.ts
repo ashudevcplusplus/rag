@@ -47,6 +47,17 @@ const ALLOWED_MIME_TYPES = [
   'application/json',
   // HTML
   'text/html',
+  // Email
+  'message/rfc822',
+  'application/vnd.ms-outlook',
+  // Code
+  'text/javascript',
+  'application/javascript',
+  'text/typescript',
+  'text/x-python',
+  'text/x-java-source',
+  'text/x-c',
+  'text/x-go',
 ] as const;
 
 // File upload validation
@@ -54,7 +65,7 @@ export const fileUploadSchema = z.object({
   file: z.object({
     mimetype: z.enum(ALLOWED_MIME_TYPES, {
       message:
-        'Unsupported file type. Only document files (PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML) are allowed.',
+        'Unsupported file type. Only document files (PDF, TXT, DOCX, DOC, RTF, ODT, MD, CSV, XML, JSON, HTML, EML, CODE) are allowed.',
     }),
     size: z.number().max(50 * 1024 * 1024, { message: 'File too large (Max 50MB)' }),
     originalname: z.string(),

@@ -4,36 +4,88 @@ import { userRepository } from '../repositories/user.repository';
 import { projectRepository } from '../repositories/project.repository';
 import { SubscriptionTier, UserRole, Visibility } from '../types/enums';
 import { logger } from '../utils/logger';
-import { CreateCompanyDTO } from '../schemas/company.schema';
-import { CreateUserDTO } from '../schemas/user.schema';
-import { CreateProjectDTO } from '../schemas/project.schema';
+import { CreateCompanyDTO, ICompany } from '../schemas/company.schema';
+import { CreateUserDTO, IUser } from '../schemas/user.schema';
+import { CreateProjectDTO, IProject } from '../schemas/project.schema';
 
 // Extended DTOs for seeding with explicit IDs
 type SeedCompanyDTO = CreateCompanyDTO & { _id: string };
 type SeedUserDTO = Omit<CreateUserDTO, 'password'> & { _id: string; passwordHash: string };
 type SeedProjectDTO = CreateProjectDTO & { _id: string };
 
+// Helper function to find or create a company
+async function findOrCreateCompany(
+  seedData: SeedCompanyDTO
+): Promise<{ company: ICompany; created: boolean }> {
+  // Try to find by _id first, then by slug
+  let existing = await companyRepository.findById(seedData._id);
+  if (!existing) {
+    existing = await companyRepository.findBySlug(seedData.slug);
+  }
+
+  if (existing) {
+    logger.info('Company already exists, skipping', {
+      companyId: existing._id,
+      slug: existing.slug,
+    });
+    return { company: existing, created: false };
+  }
+
+  const company = await companyRepository.create(seedData as CreateCompanyDTO & { _id: string });
+  logger.info('Company created', { companyId: company._id, apiKey: company.apiKey });
+  return { company, created: true };
+}
+
+// Helper function to find or create a user
+async function findOrCreateUser(seedData: SeedUserDTO): Promise<{ user: IUser; created: boolean }> {
+  // Try to find by _id first, then by email
+  let existing = await userRepository.findById(seedData._id);
+  if (!existing) {
+    existing = await userRepository.findByEmail(seedData.email);
+  }
+
+  if (existing) {
+    logger.info('User already exists, skipping', { userId: existing._id, email: existing.email });
+    return { user: existing, created: false };
+  }
+
+  const user = await userRepository.create(seedData as SeedUserDTO);
+  logger.info('User created', { userId: user._id, email: user.email });
+  return { user, created: true };
+}
+
+// Helper function to find or create a project
+async function findOrCreateProject(
+  seedData: SeedProjectDTO
+): Promise<{ project: IProject; created: boolean }> {
+  // Try to find by _id first, then by slug within the company
+  let existing = await projectRepository.findById(seedData._id);
+  if (!existing) {
+    existing = await projectRepository.findBySlug(seedData.companyId, seedData.slug);
+  }
+
+  if (existing) {
+    logger.info('Project already exists, skipping', {
+      projectId: existing._id,
+      slug: existing.slug,
+    });
+    return { project: existing, created: false };
+  }
+
+  const project = await projectRepository.create(seedData as CreateProjectDTO & { _id: string });
+  logger.info('Project created', { projectId: project._id, slug: project.slug });
+  return { project, created: true };
+}
+
 async function seed(): Promise<void> {
   try {
-    logger.info('Starting database seed...');
+    logger.info('Starting database seed (additive mode - existing data will be preserved)...');
 
     // Connect to MongoDB
     await database.connect();
 
-    // Drop existing collections to prevent duplicate key errors
-    if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.NODE_ENV === 'test' ||
-      !process.env.NODE_ENV
-    ) {
-      logger.info('Cleaning up existing data...');
-      await companyRepository.model.deleteMany({});
-      await userRepository.model.deleteMany({});
-      await projectRepository.model.deleteMany({});
-    }
-
-    // Create companies
-    logger.info('Creating companies...');
+    // Create companies (only if they don't exist)
+    logger.info('Seeding companies...');
 
     const seedCompany1: SeedCompanyDTO = {
       _id: '507f1f77bcf86cd799439011',
@@ -56,12 +108,10 @@ async function seed(): Promise<void> {
         },
       },
     };
-    const company1 = await companyRepository.create(
-      seedCompany1 as CreateCompanyDTO & { _id: string }
-    );
-    logger.info('Company created', { companyId: company1._id, apiKey: company1.apiKey });
+    const { company: company1 } = await findOrCreateCompany(seedCompany1);
 
-    const company2 = await companyRepository.create({
+    const seedCompany2: SeedCompanyDTO = {
+      _id: '507f1f77bcf86cd799439012',
       name: 'TechStart Inc',
       slug: 'techstart',
       email: 'hello@techstart.io',
@@ -69,11 +119,11 @@ async function seed(): Promise<void> {
       storageLimit: 5368709120, // 5GB
       maxUsers: 10,
       maxProjects: 20,
-    });
-    logger.info('Company created', { companyId: company2._id, apiKey: company2.apiKey });
+    };
+    const { company: company2 } = await findOrCreateCompany(seedCompany2);
 
-    // Create users for company1
-    logger.info('Creating users for Acme Corporation...');
+    // Create users (only if they don't exist)
+    logger.info('Seeding users for Acme Corporation...');
 
     const passwordHash = await userRepository.hashPassword('password123');
 
@@ -92,8 +142,7 @@ async function seed(): Promise<void> {
         canManageUsers: true,
       },
     };
-    const user1 = await userRepository.create(seedUser1 as SeedUserDTO);
-    logger.info('User created', { userId: user1._id, email: user1.email });
+    const { user: user1 } = await findOrCreateUser(seedUser1);
 
     const seedUser2: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439021',
@@ -110,8 +159,7 @@ async function seed(): Promise<void> {
         canManageUsers: false,
       },
     };
-    const user2 = await userRepository.create(seedUser2 as SeedUserDTO);
-    logger.info('User created', { userId: user2._id, email: user2.email });
+    const { user: user2 } = await findOrCreateUser(seedUser2);
 
     const seedUser3: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439022',
@@ -128,11 +176,10 @@ async function seed(): Promise<void> {
         canManageUsers: false,
       },
     };
-    const user3 = await userRepository.create(seedUser3 as SeedUserDTO);
-    logger.info('User created', { userId: user3._id, email: user3.email });
+    const { user: user3 } = await findOrCreateUser(seedUser3);
 
     // Create users for company2
-    logger.info('Creating users for TechStart Inc...');
+    logger.info('Seeding users for TechStart Inc...');
 
     const seedUser4: SeedUserDTO = {
       _id: '507f1f77bcf86cd799439023',
@@ -143,11 +190,10 @@ async function seed(): Promise<void> {
       lastName: 'Wilson',
       role: UserRole.OWNER,
     };
-    const user4 = await userRepository.create(seedUser4 as SeedUserDTO);
-    logger.info('User created', { userId: user4._id, email: user4.email });
+    const { user: user4 } = await findOrCreateUser(seedUser4);
 
-    // Create projects for company1
-    logger.info('Creating projects for Acme Corporation...');
+    // Create projects (only if they don't exist)
+    logger.info('Seeding projects for Acme Corporation...');
 
     const seedProject1: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439030',
@@ -170,10 +216,7 @@ async function seed(): Promise<void> {
         category: 'Documentation',
       },
     };
-    const project1 = await projectRepository.create(
-      seedProject1 as CreateProjectDTO & { _id: string }
-    );
-    logger.info('Project created', { projectId: project1._id, slug: project1.slug });
+    const { project: project1 } = await findOrCreateProject(seedProject1);
 
     const seedProject2: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439031',
@@ -196,10 +239,7 @@ async function seed(): Promise<void> {
         category: 'Knowledge Base',
       },
     };
-    const project2 = await projectRepository.create(
-      seedProject2 as CreateProjectDTO & { _id: string }
-    );
-    logger.info('Project created', { projectId: project2._id, slug: project2.slug });
+    const { project: project2 } = await findOrCreateProject(seedProject2);
 
     const seedProject3: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439032',
@@ -217,13 +257,10 @@ async function seed(): Promise<void> {
         category: 'Confidential',
       },
     };
-    const project3 = await projectRepository.create(
-      seedProject3 as CreateProjectDTO & { _id: string }
-    );
-    logger.info('Project created', { projectId: project3._id, slug: project3.slug });
+    const { project: project3 } = await findOrCreateProject(seedProject3);
 
     // Create projects for company2
-    logger.info('Creating projects for TechStart Inc...');
+    logger.info('Seeding projects for TechStart Inc...');
 
     const seedProject4: SeedProjectDTO = {
       _id: '507f1f77bcf86cd799439033',
@@ -246,18 +283,15 @@ async function seed(): Promise<void> {
         category: 'Technical',
       },
     };
-    const project4 = await projectRepository.create(
-      seedProject4 as CreateProjectDTO & { _id: string }
-    );
-    logger.info('Project created', { projectId: project4._id, slug: project4.slug });
+    const { project: project4 } = await findOrCreateProject(seedProject4);
 
-    logger.info('✅ Database seed completed successfully!');
+    logger.info('✅ Database seed completed successfully (existing data preserved)!');
     logger.info('');
     logger.info('='.repeat(80));
-    logger.info('SEED DATA SUMMARY');
+    logger.info('SEED DATA SUMMARY (created or already existed)');
     logger.info('='.repeat(80));
     logger.info('');
-    logger.info('Companies Created:');
+    logger.info('Companies:');
     logger.info(`  1. ${company1.name} (${company1.slug})`);
     logger.info(`     API Key: ${company1.apiKey}`);
     logger.info(`     Email: ${company1.email}`);
@@ -268,13 +302,13 @@ async function seed(): Promise<void> {
     logger.info(`     Email: ${company2.email}`);
     logger.info(`     Tier: ${company2.subscriptionTier}`);
     logger.info('');
-    logger.info('Users Created (Password: password123):');
+    logger.info('Users (Password for new users: password123):');
     logger.info(`  - ${user1.email} (${user1.role}) - Acme Corporation`);
     logger.info(`  - ${user2.email} (${user2.role}) - Acme Corporation`);
     logger.info(`  - ${user3.email} (${user3.role}) - Acme Corporation`);
     logger.info(`  - ${user4.email} (${user4.role}) - TechStart Inc`);
     logger.info('');
-    logger.info('Projects Created:');
+    logger.info('Projects:');
     logger.info(`  - ${project1.name} (${project1.slug}) - Acme Corporation`);
     logger.info(`  - ${project2.name} (${project2.slug}) - Acme Corporation`);
     logger.info(`  - ${project3.name} (${project3.slug}) - Acme Corporation`);

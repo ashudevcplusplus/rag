@@ -8,7 +8,9 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "import": "./src/index.ts",
+      "require": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
@@ -19,7 +21,8 @@
   "dependencies": {
     "@langchain/textsplitters": "^1.0.1",
     "langchain": "^1.2.3",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "pdf.js-extract": "^0.2.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",

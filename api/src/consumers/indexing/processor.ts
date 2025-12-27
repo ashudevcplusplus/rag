@@ -1,6 +1,12 @@
 import { Job } from 'bullmq';
 import { generateContentHash, generatePointId } from '../../utils/hash.util';
-import { extractText, chunkText } from '../../utils/text-processor';
+import {
+  extractText,
+  chunkText,
+  preprocessText,
+  detectSourceFormat,
+  type SourceFormat,
+} from '../../utils/text-processor';
 import { VectorService, EmbeddingProvider } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
@@ -12,6 +18,43 @@ import { embeddingRepository } from '../../repositories/embedding.repository';
 import { publishStorageUpdate, publishFileCleanup } from '../../utils/async-events.util';
 import { getErrorMessage } from '../../types/error.types';
 import { CONFIG } from '../../config';
+
+/**
+ * Map MIME type to source format for preprocessing
+ */
+function detectSourceFormatFromMimetype(mimetype: string, filename?: string): SourceFormat {
+  // Try to detect from filename first (more accurate for extensions)
+  if (filename) {
+    const detected = detectSourceFormat('', filename);
+    if (detected !== 'text') return detected;
+  }
+
+  // Map MIME types to source formats
+  const mimeMap: Record<string, SourceFormat> = {
+    'application/pdf': 'pdf',
+    'text/html': 'html',
+    'application/xhtml+xml': 'html',
+    'text/markdown': 'markdown',
+    'text/x-markdown': 'markdown',
+    'message/rfc822': 'email',
+    'application/vnd.ms-outlook': 'email',
+    'text/javascript': 'code',
+    'application/javascript': 'code',
+    'text/typescript': 'code',
+    'text/x-python': 'code',
+    'text/x-java': 'code',
+    'text/x-c': 'code',
+    'text/x-go': 'code',
+    'application/json': 'code',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/msword': 'docx',
+    'text/csv': 'csv',
+    'application/csv': 'csv',
+    'text/plain': 'text',
+  };
+
+  return mimeMap[mimetype] || 'text';
+}
 
 export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): Promise<JobResult> {
   const { companyId, fileId, filePath, mimetype, fileSizeMB, embeddingProvider, embeddingModel } =
@@ -54,15 +97,31 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     // 1. Extract
     logger.debug('Extracting text', { jobId: job.id, filePath });
     const rawText = await extractText(filePath, mimetype);
+    await job.updateProgress(20); // 20% - Text extracted
 
-    // 2. Chunk with project settings
+    // 2. Preprocess based on source format
+    const sourceFormat = detectSourceFormatFromMimetype(mimetype, fileMetadata.originalFilename);
+    logger.debug('Preprocessing text', { jobId: job.id, sourceFormat, rawLength: rawText.length });
+    const processedText = preprocessText(rawText, { sourceFormat });
+
+    logger.debug('Text preprocessed', {
+      jobId: job.id,
+      sourceFormat,
+      rawLength: rawText.length,
+      processedLength: processedText.length,
+      reduction: `${Math.round((1 - processedText.length / rawText.length) * 100)}%`,
+    });
+
+    // 3. Chunk with project settings
     logger.debug('Chunking text', { jobId: job.id, chunkSize, chunkOverlap });
-    const chunks = chunkText(rawText, chunkSize, chunkOverlap);
+    const chunks = chunkText(processedText, chunkSize, chunkOverlap);
     await job.updateProgress(30); // 30% - Text ready
 
-    logger.info('Text extracted and chunked', {
+    logger.info('Text extracted, preprocessed, and chunked', {
       jobId: job.id,
-      textLength: rawText.length,
+      sourceFormat,
+      rawTextLength: rawText.length,
+      processedTextLength: processedText.length,
       chunksCount: chunks.length,
     });
 
