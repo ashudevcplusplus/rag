@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { companyRepository } from '../repositories/company.repository';
 import { ICompany } from '../schemas/company.schema';
 import { publishApiKeyTracking } from '../utils/async-events.util';
+import { EventSource } from '../types/enums';
 import { CacheService } from '../services/cache.service';
 
 /**
@@ -102,7 +103,10 @@ export const authenticateRequest = async (
     });
 
     // One-line event publishing
-    void publishApiKeyTracking({ companyId: company._id });
+    void publishApiKeyTracking({
+      source: EventSource.AUTH_MIDDLEWARE,
+      companyId: company._id,
+    });
 
     next();
   } catch (error) {

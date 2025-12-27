@@ -9,7 +9,8 @@ import {
 import { VectorService } from '../services/vector.service';
 import { CacheService } from '../services/cache.service';
 import { fileService } from '../services/file.service';
-import { AnalyticsEventType } from '../types/enums';
+import { ConsistencyCheckService } from '../services/consistency-check.service';
+import { AnalyticsEventType, EventSource } from '../types/enums';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import {
@@ -21,6 +22,9 @@ import {
 } from '../validators/upload.validator';
 import { projectRepository } from '../repositories/project.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
+import { companyRepository } from '../repositories/company.repository';
+import { consumerChangeRepository } from '../repositories/consumer-change.repository';
+import { embeddingRepository } from '../repositories/embedding.repository';
 import { sendNotFoundResponse } from '../utils/response.util';
 import { QdrantFilter, SearchResult, SearchResultPayload } from '../types/vector.types';
 import { asyncHandler } from '../middleware/error.middleware';
@@ -89,6 +93,7 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
 
       // One-line event publishing for each file
       void publishAnalytics({
+        source: EventSource.COMPANY_CONTROLLER_UPLOAD,
         eventType: AnalyticsEventType.UPLOAD,
         companyId,
         projectId,
@@ -115,7 +120,7 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response): Prom
 
   // One-line event publishing for cache invalidation
   if (results.length > 0) {
-    void publishCacheInvalidation({ companyId });
+    void publishCacheInvalidation({ source: EventSource.COMPANY_CONTROLLER_UPLOAD, companyId });
   }
 
   // Return response based on results
@@ -421,8 +426,14 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
   }
 
   // 4. One-line event publishing
-  void publishSearchCache({ cacheKey, results, ttl: 3600 });
+  void publishSearchCache({
+    source: EventSource.COMPANY_CONTROLLER_SEARCH,
+    cacheKey,
+    results,
+    ttl: 3600,
+  });
   void publishAnalytics({
+    source: EventSource.COMPANY_CONTROLLER_SEARCH,
     eventType: AnalyticsEventType.SEARCH,
     companyId,
     metadata: {
@@ -444,36 +455,52 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
   res.json({ results });
 });
 
+/**
+ * Helper to handle consistency job requests
+ * Validates company if provided and publishes the job
+ */
+async function handleConsistencyJob(
+  req: Request,
+  res: Response,
+  jobName: string,
+  publishFn: (companyId?: string) => Promise<string>
+): Promise<void> {
+  const { companyId } = req.params;
+
+  // If companyId is provided, validate it exists
+  if (companyId) {
+    const company = await companyRepository.findById(companyId);
+    if (!company) {
+      logger.warn(`Company not found for ${jobName}`, { companyId });
+      sendNotFoundResponse(res, 'Company');
+      return;
+    }
+  }
+
+  // Publish event
+  const jobId = await publishFn(companyId || undefined);
+
+  logger.info(`${jobName} event published`, {
+    jobId,
+    companyId: companyId || 'all',
+  });
+
+  res.status(202).json({
+    message: `${jobName} event published`,
+    jobId,
+    companyId: companyId || 'all',
+    statusUrl: `/v1/jobs/consistency/${jobId}`,
+  });
+}
+
 export const triggerConsistencyCheck = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { companyId } = req.params;
-
-    // If companyId is provided, validate it exists
-    if (companyId) {
-      const { companyRepository } = await import('../repositories/company.repository');
-      const company = await companyRepository.findById(companyId);
-      if (!company) {
-        logger.warn('Company not found for consistency check', { companyId });
-        sendNotFoundResponse(res, 'Company');
-        return;
-      }
-    }
-
-    // Publish event
-    const { ConsistencyCheckService } = await import('../services/consistency-check.service');
-    const jobId = await ConsistencyCheckService.publishConsistencyCheck(companyId || undefined);
-
-    logger.info('Consistency check event published', {
-      jobId,
-      companyId: companyId || 'all',
-    });
-
-    res.status(202).json({
-      message: 'Consistency check event published',
-      jobId,
-      companyId: companyId || 'all',
-      statusUrl: `/v1/jobs/consistency/${jobId}`,
-    });
+    await handleConsistencyJob(
+      req,
+      res,
+      'Consistency check',
+      ConsistencyCheckService.publishConsistencyCheck
+    );
   }
 );
 
@@ -524,66 +551,17 @@ export const clearCache = asyncHandler(async (req: Request, res: Response): Prom
 
 export const cleanupOrphanedVectors = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { companyId } = req.params;
-
-    // If companyId is provided, validate it exists
-    if (companyId) {
-      const { companyRepository } = await import('../repositories/company.repository');
-      const company = await companyRepository.findById(companyId);
-      if (!company) {
-        logger.warn('Company not found for cleanup', { companyId });
-        sendNotFoundResponse(res, 'Company');
-        return;
-      }
-    }
-
-    // Publish event
-    const { ConsistencyCheckService } = await import('../services/consistency-check.service');
-    const jobId = await ConsistencyCheckService.publishCleanupOrphaned(companyId || undefined);
-
-    logger.info('Cleanup orphaned vectors event published', {
-      jobId,
-      companyId: companyId || 'all',
-    });
-
-    res.status(202).json({
-      message: 'Cleanup orphaned vectors event published',
-      jobId,
-      companyId: companyId || 'all',
-      statusUrl: `/v1/jobs/consistency/${jobId}`,
-    });
+    await handleConsistencyJob(
+      req,
+      res,
+      'Cleanup orphaned vectors',
+      ConsistencyCheckService.publishCleanupOrphaned
+    );
   }
 );
 
 export const checkAndFix = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { companyId } = req.params;
-
-  // If companyId is provided, validate it exists
-  if (companyId) {
-    const { companyRepository } = await import('../repositories/company.repository');
-    const company = await companyRepository.findById(companyId);
-    if (!company) {
-      logger.warn('Company not found for check and fix', { companyId });
-      sendNotFoundResponse(res, 'Company');
-      return;
-    }
-  }
-
-  // Publish event
-  const { ConsistencyCheckService } = await import('../services/consistency-check.service');
-  const jobId = await ConsistencyCheckService.publishCheckAndFix(companyId || undefined);
-
-  logger.info('Check and fix event published', {
-    jobId,
-    companyId: companyId || 'all',
-  });
-
-  res.status(202).json({
-    message: 'Check and fix event published',
-    jobId,
-    companyId: companyId || 'all',
-    statusUrl: `/v1/jobs/consistency/${jobId}`,
-  });
+  await handleConsistencyJob(req, res, 'Check and fix', ConsistencyCheckService.publishCheckAndFix);
 });
 
 export const getConsumerChanges = asyncHandler(
@@ -591,8 +569,6 @@ export const getConsumerChanges = asyncHandler(
     const { companyId } = req.params;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
-
-    const { consumerChangeRepository } = await import('../repositories/consumer-change.repository');
 
     const filters: {
       eventType?: string;
@@ -620,8 +596,6 @@ export const getConsumerChangeStats = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const { companyId } = req.params;
 
-    const { consumerChangeRepository } = await import('../repositories/consumer-change.repository');
-
     const stats = await consumerChangeRepository.getStats(companyId);
 
     res.json(stats);
@@ -648,7 +622,6 @@ export const getCompanyVectors = asyncHandler(
       return;
     }
 
-    const { embeddingRepository } = await import('../repositories/embedding.repository');
     const result = await embeddingRepository.findByProjectIds(projectIds, page, limit);
 
     res.json(result);
@@ -658,7 +631,6 @@ export const getCompanyVectors = asyncHandler(
 export const getCompanyStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { companyId } = companyIdSchema.parse(req.params);
 
-  const { companyRepository } = await import('../repositories/company.repository');
   const stats = await companyRepository.getStats(companyId);
 
   if (!stats) {

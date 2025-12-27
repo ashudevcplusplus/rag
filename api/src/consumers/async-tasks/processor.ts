@@ -27,9 +27,9 @@ import {
 } from '../../utils/validation.util';
 
 export async function processAsyncTask(job: Job): Promise<unknown> {
-  const { taskType } = job.data;
+  const { taskType, source } = job.data;
 
-  logger.debug('Processing async task', { jobId: job.id, taskType });
+  logger.debug('Processing async task', { jobId: job.id, taskType, source });
 
   switch (taskType) {
     // Triggered by: api-logging.middleware.ts on every API response

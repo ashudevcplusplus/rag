@@ -194,6 +194,59 @@ export function createMockAuthenticatedRequest(
   return req;
 }
 
+/**
+ * Interface for validated file request (after middleware validation)
+ */
+export interface MockValidatedFileRequest extends AuthenticatedRequest {
+  validatedProject: IProject;
+  validatedFile: IFileMetadata;
+  validatedCompanyId: string;
+}
+
+/**
+ * Interface for validated project request (after middleware validation)
+ */
+export interface MockValidatedProjectRequest extends AuthenticatedRequest {
+  validatedProject: IProject;
+  validatedCompanyId: string;
+}
+
+/**
+ * Create a mock request with validated file data (simulates middleware having run)
+ */
+export function createMockValidatedFileRequest(
+  company: ICompany,
+  project: IProject,
+  file: IFileMetadata,
+  overrides?: Partial<MockExpressRequest>
+): MockValidatedFileRequest {
+  const req = createMockAuthenticatedRequest(
+    company,
+    overrides
+  ) as unknown as MockValidatedFileRequest;
+  req.validatedProject = project;
+  req.validatedFile = file;
+  req.validatedCompanyId = company._id;
+  return req;
+}
+
+/**
+ * Create a mock request with validated project data (simulates middleware having run)
+ */
+export function createMockValidatedProjectRequest(
+  company: ICompany,
+  project: IProject,
+  overrides?: Partial<MockExpressRequest>
+): MockValidatedProjectRequest {
+  const req = createMockAuthenticatedRequest(
+    company,
+    overrides
+  ) as unknown as MockValidatedProjectRequest;
+  req.validatedProject = project;
+  req.validatedCompanyId = company._id;
+  return req;
+}
+
 // ============================================================================
 // Mongoose Mock Factories
 // ============================================================================

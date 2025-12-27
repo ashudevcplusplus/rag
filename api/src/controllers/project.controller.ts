@@ -12,7 +12,7 @@ import {
 } from '../schemas/project.schema';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
-import { AnalyticsEventType, ProcessingStatus } from '../types/enums';
+import { AnalyticsEventType, ProcessingStatus, EventSource } from '../types/enums';
 import {
   sendConflictResponse,
   sendNotFoundResponse,
@@ -21,11 +21,10 @@ import {
 import { getCompanyId } from '../utils/request.util';
 import { parsePaginationQuery, createPaginationResponse } from '../utils/pagination.util';
 import { asyncHandler } from '../middleware/error.middleware';
-import { z } from 'zod';
-
-const fileIdSchema = z.object({
-  fileId: z.string().min(1),
-});
+import {
+  ValidatedFileRequest,
+  ValidatedProjectRequest,
+} from '../middleware/project-file-access.middleware';
 
 /**
  * Create a new project
@@ -59,6 +58,7 @@ export const createProject = asyncHandler(async (req: Request, res: Response): P
 
   // One-line event publishing
   void publishAnalytics({
+    source: EventSource.PROJECT_CONTROLLER_CREATE,
     eventType: AnalyticsEventType.PROJECT_CREATE,
     companyId,
     projectId: project._id,
@@ -146,6 +146,7 @@ export const updateProject = asyncHandler(async (req: Request, res: Response): P
   const companyId = getCompanyId(req);
   if (companyId) {
     void publishAnalytics({
+      source: EventSource.PROJECT_CONTROLLER_UPDATE,
       eventType: AnalyticsEventType.PROJECT_UPDATE,
       companyId,
       projectId,
@@ -173,7 +174,12 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response): P
   // One-line event publishing
   const companyId = getCompanyId(req);
   if (companyId) {
-    void publishAnalytics({ eventType: AnalyticsEventType.PROJECT_DELETE, companyId, projectId });
+    void publishAnalytics({
+      source: EventSource.PROJECT_CONTROLLER_DELETE,
+      eventType: AnalyticsEventType.PROJECT_DELETE,
+      companyId,
+      projectId,
+    });
   }
 
   res.json({ message: 'Project deleted successfully' });
@@ -265,39 +271,13 @@ export const searchProjects = asyncHandler(async (req: Request, res: Response): 
 
 /**
  * Get file preview/content
+ * Note: validateFileAccess middleware must be applied before this handler
  */
 export const getFilePreview = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { projectId } = projectIdSchema.parse(req.params);
-  const { fileId } = fileIdSchema.parse(req.params);
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    sendBadRequestResponse(res, 'Company ID is required');
-    return;
-  }
-
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
-  if (!project) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify project belongs to the authenticated company
-  if (project.companyId !== companyId) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify file exists and belongs to project
-  const file = await fileMetadataRepository.findById(fileId);
-  if (!file || file.projectId !== projectId) {
-    sendNotFoundResponse(res, 'File');
-    return;
-  }
+  const { validatedFile: file } = req as ValidatedFileRequest;
 
   // Get file content from embeddings
-  const embedding = await embeddingRepository.findByFileId(fileId);
+  const embedding = await embeddingRepository.findByFileId(file._id);
 
   if (!embedding || !embedding.contents || embedding.contents.length === 0) {
     // File exists but no content yet (still processing)
@@ -334,36 +314,12 @@ export const getFilePreview = asyncHandler(async (req: Request, res: Response): 
 
 /**
  * Delete file from project
+ * Note: validateFileAccess middleware must be applied before this handler
  */
 export const deleteFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { projectId } = projectIdSchema.parse(req.params);
-  const { fileId } = fileIdSchema.parse(req.params);
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    sendBadRequestResponse(res, 'Company ID is required');
-    return;
-  }
-
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
-  if (!project) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify project belongs to the authenticated company
-  if (project.companyId !== companyId) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify file exists and belongs to project
-  const file = await fileMetadataRepository.findById(fileId);
-  if (!file || file.projectId !== projectId) {
-    sendNotFoundResponse(res, 'File');
-    return;
-  }
+  const { validatedFile: file, validatedCompanyId: companyId } = req as ValidatedFileRequest;
+  const fileId = file._id;
+  const projectId = file.projectId;
 
   // Delete file and associated data
   const success = await DeletionService.deleteFile(fileId);
@@ -375,50 +331,24 @@ export const deleteFile = asyncHandler(async (req: Request, res: Response): Prom
   logger.info('File deleted', { fileId, projectId });
 
   // Publish analytics
-  if (companyId) {
-    void publishAnalytics({
-      eventType: AnalyticsEventType.FILE_DELETE,
-      companyId,
-      projectId,
-      metadata: { fileId, filename: file.originalFilename },
-    });
-  }
+  void publishAnalytics({
+    source: EventSource.PROJECT_CONTROLLER_DELETE_FILE,
+    eventType: AnalyticsEventType.FILE_DELETE,
+    companyId,
+    projectId,
+    metadata: { fileId, filename: file.originalFilename },
+  });
 
   res.json({ message: 'File deleted successfully' });
 });
 
 /**
  * Download file
+ * Note: validateFileAccess middleware must be applied before this handler
  */
 export const downloadFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { projectId } = projectIdSchema.parse(req.params);
-  const { fileId } = fileIdSchema.parse(req.params);
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    sendBadRequestResponse(res, 'Company ID is required');
-    return;
-  }
-
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
-  if (!project) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify project belongs to the authenticated company
-  if (project.companyId !== companyId) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify file exists and belongs to project
-  const file = await fileMetadataRepository.findById(fileId);
-  if (!file || file.projectId !== projectId) {
-    sendNotFoundResponse(res, 'File');
-    return;
-  }
+  const { validatedFile: file } = req as ValidatedFileRequest;
+  const fileId = file._id;
 
   // Check if file exists on disk
   const fs = await import('fs/promises');
@@ -457,36 +387,12 @@ export const downloadFile = asyncHandler(async (req: Request, res: Response): Pr
 
 /**
  * Reindex/retry a file
+ * Note: validateFileAccess middleware must be applied before this handler
  */
 export const reindexFile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { projectId } = projectIdSchema.parse(req.params);
-  const { fileId } = fileIdSchema.parse(req.params);
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    sendBadRequestResponse(res, 'Company ID is required');
-    return;
-  }
-
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
-  if (!project) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify project belongs to the authenticated company
-  if (project.companyId !== companyId) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify file exists and belongs to project
-  const file = await fileMetadataRepository.findById(fileId);
-  if (!file || file.projectId !== projectId) {
-    sendNotFoundResponse(res, 'File');
-    return;
-  }
+  const { validatedFile: file, validatedCompanyId: companyId } = req as ValidatedFileRequest;
+  const fileId = file._id;
+  const projectId = file.projectId;
 
   // Check if file can be reindexed (FAILED, COMPLETED, or stuck PROCESSING)
   const allowedStatuses = [
@@ -561,28 +467,11 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
 
 /**
  * Get indexing stats for a project
+ * Note: validateProjectAccess middleware must be applied before this handler
  */
 export const getIndexingStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { projectId } = projectIdSchema.parse(req.params);
-  const companyId = getCompanyId(req);
-
-  if (!companyId) {
-    sendBadRequestResponse(res, 'Company ID is required');
-    return;
-  }
-
-  // Verify project exists
-  const project = await projectRepository.findById(projectId);
-  if (!project) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
-
-  // Verify project belongs to the authenticated company
-  if (project.companyId !== companyId) {
-    sendNotFoundResponse(res, 'Project');
-    return;
-  }
+  const { validatedProject: project } = req as ValidatedProjectRequest;
+  const projectId = project._id;
 
   // Get counts by processing status (efficient count queries instead of loading documents)
   const [pending, processing, completed, failed] = await Promise.all([
@@ -605,29 +494,13 @@ export const getIndexingStats = asyncHandler(async (req: Request, res: Response)
 
 /**
  * Bulk reindex failed files in a project
+ * Note: validateProjectAccess middleware must be applied before this handler
  */
 export const bulkReindexFailed = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { projectId } = projectIdSchema.parse(req.params);
-    const companyId = getCompanyId(req);
-
-    if (!companyId) {
-      sendBadRequestResponse(res, 'Company ID is required');
-      return;
-    }
-
-    // Verify project exists
-    const project = await projectRepository.findById(projectId);
-    if (!project) {
-      sendNotFoundResponse(res, 'Project');
-      return;
-    }
-
-    // Verify project belongs to the authenticated company
-    if (project.companyId !== companyId) {
-      sendNotFoundResponse(res, 'Project');
-      return;
-    }
+    const { validatedProject: project, validatedCompanyId: companyId } =
+      req as ValidatedProjectRequest;
+    const projectId = project._id;
 
     // Get all failed files
     const failedFiles = await fileMetadataRepository.findByProcessingStatus(
