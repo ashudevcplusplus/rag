@@ -196,6 +196,24 @@ This is duplicate content that spans pages`;
       });
       expect(result).not.toContain('BADWORD');
     });
+
+    it('should decode HTML entities correctly instead of deleting them', () => {
+      const text = '<p>Hello&nbsp;World</p><p>Rock &amp; Roll</p><p>&lt;tag&gt;</p>';
+      const result = preprocessText(text, { sourceFormat: 'html', stripHtmlTags: true });
+      // Entities should be decoded, not deleted
+      expect(result).toContain('Hello World'); // &nbsp; -> space
+      expect(result).toContain('Rock & Roll'); // &amp; -> &
+      expect(result).toContain('<tag>'); // &lt; and &gt; -> < and >
+      // Should NOT have malformed text
+      expect(result).not.toContain('HelloWorld'); // Would happen if &nbsp; was deleted
+      expect(result).not.toContain('Rock Roll'); // Would happen if &amp; was deleted
+    });
+
+    it('should decode numeric HTML entities', () => {
+      const text = '<p>Copyright &#169; 2025</p>';
+      const result = preprocessText(text, { sourceFormat: 'html', stripHtmlTags: true });
+      expect(result).toContain('©'); // &#169; -> ©
+    });
   });
 
   describe('isTabularContent', () => {

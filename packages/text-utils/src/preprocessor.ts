@@ -67,14 +67,8 @@ const DOCUMENT_PATTERNS: Record<SourceFormat, DocumentPatterns> = {
       /<style[\s\S]*?<\/style>/gi,
       /<noscript[\s\S]*?<\/noscript>/gi,
     ],
-    artifacts: [
-      /&nbsp;/g,
-      /&amp;/g,
-      /&lt;/g,
-      /&gt;/g,
-      /&quot;/g,
-      /&#\d+;/g,
-    ],
+    // Note: HTML entities are decoded in stripHtml(), not removed as artifacts
+    artifacts: [],
     duplicateBoundary: '',
   },
   markdown: {
