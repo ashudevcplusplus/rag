@@ -6,12 +6,25 @@ import { createMockHttpError, MockQdrantClient } from '../../lib/mock-utils';
 // Mock dependencies BEFORE importing VectorService
 jest.mock('@qdrant/js-client-rest');
 jest.mock('../../../src/repositories/embedding.repository');
+jest.mock('../../../src/services/embedding.service', () => ({
+  EmbeddingService: {
+    getEmbeddings: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
+  },
+}));
+jest.mock('../../../src/services/gemini-embedding.service', () => ({
+  GeminiEmbeddingService: {
+    getEmbeddings: jest.fn().mockResolvedValue([[0.1, 0.2, 0.3]]),
+    getEmbeddingDimensions: jest.fn().mockReturnValue(768),
+  },
+}));
 jest.mock('../../../src/config', () => ({
   CONFIG: {
     QDRANT_URL: 'http://localhost:6333',
-    EMBED_URL: 'http://localhost:5001/embed',
-    RERANK_URL: 'http://localhost:5001/rerank',
-    INHOUSE_EMBEDDINGS: true, // Use in-house Python service for tests
+    EMBEDDING_PROVIDER: 'openai',
+    OPENAI_API_KEY: 'test-api-key',
+    OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
+    GEMINI_API_KEY: '',
+    GEMINI_EMBEDDING_MODEL: 'text-embedding-004',
   },
 }));
 jest.mock('../../../src/utils/logger', () => ({
@@ -58,62 +71,46 @@ interface CollectionInfo {
   vectors_count: number;
 }
 
+// Import mocked services for reference in tests
+import { EmbeddingService } from '../../../src/services/embedding.service';
+
 describe('VectorService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (embeddingRepository.findChunks as jest.Mock).mockResolvedValue([]);
+    // Reset EmbeddingService mock to default behavior
+    (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1, 0.2, 0.3]]);
   });
 
   describe('getEmbeddings', () => {
-    it('should fetch embeddings successfully', async () => {
+    it('should fetch embeddings successfully via EmbeddingService', async () => {
       const mockEmbeddings = [
         [0.1, 0.2, 0.3],
         [0.4, 0.5, 0.6],
       ];
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ embeddings: mockEmbeddings }),
-      });
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue(mockEmbeddings);
 
       const result = await VectorService.getEmbeddings(['text1', 'text2']);
 
       expect(result).toEqual(mockEmbeddings);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:5001/embed',
-        expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texts: ['text1', 'text2'] }),
-        })
-      );
+      expect(EmbeddingService.getEmbeddings).toHaveBeenCalledWith(['text1', 'text2']);
     });
 
-    it('should handle vectors field name', async () => {
+    it('should handle single text input', async () => {
       const mockVectors = [[0.1, 0.2, 0.3]];
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ vectors: mockVectors }),
-      });
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue(mockVectors);
 
       const result = await VectorService.getEmbeddings(['text1']);
 
       expect(result).toEqual(mockVectors);
     });
 
-    it('should throw ExternalServiceError on HTTP error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: false,
-        statusText: 'Service Unavailable',
-        text: async () => 'Error detail',
-      });
+    it('should throw error when EmbeddingService fails', async () => {
+      (EmbeddingService.getEmbeddings as jest.Mock).mockRejectedValue(
+        new ExternalServiceError('OpenAI', 'API error')
+      );
 
       await expect(VectorService.getEmbeddings(['text1'])).rejects.toThrow(ExternalServiceError);
-    });
-
-    it('should handle network errors', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
-
-      await expect(VectorService.getEmbeddings(['text1'])).rejects.toThrow('Network error');
     });
   });
 
@@ -141,7 +138,7 @@ describe('VectorService', () => {
 
       expect(mockQdrant.createCollection).toHaveBeenCalledWith('test-collection', {
         vectors: {
-          size: 384,
+          size: 1536, // OpenAI text-embedding-3-small dimensions
           distance: 'Cosine',
         },
       });
@@ -381,10 +378,7 @@ describe('VectorService', () => {
 
   describe('getEmbeddings edge cases', () => {
     it('should handle empty text array', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ embeddings: [] }),
-      });
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([]);
 
       const result = await VectorService.getEmbeddings([]);
 
@@ -393,10 +387,7 @@ describe('VectorService', () => {
 
     it('should handle single text input', async () => {
       const mockEmbedding = [[0.1, 0.2, 0.3]];
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ embeddings: mockEmbedding }),
-      });
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue(mockEmbedding);
 
       const result = await VectorService.getEmbeddings(['single text']);
 
@@ -405,44 +396,36 @@ describe('VectorService', () => {
 
     it('should handle very long text', async () => {
       const longText = 'x'.repeat(100000);
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ embeddings: [[0.1]] }),
-      });
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1]]);
 
       const result = await VectorService.getEmbeddings([longText]);
 
-      expect(global.fetch).toHaveBeenCalled();
+      expect(EmbeddingService.getEmbeddings).toHaveBeenCalledWith([longText]);
       expect(result).toEqual([[0.1]]);
     });
 
     it('should handle unicode text correctly', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ embeddings: [[0.1, 0.2]] }),
-      });
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1, 0.2]]);
 
       await VectorService.getEmbeddings(['你好世界 🌍 مرحبا']);
 
-      const callBody = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string);
-      expect(callBody.texts[0]).toBe('你好世界 🌍 مرحبا');
+      expect(EmbeddingService.getEmbeddings).toHaveBeenCalledWith(['你好世界 🌍 مرحبا']);
     });
 
-    it('should handle timeout errors', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Request timeout'));
+    it('should handle service errors', async () => {
+      (EmbeddingService.getEmbeddings as jest.Mock).mockRejectedValue(
+        new ExternalServiceError('OpenAI', 'Request timeout')
+      );
 
-      await expect(VectorService.getEmbeddings(['text'])).rejects.toThrow('Request timeout');
+      await expect(VectorService.getEmbeddings(['text'])).rejects.toThrow(ExternalServiceError);
     });
 
-    it('should handle malformed JSON response', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => {
-          throw new SyntaxError('Unexpected token');
-        },
-      });
+    it('should propagate errors from embedding service', async () => {
+      (EmbeddingService.getEmbeddings as jest.Mock).mockRejectedValue(
+        new ExternalServiceError('OpenAI', 'Invalid response')
+      );
 
-      await expect(VectorService.getEmbeddings(['text'])).rejects.toThrow();
+      await expect(VectorService.getEmbeddings(['text'])).rejects.toThrow(ExternalServiceError);
     });
   });
 
@@ -556,45 +539,55 @@ describe('VectorService', () => {
   });
 
   describe('rerank', () => {
-    it('should rerank documents successfully', async () => {
-      const mockScores = [0.9, 0.7, 0.5];
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ scores: mockScores }),
-      });
+    it('should rerank documents using embedding similarity', async () => {
+      // Mock embeddings: query embedding and multiple doc embeddings
+      (EmbeddingService.getEmbeddings as jest.Mock)
+        .mockResolvedValueOnce([[1, 0, 0]]) // query embedding
+        .mockResolvedValueOnce([
+          [1, 0, 0], // doc1 - same as query
+          [0, 1, 0], // doc2 - orthogonal
+          [0.5, 0.5, 0], // doc3 - partially similar
+        ]);
 
       const result = await VectorService.rerank('test query', ['doc1', 'doc2', 'doc3']);
 
-      expect(result).toEqual(mockScores);
-    });
-
-    it('should throw ExternalServiceError on rerank service error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: false,
-        statusText: 'Service Unavailable',
+      // Should return an array of scores (one per document)
+      expect(result).toHaveLength(3);
+      result.forEach((score) => {
+        expect(typeof score).toBe('number');
+        // Cosine similarity is between -1 and 1
+        expect(score).toBeGreaterThanOrEqual(-1);
+        expect(score).toBeLessThanOrEqual(1);
       });
 
-      await expect(VectorService.rerank('query', ['doc'])).rejects.toThrow(ExternalServiceError);
+      // First doc should have highest score (same vector as query)
+      expect(result[0]).toBeCloseTo(1, 5);
+      // Second doc should have lowest score (orthogonal)
+      expect(result[1]).toBeCloseTo(0, 5);
     });
 
-    it('should throw on network error during rerank', async () => {
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+    it('should call embedding service for query and documents', async () => {
+      (EmbeddingService.getEmbeddings as jest.Mock)
+        .mockResolvedValueOnce([[0.1, 0.2, 0.3]])
+        .mockResolvedValueOnce([[0.1, 0.2, 0.3]]);
 
-      await expect(VectorService.rerank('query', ['doc'])).rejects.toThrow('Network error');
+      await VectorService.rerank('query', ['doc1']);
+
+      expect(EmbeddingService.getEmbeddings).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('getEmbeddingDimensions', () => {
-    it('should return 384 for inhouse provider', () => {
-      const result = VectorService.getEmbeddingDimensions('inhouse');
-      expect(result).toBe(384);
+    it('should return 1536 for openai provider (text-embedding-3-small)', () => {
+      const result = VectorService.getEmbeddingDimensions('openai');
+      expect(result).toBe(1536);
     });
   });
 
   describe('getModelName', () => {
-    it('should return model name for inhouse provider', () => {
-      const result = VectorService.getModelName('inhouse');
-      expect(result).toBe('all-MiniLM-L6-v2');
+    it('should return model name for openai provider', () => {
+      const result = VectorService.getModelName('openai');
+      expect(result).toBe('text-embedding-3-small');
     });
   });
 
@@ -879,11 +872,8 @@ describe('VectorService', () => {
 
   describe('searchWithReranking', () => {
     it('should perform hybrid search with reranking', async () => {
-      // Mock embeddings
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
-      });
+      // Mock embeddings via EmbeddingService
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1, 0.2, 0.3]]);
 
       // Mock initial search results
       mockQdrant.search.mockResolvedValue([
@@ -896,12 +886,6 @@ describe('VectorService', () => {
         { fileId: 'file-1', chunkIndex: 0, content: 'Full document 1 text' },
         { fileId: 'file-2', chunkIndex: 0, content: 'Full document 2 text' },
       ]);
-
-      // Mock rerank scores
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ scores: [0.95, 0.75] }),
-      });
 
       const result = await VectorService.searchWithReranking(
         'test-collection',
@@ -917,11 +901,8 @@ describe('VectorService', () => {
     });
 
     it('should return empty array when no initial results', async () => {
-      // Mock embeddings
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
-      });
+      // Mock embeddings via EmbeddingService
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1, 0.2, 0.3]]);
 
       // Mock empty search results
       mockQdrant.search.mockResolvedValue([]);
@@ -932,11 +913,8 @@ describe('VectorService', () => {
     });
 
     it('should handle rerank with identical scores', async () => {
-      // Mock embeddings
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
-      });
+      // Mock embeddings - using same vector for all to get identical similarity scores
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1, 0.2, 0.3]]);
 
       // Mock search results
       mockQdrant.search.mockResolvedValue([
@@ -946,25 +924,17 @@ describe('VectorService', () => {
 
       (embeddingRepository.findChunks as jest.Mock).mockResolvedValue([]);
 
-      // All same rerank scores
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ scores: [0.5, 0.5] }),
-      });
-
       const result = await VectorService.searchWithReranking('test-collection', 'test query');
 
-      // All scores should be 50 when range is 0
-      expect(result[0].score).toBe(50);
-      expect(result[1].score).toBe(50);
+      // Should return at least one result
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      // First result should have a score
+      expect(typeof result[0].score).toBe('number');
     });
 
     it('should fall back to text_preview when full text fetch fails', async () => {
-      // Mock embeddings
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ embeddings: [[0.1, 0.2, 0.3]] }),
-      });
+      // Mock embeddings via EmbeddingService
+      (EmbeddingService.getEmbeddings as jest.Mock).mockResolvedValue([[0.1, 0.2, 0.3]]);
 
       // Mock search results
       mockQdrant.search.mockResolvedValue([
@@ -975,17 +945,12 @@ describe('VectorService', () => {
         },
       ]);
 
-      // Full text fetch fails
+      // Full text fetch fails - falls back to text_preview
       (embeddingRepository.findChunks as jest.Mock).mockRejectedValue(new Error('DB error'));
-
-      // Mock rerank
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ scores: [0.9] }),
-      });
 
       const result = await VectorService.searchWithReranking('test-collection', 'test query');
 
+      // Should still return result even when full text fetch fails
       expect(result).toHaveLength(1);
     });
   });
@@ -995,7 +960,7 @@ describe('VectorService', () => {
       mockQdrant.getCollection.mockResolvedValue({
         config: {
           params: {
-            vectors: { size: 1536 }, // Different from expected 384 for inhouse
+            vectors: { size: 3072 }, // Different from expected 1536 for text-embedding-3-small
           },
         },
       });

@@ -201,6 +201,10 @@ export interface IndexingStats {
   completed: number;
   failed: number;
   total: number;
+  // Indexing time metrics (in milliseconds)
+  averageProcessingTimeMs?: number | null;
+  minProcessingTimeMs?: number | null;
+  maxProcessingTimeMs?: number | null;
 }
 
 export interface ReindexResponse {
@@ -538,7 +542,10 @@ export const chatApi = {
               }
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.content) {
+                // Handle both 'token' (streaming format) and 'content' (legacy format)
+                if (parsed.token) {
+                  onChunk(parsed.token);
+                } else if (parsed.content) {
                   onChunk(parsed.content);
                 }
                 if (parsed.sources) {
@@ -650,6 +657,113 @@ export const vectorsApi = {
 };
 
 // ============================================================================
+// Conversations API
+// ============================================================================
+
+export interface ConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: ChatResponse['sources'];
+  timestamp: string;
+}
+
+export interface Conversation {
+  _id: string;
+  companyId: string;
+  userId?: string;
+  projectId?: string;
+  title: string;
+  messages: ConversationMessage[];
+  messageCount: number;
+  lastMessageAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateConversationRequest {
+  title?: string;
+  projectId?: string;
+}
+
+export interface AddMessageRequest {
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: ChatResponse['sources'];
+}
+
+export const conversationsApi = {
+  async list(
+    companyId: string,
+    params?: { page?: number; limit?: number; projectId?: string }
+  ): Promise<{ conversations: Conversation[]; pagination: { page: number; totalPages: number; total: number } }> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.projectId) searchParams.set('projectId', params.projectId);
+    const query = searchParams.toString();
+    return request(`/v1/companies/${companyId}/conversations${query ? `?${query}` : ''}`);
+  },
+
+  async get(companyId: string, conversationId: string): Promise<{ conversation: Conversation }> {
+    return request(`/v1/companies/${companyId}/conversations/${conversationId}`);
+  },
+
+  async create(companyId: string, data: CreateConversationRequest): Promise<{ conversation: Conversation }> {
+    return request(`/v1/companies/${companyId}/conversations`, {
+      method: 'POST',
+      body: data,
+    });
+  },
+
+  async update(
+    companyId: string,
+    conversationId: string,
+    data: { title?: string }
+  ): Promise<{ conversation: Conversation }> {
+    return request(`/v1/companies/${companyId}/conversations/${conversationId}`, {
+      method: 'PATCH',
+      body: data,
+    });
+  },
+
+  async delete(companyId: string, conversationId: string): Promise<void> {
+    return request(`/v1/companies/${companyId}/conversations/${conversationId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async addMessage(
+    companyId: string,
+    conversationId: string,
+    message: AddMessageRequest
+  ): Promise<{ message: ConversationMessage; conversation: Conversation }> {
+    return request(`/v1/companies/${companyId}/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: message,
+    });
+  },
+
+  async updateMessage(
+    companyId: string,
+    conversationId: string,
+    messageId: string,
+    updates: Partial<AddMessageRequest>
+  ): Promise<{ conversation: Conversation }> {
+    return request(`/v1/companies/${companyId}/conversations/${conversationId}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: updates,
+    });
+  },
+
+  async clearMessages(companyId: string, conversationId: string): Promise<{ message: string }> {
+    return request(`/v1/companies/${companyId}/conversations/${conversationId}/messages`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ============================================================================
 // Export All
 // ============================================================================
 
@@ -660,6 +774,7 @@ export const api = {
   files: filesApi,
   search: searchApi,
   chat: chatApi,
+  conversations: conversationsApi,
   jobs: jobsApi,
   users: usersApi,
   vectors: vectorsApi,

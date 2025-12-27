@@ -1,0 +1,90 @@
+# TalentHub - Pricing Plans
+
+Choose the plan that fits your hiring needs. All plans include a 14-day free trial.
+
+## Plan Comparison
+
+### Starter - $99/month
+Best for small teams hiring occasionally
+- Up to 3 active job postings
+- 5 team members
+- Basic ATS functionality
+- Email support
+- 500 candidate limit per month
+- Job posting to 10 free boards
+- Basic analytics
+
+### Growth - $299/month (Most Popular)
+Best for growing companies with regular hiring
+- Up to 10 active job postings
+- 15 team members
+- Full ATS with custom pipelines
+- AI candidate matching
+- Priority email support
+- 2,000 candidates per month
+- Job posting to 30+ boards
+- Advanced analytics & reporting
+- Video interviews (50 hours/month)
+- Calendar integrations
+
+### Professional - $599/month
+Best for mid-size companies with high-volume hiring
+- Up to 25 active job postings
+- 50 team members
+- Everything in Growth, plus:
+- Unlimited candidates
+- Dedicated success manager
+- Custom workflows
+- API access
+- SSO (SAML)
+- Onboarding automation
+- Background check integration
+- Assessment integrations
+- 150 hours video interviews
+
+### Enterprise - Custom Pricing
+Best for large organizations with complex needs
+- Unlimited job postings
+- Unlimited team members
+- Everything in Professional, plus:
+- Custom integrations
+- On-premise deployment option
+- SLA guarantee (99.99% uptime)
+- Dedicated account manager
+- Custom training and onboarding
+- Audit logs and compliance reports
+- White-label options
+- Multi-region data residency
+
+## Add-Ons
+
+| Add-On | Price |
+|--------|-------|
+| Additional job board credits | $49/pack of 10 |
+| Extra video interview hours | $29/50 hours |
+| Background check credits | $25/check |
+| Skills assessment credits | $15/assessment |
+| SMS notifications | $0.05/message |
+| Custom career page design | $499 one-time |
+
+## Billing Information
+
+- Monthly or annual billing available
+- Annual plans save 20%
+- Payment methods: Credit card, ACH, Wire transfer
+- Invoices generated on the 1st of each month
+
+## Refund Policy
+
+- 30-day money-back guarantee for new customers
+- Refunds processed within 10 business days
+- Pro-rated refunds for annual plan cancellations
+- Contact billing@talenthub.io for refund requests
+
+## Discounts
+
+- Startups (under 50 employees): 30% off first year
+- Nonprofits: 40% off
+- Annual payment: 20% off
+- Referral program: $100 credit per referral
+

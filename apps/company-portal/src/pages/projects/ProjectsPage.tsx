@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FolderOpen, Search, MoreVertical, Trash2, Edit, Archive, RotateCcw, Filter } from 'lucide-react';
+import { Plus, FolderOpen, Search, MoreVertical, Trash2, Edit, Archive, RotateCcw, Filter, Settings2, Lightbulb, Layers, GitMerge } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   Card,
@@ -12,11 +12,13 @@ import {
   ModalFooter,
   EmptyState,
   StatusBadge,
+  Textarea,
+  SelectWithDescription,
 } from '@rag/ui';
-import { Textarea } from '@rag/ui';
 import { projectsApi } from '@rag/api-client';
 import { formatRelativeTime, slugify } from '@rag/utils';
-import type { Project, CreateProjectDTO, UpdateProjectDTO } from '@rag/types';
+import type { Project, CreateProjectDTO, UpdateProjectDTO, ProjectSettings } from '@rag/types';
+import { ChunkSizePreset, CHUNK_SIZE_PRESETS, getChunkPresetOptions } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
 
@@ -45,17 +47,30 @@ export function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<CreateProjectDTO>({
+  const [formData, setFormData] = useState<CreateProjectDTO & { settings?: ProjectSettings }>({
     name: '',
     slug: '',
     description: '',
+    settings: {
+      chunkSizePreset: ChunkSizePreset.GENERAL,
+    },
   });
 
-  const [editFormData, setEditFormData] = useState<UpdateProjectDTO & { color?: string }>({
+  const [editFormData, setEditFormData] = useState<UpdateProjectDTO & { color?: string; settings?: ProjectSettings }>({
     name: '',
     description: '',
     color: '',
+    settings: {
+      chunkSizePreset: ChunkSizePreset.GENERAL,
+    },
   });
+
+  // Convert chunk presets to select options
+  const chunkPresetOptions = getChunkPresetOptions().map(preset => ({
+    value: preset.preset,
+    label: preset.label,
+    description: preset.description,
+  }));
 
   // Fetch projects
   const { data, isLoading } = useQuery({
@@ -70,7 +85,12 @@ export function ProjectsPage() {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsCreateModalOpen(false);
-      setFormData({ name: '', slug: '', description: '' });
+      setFormData({ 
+        name: '', 
+        slug: '', 
+        description: '',
+        settings: { chunkSizePreset: ChunkSizePreset.GENERAL },
+      });
       addActivity({ text: `Created project: ${response.project.name}`, type: 'project' });
       toast.success('Project created successfully!');
     },
@@ -172,11 +192,20 @@ export function ProjectsPage() {
       return;
     }
 
+    // Get chunk config from preset
+    const preset = formData.settings?.chunkSizePreset || ChunkSizePreset.GENERAL;
+    const chunkConfig = CHUNK_SIZE_PRESETS[preset];
+
     createMutation.mutate({
       name: formData.name.trim(),
       slug,
       description: formData.description?.trim(),
-    });
+      settings: {
+        chunkSizePreset: preset,
+        chunkSize: chunkConfig.chunkSize,
+        chunkOverlap: chunkConfig.chunkOverlap,
+      },
+    } as CreateProjectDTO);
   };
 
   const handleDeleteProject = () => {
@@ -188,12 +217,21 @@ export function ProjectsPage() {
   const handleEditProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedProject && editFormData.name?.trim()) {
+      // Get chunk config from preset
+      const preset = editFormData.settings?.chunkSizePreset || ChunkSizePreset.GENERAL;
+      const chunkConfig = CHUNK_SIZE_PRESETS[preset];
+
       updateMutation.mutate({
         projectId: selectedProject._id,
         data: {
           name: editFormData.name.trim(),
           description: editFormData.description?.trim(),
           color: editFormData.color,
+          settings: {
+            chunkSizePreset: preset,
+            chunkSize: chunkConfig.chunkSize,
+            chunkOverlap: chunkConfig.chunkOverlap,
+          },
         },
       });
     }
@@ -205,6 +243,11 @@ export function ProjectsPage() {
       name: project.name,
       description: project.description || '',
       color: project.color || PROJECT_COLORS[0],
+      settings: {
+        chunkSizePreset: project.settings?.chunkSizePreset || ChunkSizePreset.GENERAL,
+        chunkSize: project.settings?.chunkSize,
+        chunkOverlap: project.settings?.chunkOverlap,
+      },
     });
     setIsEditModalOpen(true);
   };
@@ -499,6 +542,115 @@ export function ProjectsPage() {
             rows={3}
           />
 
+          {/* Chunk Size Preset */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-purple-100 rounded-lg">
+                  <Settings2 className="w-4 h-4 text-purple-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-900">Indexing Settings</span>
+              </div>
+            </div>
+            
+            <SelectWithDescription
+              label="Document Type"
+              value={formData.settings?.chunkSizePreset || ChunkSizePreset.GENERAL}
+              onChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  settings: {
+                    ...prev.settings,
+                    chunkSizePreset: value as ChunkSizePreset,
+                  },
+                }))
+              }
+              options={chunkPresetOptions}
+              showDescription={false}
+            />
+            
+            {/* Chunk Size Values Display - Improved UI */}
+            {(() => {
+              const preset = formData.settings?.chunkSizePreset || ChunkSizePreset.GENERAL;
+              const config = CHUNK_SIZE_PRESETS[preset];
+              return (
+                <div className="mt-4 p-4 bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      {/* Chunk Size */}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Layers className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Chunk Size</div>
+                          <div className="text-lg font-bold text-gray-900">{config.chunkSize.toLocaleString()} <span className="text-sm font-normal text-gray-500">chars</span></div>
+                        </div>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="w-px h-10 bg-gray-300"></div>
+                      
+                      {/* Overlap */}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <GitMerge className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Overlap</div>
+                          <div className="text-lg font-bold text-gray-900">{config.chunkOverlap.toLocaleString()} <span className="text-sm font-normal text-gray-500">chars</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Info Button with Tooltip */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        className="p-2.5 bg-amber-100 hover:bg-amber-200 rounded-full text-amber-600 transition-all hover:scale-110"
+                        title="Learn more"
+                      >
+                        <Lightbulb className="w-5 h-5" />
+                      </button>
+                      <div className="absolute right-0 bottom-full mb-3 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="p-4 bg-white rounded-xl shadow-xl border border-gray-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="p-1.5 bg-amber-100 rounded-lg">
+                              <Lightbulb className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <span className="font-semibold text-gray-900">{config.label}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">{config.description}</p>
+                          <div className="space-y-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-start gap-3">
+                              <div className="p-1 bg-blue-100 rounded">
+                                <Layers className="w-3 h-3 text-blue-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Chunk Size</div>
+                                <div className="text-xs text-gray-500">Maximum characters per text segment for embedding</div>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="p-1 bg-green-100 rounded">
+                                <GitMerge className="w-3 h-3 text-green-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Overlap</div>
+                                <div className="text-xs text-gray-500">Characters shared between chunks for context continuity</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="absolute right-4 top-full -mt-2 border-8 border-transparent border-t-white drop-shadow-sm"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
           <ModalFooter>
             <Button
               type="button"
@@ -563,6 +715,123 @@ export function ProjectsPage() {
                 />
               ))}
             </div>
+          </div>
+
+          {/* Chunk Size Preset */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-purple-100 rounded-lg">
+                  <Settings2 className="w-4 h-4 text-purple-600" />
+                </div>
+                <span className="text-sm font-semibold text-gray-900">Indexing Settings</span>
+              </div>
+            </div>
+            
+            <SelectWithDescription
+              label="Document Type"
+              value={editFormData.settings?.chunkSizePreset || ChunkSizePreset.GENERAL}
+              onChange={(value) =>
+                setEditFormData((prev) => ({
+                  ...prev,
+                  settings: {
+                    ...prev.settings,
+                    chunkSizePreset: value as ChunkSizePreset,
+                  },
+                }))
+              }
+              options={chunkPresetOptions}
+              showDescription={false}
+            />
+            
+            {/* Chunk Size Values Display - Improved UI */}
+            {(() => {
+              const preset = editFormData.settings?.chunkSizePreset || ChunkSizePreset.GENERAL;
+              const config = CHUNK_SIZE_PRESETS[preset];
+              return (
+                <div className="mt-4 p-4 bg-gradient-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      {/* Chunk Size */}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Layers className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Chunk Size</div>
+                          <div className="text-lg font-bold text-gray-900">{config.chunkSize.toLocaleString()} <span className="text-sm font-normal text-gray-500">chars</span></div>
+                        </div>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="w-px h-10 bg-gray-300"></div>
+                      
+                      {/* Overlap */}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <GitMerge className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Overlap</div>
+                          <div className="text-lg font-bold text-gray-900">{config.chunkOverlap.toLocaleString()} <span className="text-sm font-normal text-gray-500">chars</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Info Button with Tooltip */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        className="p-2.5 bg-amber-100 hover:bg-amber-200 rounded-full text-amber-600 transition-all hover:scale-110"
+                        title="Learn more"
+                      >
+                        <Lightbulb className="w-5 h-5" />
+                      </button>
+                      <div className="absolute right-0 bottom-full mb-3 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="p-4 bg-white rounded-xl shadow-xl border border-gray-200">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="p-1.5 bg-amber-100 rounded-lg">
+                              <Lightbulb className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <span className="font-semibold text-gray-900">{config.label}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-4">{config.description}</p>
+                          <div className="space-y-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-start gap-3">
+                              <div className="p-1 bg-blue-100 rounded">
+                                <Layers className="w-3 h-3 text-blue-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Chunk Size</div>
+                                <div className="text-xs text-gray-500">Maximum characters per text segment for embedding</div>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="p-1 bg-green-100 rounded">
+                                <GitMerge className="w-3 h-3 text-green-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-medium text-gray-900">Overlap</div>
+                                <div className="text-xs text-gray-500">Characters shared between chunks for context continuity</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="absolute right-4 top-full -mt-2 border-8 border-transparent border-t-white drop-shadow-sm"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Warning for edit mode */}
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                      <span className="text-amber-500">⚠️</span>
+                      <span>Changes only affect newly uploaded files. Reindex existing files to apply new settings.</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <ModalFooter>

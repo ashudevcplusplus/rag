@@ -9,6 +9,7 @@ export * from './components/Avatar';
 export * from './components/EmptyState';
 export * from './components/StatusBadge';
 export * from './components/ProgressBar';
+export * from './components/Select';
 
 // Export utilities
 export { cn } from './utils';

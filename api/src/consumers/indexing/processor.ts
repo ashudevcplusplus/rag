@@ -10,7 +10,13 @@ import {
 import { VectorService, EmbeddingProvider } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
-import { FileCleanupReason, ProcessingStatus, EventSource } from '../../types/enums';
+import {
+  FileCleanupReason,
+  ProcessingStatus,
+  EventSource,
+  getChunkConfig,
+  ChunkSizePreset,
+} from '../../types/enums';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
 import { projectRepository } from '../../repositories/project.repository';
@@ -86,8 +92,27 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     }
 
     // Get chunking settings from project, with defaults
-    const chunkSize = project.settings?.chunkSize ?? 1000;
-    const chunkOverlap = project.settings?.chunkOverlap ?? 200;
+    // Priority: explicit values > preset values > defaults
+    let chunkSize = 1000;
+    let chunkOverlap = 200;
+
+    if (
+      project.settings?.chunkSizePreset &&
+      project.settings.chunkSizePreset !== ChunkSizePreset.CUSTOM
+    ) {
+      // Use preset values
+      const presetConfig = getChunkConfig(project.settings.chunkSizePreset);
+      chunkSize = presetConfig.chunkSize;
+      chunkOverlap = presetConfig.chunkOverlap;
+    }
+
+    // Explicit values override preset
+    if (project.settings?.chunkSize) {
+      chunkSize = project.settings.chunkSize;
+    }
+    if (project.settings?.chunkOverlap !== undefined) {
+      chunkOverlap = project.settings.chunkOverlap;
+    }
 
     // Update file status to PROCESSING
     await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.PROCESSING);
@@ -203,10 +228,7 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     }
 
     // Determine provider and model name
-    const effectiveProvider: EmbeddingProvider =
-      (embeddingProvider as EmbeddingProvider) ||
-      (CONFIG.EMBEDDING_PROVIDER as EmbeddingProvider) ||
-      (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+    const effectiveProvider: EmbeddingProvider = embeddingProvider || CONFIG.EMBEDDING_PROVIDER;
     const effectiveModelName = embeddingModel || VectorService.getModelName(effectiveProvider);
     const vectorDimensions = VectorService.getEmbeddingDimensions(effectiveProvider);
 

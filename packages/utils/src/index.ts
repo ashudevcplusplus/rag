@@ -90,6 +90,53 @@ export function formatDateTime(isoString: string): string {
   return new Date(isoString).toLocaleString();
 }
 
+/**
+ * Format duration in milliseconds to human-readable format
+ * Examples: "1.2s", "45.3s", "2m 15s", "1h 5m"
+ */
+export function formatDuration(ms: number): string {
+  if (ms < 0) return '—';
+  
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  }
+  
+  if (minutes > 0) {
+    const remainingSeconds = seconds % 60;
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  }
+  
+  if (seconds > 0) {
+    const remainingMs = ms % 1000;
+    const decimal = Math.floor(remainingMs / 100);
+    return decimal > 0 ? `${seconds}.${decimal}s` : `${seconds}s`;
+  }
+  
+  return `${ms}ms`;
+}
+
+/**
+ * Calculate processing duration from start and end timestamps
+ * Returns null if either timestamp is missing
+ */
+export function calculateProcessingTime(
+  startedAt?: string | Date | null,
+  completedAt?: string | Date | null
+): number | null {
+  if (!startedAt || !completedAt) return null;
+  
+  const start = startedAt instanceof Date ? startedAt : new Date(startedAt);
+  const end = completedAt instanceof Date ? completedAt : new Date(completedAt);
+  
+  const diff = end.getTime() - start.getTime();
+  return diff >= 0 ? diff : null;
+}
+
 // ============================================================================
 // Validation Utilities
 // ============================================================================

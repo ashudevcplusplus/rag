@@ -176,11 +176,10 @@ describe('Project File Access Middleware', () => {
         mockNext
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((mockReq as any).validatedProject).toEqual(mockProject);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       expect((mockReq as any).validatedFile).toEqual(mockFile);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       expect((mockReq as any).validatedCompanyId).toEqual(mockCompany._id);
       expect(mockNext).toHaveBeenCalled();
     });
@@ -256,9 +255,8 @@ describe('Project File Access Middleware', () => {
         mockNext
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((mockReq as any).validatedProject).toEqual(mockProject);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       expect((mockReq as any).validatedCompanyId).toEqual(mockCompany._id);
       expect(mockNext).toHaveBeenCalled();
     });

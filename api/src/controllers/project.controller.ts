@@ -473,12 +473,13 @@ export const getIndexingStats = asyncHandler(async (req: Request, res: Response)
   const { validatedProject: project } = req as ValidatedProjectRequest;
   const projectId = project._id;
 
-  // Get counts by processing status (efficient count queries instead of loading documents)
-  const [pending, processing, completed, failed] = await Promise.all([
+  // Get counts by processing status and timing stats in parallel
+  const [pending, processing, completed, failed, timeStats] = await Promise.all([
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.PENDING),
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.PROCESSING),
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.COMPLETED),
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.FAILED),
+    fileMetadataRepository.getIndexingTimeStats(projectId),
   ]);
 
   res.json({
@@ -488,6 +489,10 @@ export const getIndexingStats = asyncHandler(async (req: Request, res: Response)
       completed,
       failed,
       total: pending + processing + completed + failed,
+      // Indexing time metrics
+      averageProcessingTimeMs: timeStats.averageTimeMs,
+      minProcessingTimeMs: timeStats.minTimeMs,
+      maxProcessingTimeMs: timeStats.maxTimeMs,
     },
   });
 });

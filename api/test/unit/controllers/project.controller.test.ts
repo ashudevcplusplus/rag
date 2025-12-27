@@ -403,6 +403,13 @@ describe('ProjectController', () => {
     it('should return indexing stats successfully', async () => {
       // Mock countByProcessingStatus to return numbers
       (fileMetadataRepository.countByProcessingStatus as jest.Mock).mockResolvedValue(0);
+      // Mock getIndexingTimeStats to return timing stats
+      (fileMetadataRepository.getIndexingTimeStats as jest.Mock).mockResolvedValue({
+        averageTimeMs: null,
+        minTimeMs: null,
+        maxTimeMs: null,
+        totalFilesCompleted: 0,
+      });
 
       // Create request with validatedProject properly set
       const mockReq = createMockAuthenticatedRequest(mockCompany, {
@@ -424,7 +431,8 @@ describe('ProjectController', () => {
 
       // Verify the mock was called
       expect(fileMetadataRepository.countByProcessingStatus).toHaveBeenCalled();
-      // Check that json was called with stats object
+      expect(fileMetadataRepository.getIndexingTimeStats).toHaveBeenCalled();
+      // Check that json was called with stats object including timing fields
       expect(mockRes.json).toHaveBeenCalledWith({
         stats: {
           pending: 0,
@@ -432,6 +440,9 @@ describe('ProjectController', () => {
           completed: 0,
           failed: 0,
           total: 0,
+          averageProcessingTimeMs: null,
+          minProcessingTimeMs: null,
+          maxProcessingTimeMs: null,
         },
       });
     });

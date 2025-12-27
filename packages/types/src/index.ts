@@ -123,6 +123,95 @@ export interface AuthResponse {
 }
 
 // ============================================================================
+// Chunk Size Presets
+// ============================================================================
+
+/**
+ * Predefined chunk size presets optimized for different use cases
+ */
+export enum ChunkSizePreset {
+  FAQ_SUPPORT = 'FAQ_SUPPORT',
+  GENERAL = 'GENERAL',
+  TECHNICAL = 'TECHNICAL',
+  LEGAL = 'LEGAL',
+  RESEARCH = 'RESEARCH',
+  CUSTOM = 'CUSTOM',
+}
+
+/**
+ * Chunk size configuration for each preset
+ */
+export interface ChunkSizeConfig {
+  preset: ChunkSizePreset;
+  chunkSize: number;
+  chunkOverlap: number;
+  label: string;
+  description: string;
+}
+
+/**
+ * Predefined chunk size configurations
+ */
+export const CHUNK_SIZE_PRESETS: Record<ChunkSizePreset, ChunkSizeConfig> = {
+  [ChunkSizePreset.FAQ_SUPPORT]: {
+    preset: ChunkSizePreset.FAQ_SUPPORT,
+    chunkSize: 600,
+    chunkOverlap: 100,
+    label: 'FAQ / Support KB',
+    description: 'Short, focused answers. Best for Q&A and support documentation.',
+  },
+  [ChunkSizePreset.GENERAL]: {
+    preset: ChunkSizePreset.GENERAL,
+    chunkSize: 1000,
+    chunkOverlap: 200,
+    label: 'General Documents',
+    description: 'Balanced performance for most document types.',
+  },
+  [ChunkSizePreset.TECHNICAL]: {
+    preset: ChunkSizePreset.TECHNICAL,
+    chunkSize: 1500,
+    chunkOverlap: 250,
+    label: 'Technical Documentation',
+    description: 'Keeps code examples and technical explanations intact.',
+  },
+  [ChunkSizePreset.LEGAL]: {
+    preset: ChunkSizePreset.LEGAL,
+    chunkSize: 1800,
+    chunkOverlap: 300,
+    label: 'Legal / Contracts',
+    description: 'Maintains clause context for legal documents.',
+  },
+  [ChunkSizePreset.RESEARCH]: {
+    preset: ChunkSizePreset.RESEARCH,
+    chunkSize: 2200,
+    chunkOverlap: 400,
+    label: 'Research Papers',
+    description: 'Preserves argument flow for academic content.',
+  },
+  [ChunkSizePreset.CUSTOM]: {
+    preset: ChunkSizePreset.CUSTOM,
+    chunkSize: 1000,
+    chunkOverlap: 200,
+    label: 'Custom',
+    description: 'Set your own chunk size and overlap values.',
+  },
+};
+
+/**
+ * Get chunk configuration from preset
+ */
+export function getChunkConfig(preset: ChunkSizePreset): ChunkSizeConfig {
+  return CHUNK_SIZE_PRESETS[preset] || CHUNK_SIZE_PRESETS[ChunkSizePreset.GENERAL];
+}
+
+/**
+ * Get all available presets as array (for dropdowns)
+ */
+export function getChunkPresetOptions(): ChunkSizeConfig[] {
+  return Object.values(CHUNK_SIZE_PRESETS);
+}
+
+// ============================================================================
 // Project Types
 // ============================================================================
 
@@ -149,6 +238,7 @@ export interface Project {
 
 export interface ProjectSettings {
   autoIndex?: boolean;
+  chunkSizePreset?: ChunkSizePreset;
   chunkSize?: number;
   chunkOverlap?: number;
 }
@@ -166,6 +256,7 @@ export interface CreateProjectDTO {
   color?: string;
   tags?: string[];
   visibility?: Visibility;
+  settings?: ProjectSettings;
 }
 
 export interface UpdateProjectDTO {
@@ -175,6 +266,7 @@ export interface UpdateProjectDTO {
   tags?: string[];
   status?: ProjectStatus;
   visibility?: Visibility;
+  settings?: ProjectSettings;
 }
 
 // ============================================================================
@@ -197,6 +289,11 @@ export interface FileMetadata {
   chunkCount: number;
   vectorIds: string[];
   metadata?: Record<string, unknown>;
+
+  // Timing fields for indexing metrics
+  processingStartedAt?: string;
+  processingCompletedAt?: string;
+  vectorIndexedAt?: string;
 }
 
 export interface UploadResult {

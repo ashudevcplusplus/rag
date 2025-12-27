@@ -1,0 +1,100 @@
+# ShopEase - Frequently Asked Questions
+
+## Getting Started
+
+**Q: How do I create my online store?**
+A: Sign up at shopease.com, choose a theme, add your products, configure payments and shipping, then publish. Most stores are live within 24 hours.
+
+**Q: Do I need technical skills to use ShopEase?**
+A: No! ShopEase is designed for non-technical users. Our drag-and-drop builder requires no coding. However, developers can access HTML/CSS for advanced customization.
+
+**Q: Can I use my own domain name?**
+A: Yes, you can connect your existing domain or buy a new one through ShopEase. All plans include free SSL certificates.
+
+**Q: Is there a free trial?**
+A: Yes, all plans include a 14-day free trial with full features. No credit card required to start.
+
+## Products & Inventory
+
+**Q: How many products can I sell?**
+A: Basic plan: 100 products, Professional: 5,000, Business and Enterprise: Unlimited.
+
+**Q: Can I sell digital products?**
+A: Yes! ShopEase supports digital downloads including ebooks, music, software, and courses. Files are delivered automatically after purchase.
+
+**Q: How do I manage inventory?**
+A: ShopEase tracks inventory automatically. Set low-stock alerts, enable backorders, or hide out-of-stock products. Sync with external inventory systems via integrations.
+
+**Q: Can I import products from another platform?**
+A: Yes, use our CSV import tool or migration apps for Shopify, WooCommerce, Etsy, and Amazon.
+
+## Payments
+
+**Q: What payment methods can I accept?**
+A: Credit/debit cards, PayPal, Apple Pay, Google Pay, Buy Now Pay Later (Klarna, Afterpay), bank transfers, and cryptocurrency.
+
+**Q: How quickly do I get paid?**
+A: With ShopEase Payments, funds are deposited in 2 business days. Third-party processors have their own schedules.
+
+**Q: Are there transaction fees?**
+A: Yes, fees depend on your plan (0-2%) plus payment processor fees (2.2-2.9% + $0.30). Using ShopEase Payments eliminates the ShopEase fee.
+
+**Q: Is my store secure?**
+A: Yes, ShopEase is PCI DSS Level 1 compliant, the highest security standard. All stores include free SSL certificates.
+
+## Shipping
+
+**Q: What shipping carriers are supported?**
+A: USPS, UPS, FedEx, DHL, and many regional carriers. Real-time rates available on Professional plan and above.
+
+**Q: Can I offer free shipping?**
+A: Yes! Set free shipping thresholds (e.g., "Free shipping over $50"), offer product-specific free shipping, or run promotional free shipping campaigns.
+
+**Q: Do you print shipping labels?**
+A: Yes, print shipping labels directly from ShopEase with discounted carrier rates up to 55% off retail.
+
+**Q: Can I ship internationally?**
+A: Yes, ship to 200+ countries. Customs forms are auto-generated, and you can offer duties-paid options.
+
+## Orders & Customers
+
+**Q: How do I track orders?**
+A: View all orders in Orders dashboard. Filter by status (pending, fulfilled, returned), date, or customer. Export to CSV for analysis.
+
+**Q: Can customers create accounts?**
+A: Yes, customers can create accounts for faster checkout and order history. Guest checkout is also available.
+
+**Q: How do returns work?**
+A: Configure your return policy in Settings. Customers can request returns, you approve/deny, then process refunds or exchanges.
+
+**Q: Can I send marketing emails?**
+A: Yes, ShopEase includes email marketing. Send newsletters, promotional emails, and automated sequences (welcome, abandoned cart, post-purchase).
+
+## Pricing & Billing
+
+**Q: Can I change plans anytime?**
+A: Yes, upgrade or downgrade anytime. Upgrades are immediate; downgrades take effect next billing cycle.
+
+**Q: Is there a contract?**
+A: No, ShopEase is month-to-month. Cancel anytime with no penalties. Annual plans receive 20% discount.
+
+**Q: What payment methods do you accept for subscription?**
+A: Credit cards (Visa, Mastercard, Amex) and PayPal.
+
+**Q: Do you offer refunds?**
+A: Yes, 30-day money-back guarantee for new customers. Contact billing@shopease.com.
+
+## Support
+
+**Q: How do I contact support?**
+A: Email support@shopease.com, use live chat (24/7), or call 1-800-SHOPEASE (Business plan and above).
+
+**Q: Is there a help center?**
+A: Yes, visit help.shopease.com for guides, tutorials, and video walkthroughs.
+
+**Q: Do you offer onboarding help?**
+A: Yes! All plans include a free 30-minute onboarding call. Business and Enterprise get dedicated success managers.
+
+**Q: Is there a community?**
+A: Yes, join community.shopease.com to connect with other merchants, share tips, and get advice.
+

@@ -16,6 +16,20 @@ export const ChatMessageSchema = z.object({
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
 /**
+ * Available prompt template types
+ * These correspond to pre-built system prompts optimized for different use cases
+ */
+export const PromptTemplateTypeSchema = z.enum([
+  'customer_support', // Default - balanced customer service
+  'sales_assistant', // Sales-focused with lead generation
+  'technical_support', // Technical documentation and troubleshooting
+  'onboarding_assistant', // New user onboarding
+  'faq_concise', // Brief FAQ-style responses
+  'ecommerce_assistant', // E-commerce product assistant
+]);
+export type PromptTemplateType = z.infer<typeof PromptTemplateTypeSchema>;
+
+/**
  * Chat request validation schema
  */
 export const chatRequestSchema = z.object({
@@ -25,8 +39,11 @@ export const chatRequestSchema = z.object({
   // Optional conversation history for multi-turn chat
   messages: z.array(ChatMessageSchema).optional(),
 
-  // Optional system prompt to guide the LLM
-  systemPrompt: z.string().max(4000).optional(),
+  // System prompt configuration (choose ONE approach):
+  // Option 1: Use a predefined template by name
+  promptTemplate: PromptTemplateTypeSchema.optional(),
+  // Option 2: Provide a custom system prompt (overrides template if both provided)
+  systemPrompt: z.string().max(8000).optional(),
 
   // RAG settings
   limit: z.number().int().min(1).max(50).optional().default(5),

@@ -1,0 +1,84 @@
+{
+  "case_study": "CloudSync Pro - Customer Support",
+  "prompt_template": "customer_support",
+  "test_date": "2025-12-27",
+  "questions": [
+    {
+      "id": 1,
+      "category": "Product Overview",
+      "query": "What is CloudSync Pro and what are its main features?",
+      "expected_topics": ["cloud storage", "collaboration", "sync", "security"],
+      "result": "pass"
+    },
+    {
+      "id": 2,
+      "category": "Pricing",
+      "query": "How much does CloudSync Pro cost? What are the pricing plans?",
+      "expected_topics": ["Free", "Starter", "Professional", "Enterprise", "pricing"],
+      "result": "pass"
+    },
+    {
+      "id": 3,
+      "category": "Troubleshooting",
+      "query": "My files are not syncing. What should I do?",
+      "expected_topics": ["internet", "storage", "restart", "excluded files"],
+      "result": "pass"
+    },
+    {
+      "id": 4,
+      "category": "Security",
+      "query": "Is my data secure? What encryption do you use?",
+      "expected_topics": ["AES-256", "TLS", "encryption", "zero-knowledge"],
+      "result": "pass"
+    },
+    {
+      "id": 5,
+      "category": "Refund Policy",
+      "query": "Can I get a refund if I am not satisfied?",
+      "expected_topics": ["30 days", "refund", "14 business days"],
+      "result": "pass"
+    },
+    {
+      "id": 6,
+      "category": "Support",
+      "query": "How do I contact support? What are the response times?",
+      "expected_topics": ["email", "live chat", "response times", "plans"],
+      "result": "pass"
+    },
+    {
+      "id": 7,
+      "category": "Integration",
+      "query": "Does CloudSync Pro integrate with Slack? How do I set it up?",
+      "expected_topics": ["Slack", "Settings", "Integrations", "notifications"],
+      "result": "pass"
+    },
+    {
+      "id": 8,
+      "category": "Mobile",
+      "query": "Is there a mobile app? How can I backup my photos automatically?",
+      "expected_topics": ["iOS", "Android", "Auto Backup", "WiFi"],
+      "result": "pass"
+    },
+    {
+      "id": 9,
+      "category": "Compliance",
+      "query": "We are a healthcare company. Is CloudSync Pro HIPAA compliant?",
+      "expected_topics": ["HIPAA", "compliant", "healthcare"],
+      "result": "pass"
+    },
+    {
+      "id": 10,
+      "category": "Edge Case - Out of Scope",
+      "query": "Can you help me book a flight to New York?",
+      "expected_behavior": "Politely decline and redirect to relevant topics",
+      "result": "pass"
+    }
+  ],
+  "summary": {
+    "total_questions": 10,
+    "passed": 10,
+    "failed": 0,
+    "pass_rate": "100%"
+  }
+}
+

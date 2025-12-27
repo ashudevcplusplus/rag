@@ -1,0 +1,66 @@
+# TalentHub - HR & Recruiting Platform
+
+TalentHub is an all-in-one HR and recruiting platform that helps companies attract, hire, and retain top talent. Our AI-powered tools streamline every step of the hiring process.
+
+## Key Features
+
+### 1. Applicant Tracking System (ATS)
+- Centralized candidate pipeline management
+- Customizable hiring stages (Sourcing → Screening → Interview → Offer → Hired)
+- Automated status updates and notifications
+- Resume parsing with AI extraction
+- Duplicate candidate detection
+- Bulk actions for efficient processing
+
+### 2. AI-Powered Candidate Matching
+- Smart matching algorithm scores candidates against job requirements
+- Skills-based matching with 95% accuracy
+- Experience level and culture fit assessment
+- Automatic ranking of top candidates
+- Bias-free screening with anonymized reviews
+
+### 3. Job Posting & Distribution
+- One-click posting to 50+ job boards (Indeed, LinkedIn, Glassdoor, etc.)
+- Custom career page builder
+- Social media job sharing
+- Employee referral tracking
+- SEO-optimized job descriptions
+
+### 4. Interview Management
+- Integrated calendar scheduling with Google and Outlook
+- Self-service interview booking for candidates
+- Video interview platform with recording
+- Interview scorecards and structured feedback
+- Automated interview reminders
+
+### 5. Onboarding Automation
+- Digital offer letters with e-signatures
+- New hire document collection
+- Onboarding task checklists
+- IT equipment and access provisioning
+- First-day welcome workflows
+
+### 6. Analytics & Reporting
+- Time-to-hire metrics
+- Source effectiveness analysis
+- Pipeline conversion rates
+- Diversity and inclusion reporting
+- Custom report builder
+
+## Supported Integrations
+
+- **HRIS**: Workday, BambooHR, ADP, Gusto
+- **Communication**: Slack, Microsoft Teams
+- **Calendar**: Google Calendar, Outlook
+- **Background Checks**: Checkr, GoodHire
+- **Assessments**: Codility, HackerRank, TestGorilla
+- **Video**: Zoom, Google Meet, Microsoft Teams
+
+## Getting Started
+
+1. Sign up at talenthub.io
+2. Complete company profile setup
+3. Create your first job posting
+4. Invite your hiring team
+5. Start receiving applications
+
