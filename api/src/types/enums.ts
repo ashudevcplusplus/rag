@@ -177,3 +177,40 @@ export enum UserRole {
   MEMBER = 'MEMBER',
   VIEWER = 'VIEWER',
 }
+
+// ============================================================================
+// Event Source Enums
+// ============================================================================
+
+/**
+ * Predefined sources for async events
+ * Identifies where each event originated in the codebase
+ */
+export enum EventSource {
+  // File Service
+  FILE_SERVICE_UPLOAD = 'FileService.uploadFile',
+
+  // Auth Middleware
+  AUTH_MIDDLEWARE = 'AuthMiddleware.authenticateRequest',
+
+  // Project Controller
+  PROJECT_CONTROLLER_CREATE = 'ProjectController.createProject',
+  PROJECT_CONTROLLER_UPDATE = 'ProjectController.updateProject',
+  PROJECT_CONTROLLER_DELETE = 'ProjectController.deleteProject',
+  PROJECT_CONTROLLER_DELETE_FILE = 'ProjectController.deleteFile',
+
+  // Company Controller
+  COMPANY_CONTROLLER_UPLOAD = 'CompanyController.uploadFile',
+  COMPANY_CONTROLLER_SEARCH = 'CompanyController.searchCompany',
+
+  // Chat Controller
+  CHAT_CONTROLLER_CHAT = 'ChatController.chat',
+  CHAT_CONTROLLER_STREAM = 'ChatController.chatStream',
+
+  // Indexing Processor
+  INDEXING_PROCESSOR = 'IndexingProcessor.processIndexJob',
+
+  // Middleware
+  ERROR_MIDDLEWARE = 'ErrorMiddleware.errorHandler',
+  API_LOGGING_MIDDLEWARE = 'ApiLoggingMiddleware',
+}

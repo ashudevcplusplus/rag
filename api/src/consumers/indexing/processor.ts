@@ -10,7 +10,7 @@ import {
 import { VectorService, EmbeddingProvider } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
-import { FileCleanupReason, ProcessingStatus } from '../../types/enums';
+import { FileCleanupReason, ProcessingStatus, EventSource } from '../../types/enums';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
 import { projectRepository } from '../../repositories/project.repository';
@@ -233,7 +233,11 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     // One-line event publishing for storage update
     const meta = await fileMetadataRepository.findById(fileId);
     if (meta) {
-      void publishStorageUpdate({ companyId, fileSize: meta.size });
+      void publishStorageUpdate({
+        source: EventSource.INDEXING_PROCESSOR,
+        companyId,
+        fileSize: meta.size,
+      });
     }
 
     // Update project stats (increment vector count)
@@ -242,7 +246,11 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     });
 
     // One-line event publishing for file cleanup
-    void publishFileCleanup({ filePath, reason: FileCleanupReason.CLEANUP });
+    void publishFileCleanup({
+      source: EventSource.INDEXING_PROCESSOR,
+      filePath,
+      reason: FileCleanupReason.CLEANUP,
+    });
 
     logger.info('Job completed successfully', {
       jobId: job.id,

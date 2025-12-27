@@ -1,4 +1,9 @@
-import { AsyncTaskType, AnalyticsEventType, FileCleanupReason } from '../../../src/types/enums';
+import {
+  AsyncTaskType,
+  AnalyticsEventType,
+  FileCleanupReason,
+  EventSource,
+} from '../../../src/types/enums';
 
 // Mock the queue before importing the module
 const mockAdd = jest.fn().mockResolvedValue(undefined);
@@ -50,6 +55,7 @@ describe('async-events.util', () => {
   describe('publishApiLog', () => {
     it('should publish API log event', async () => {
       const data = {
+        source: EventSource.API_LOGGING_MIDDLEWARE,
         companyId: 'company-123',
         method: 'GET',
         endpoint: '/api/test',
@@ -74,6 +80,7 @@ describe('async-events.util', () => {
   describe('publishFileCleanup', () => {
     it('should publish file cleanup event with custom options', async () => {
       const data = {
+        source: EventSource.FILE_SERVICE_UPLOAD,
         filePath: '/path/to/file',
         reason: FileCleanupReason.CLEANUP,
       };
@@ -97,6 +104,7 @@ describe('async-events.util', () => {
   describe('publishCacheInvalidation', () => {
     it('should publish cache invalidation event', async () => {
       const data = {
+        source: EventSource.COMPANY_CONTROLLER_UPLOAD,
         companyId: 'company-123',
         cacheKey: 'test-cache-key',
       };
@@ -117,6 +125,7 @@ describe('async-events.util', () => {
   describe('publishErrorLog', () => {
     it('should publish error log event', async () => {
       const data = {
+        source: EventSource.ERROR_MIDDLEWARE,
         companyId: 'company-123',
         method: 'POST',
         endpoint: '/api/error',
@@ -140,6 +149,7 @@ describe('async-events.util', () => {
   describe('publishSearchCache', () => {
     it('should publish search cache event', async () => {
       const data = {
+        source: EventSource.COMPANY_CONTROLLER_SEARCH,
         cacheKey: 'search:project-123:query',
         results: [],
         ttl: 3600,
@@ -161,6 +171,7 @@ describe('async-events.util', () => {
   describe('publishApiKeyTracking', () => {
     it('should publish API key tracking event', async () => {
       const data = {
+        source: EventSource.AUTH_MIDDLEWARE,
         companyId: 'company-123',
       };
 
@@ -180,6 +191,7 @@ describe('async-events.util', () => {
   describe('publishAnalytics', () => {
     it('should publish analytics event', async () => {
       const data = {
+        source: EventSource.PROJECT_CONTROLLER_CREATE,
         companyId: 'company-123',
         eventType: AnalyticsEventType.SEARCH,
         metadata: { query: 'test' },
@@ -201,6 +213,7 @@ describe('async-events.util', () => {
   describe('publishProjectStats', () => {
     it('should publish project stats event', async () => {
       const data = {
+        source: EventSource.FILE_SERVICE_UPLOAD,
         projectId: 'project-123',
         fileCount: 10,
         totalSize: 1024,
@@ -222,6 +235,7 @@ describe('async-events.util', () => {
   describe('publishWebhook', () => {
     it('should publish webhook event with custom options', async () => {
       const data = {
+        source: EventSource.COMPANY_CONTROLLER_UPLOAD,
         webhookUrl: 'https://example.com/webhook',
         eventType: 'file.uploaded',
         payload: { event: 'test' },
@@ -246,6 +260,7 @@ describe('async-events.util', () => {
   describe('publishStorageUpdate', () => {
     it('should publish storage update event', async () => {
       const data = {
+        source: EventSource.INDEXING_PROCESSOR,
         companyId: 'company-123',
         fileSize: 1024,
       };
@@ -268,6 +283,7 @@ describe('async-events.util', () => {
       mockAdd.mockRejectedValueOnce(new Error('Queue error'));
 
       const data = {
+        source: EventSource.API_LOGGING_MIDDLEWARE,
         companyId: 'company-123',
         method: 'GET',
         endpoint: '/api/test',
@@ -289,6 +305,7 @@ describe('async-events.util', () => {
       mockAdd.mockRejectedValueOnce('string error');
 
       const data = {
+        source: EventSource.API_LOGGING_MIDDLEWARE,
         companyId: 'company-123',
         method: 'GET',
         endpoint: '/api/test',

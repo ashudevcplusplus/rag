@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { publishApiLog } from '../utils/async-events.util';
+import { EventSource } from '../types/enums';
 import { AuthenticatedRequest } from './auth.middleware';
 
 export const apiLoggingMiddleware = (req: Request, res: Response, next: NextFunction): void => {
@@ -14,6 +15,7 @@ export const apiLoggingMiddleware = (req: Request, res: Response, next: NextFunc
 
     // One-line event publishing
     void publishApiLog({
+      source: EventSource.API_LOGGING_MIDDLEWARE,
       companyId: authReq.context?.companyId,
       method: req.method,
       endpoint: req.path,
