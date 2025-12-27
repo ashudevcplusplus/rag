@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build text-utils dependency
+        run: pnpm --filter @rag/text-utils build
+
       - name: Run linter
         run: pnpm --filter mvp-api lint
 
@@ -109,6 +112,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build text-utils dependency
+        run: pnpm --filter @rag/text-utils build
 
       - name: Build TypeScript
         run: pnpm --filter mvp-api build
