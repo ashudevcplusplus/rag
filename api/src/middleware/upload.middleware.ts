@@ -40,9 +40,9 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/json',
   // HTML
   'text/html',
-  // Email
+  // Email (text-based formats only)
   'message/rfc822',
-  'application/vnd.ms-outlook',
+  // Note: application/vnd.ms-outlook (.msg) is a binary OLE format and cannot be extracted as text
   // Code
   'text/javascript',
   'application/javascript',
@@ -69,7 +69,7 @@ const ALLOWED_EXTENSIONS = new Set([
   '.html',
   '.htm',
   '.eml',
-  '.msg',
+  // Note: .msg (Outlook) is a binary OLE format and cannot be extracted as text
   '.js',
   '.ts',
   '.py',
