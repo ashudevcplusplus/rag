@@ -43,6 +43,7 @@ function detectSourceFormatFromMimetype(mimetype: string, filename?: string): So
     'text/typescript': 'code',
     'text/x-python': 'code',
     'text/x-java': 'code',
+    'text/x-java-source': 'code',
     'text/x-c': 'code',
     'text/x-go': 'code',
     'application/json': 'code',
@@ -109,7 +110,10 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       sourceFormat,
       rawLength: rawText.length,
       processedLength: processedText.length,
-      reduction: `${Math.round((1 - processedText.length / rawText.length) * 100)}%`,
+      reduction:
+        rawText.length > 0
+          ? `${Math.round((1 - processedText.length / rawText.length) * 100)}%`
+          : '0%',
     });
 
     // 3. Chunk with project settings

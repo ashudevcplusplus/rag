@@ -171,7 +171,7 @@ services:
       - api
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://api:8000
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
@@ -190,7 +190,7 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:8001
+      - VITE_API_URL=http://landing-page-api:8001
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
