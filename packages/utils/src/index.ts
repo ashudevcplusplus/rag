@@ -256,13 +256,15 @@ export function removeChunkOverlap(chunks: string[], minOverlapLength = 20): str
 
     // Find the overlap by checking if the end of the previous chunk
     // matches the beginning of the current chunk
+    // Use untrimmed comparison for consistency with slice operation
     let overlapLength = 0;
     const maxCheck = Math.min(prevChunk.length, currentChunk.length, 300);
 
     for (let len = maxCheck; len >= minOverlapLength; len--) {
-      const prevEnd = prevChunk.slice(-len).trim();
-      const currentStart = currentChunk.slice(0, len).trim();
+      const prevEnd = prevChunk.slice(-len);
+      const currentStart = currentChunk.slice(0, len);
       
+      // Compare without trimming to maintain consistency with slice positions
       if (prevEnd === currentStart) {
         overlapLength = len;
         break;
@@ -271,8 +273,8 @@ export function removeChunkOverlap(chunks: string[], minOverlapLength = 20): str
 
     if (overlapLength > 0) {
       // Remove the overlapping portion from the beginning of the current chunk
-      const trimmed = currentChunk.slice(overlapLength).trimStart();
-      result.push(trimmed || currentChunk); // Fallback to original if trimming leaves nothing
+      const remaining = currentChunk.slice(overlapLength);
+      result.push(remaining.trimStart() || currentChunk); // Fallback to original if trimming leaves nothing
     } else {
       result.push(currentChunk);
     }

@@ -1,10 +1,17 @@
 import fs from 'fs';
 import type { ExtractionResult, SupportedMimeType } from './types';
 
-// Import pdf.js-extract for layout-aware PDF extraction
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PDFExtractLib = require('pdf.js-extract');
-const PDFExtract = PDFExtractLib.PDFExtract;
+// Dynamic import wrapper for pdf.js-extract (CommonJS module)
+// Using lazy initialization to avoid ESM/CommonJS compatibility issues
+let PDFExtract: typeof import('pdf.js-extract').PDFExtract | null = null;
+
+async function getPDFExtract(): Promise<typeof import('pdf.js-extract').PDFExtract> {
+  if (!PDFExtract) {
+    const pdfExtractModule = await import('pdf.js-extract');
+    PDFExtract = pdfExtractModule.PDFExtract;
+  }
+  return PDFExtract;
+}
 
 /**
  * Interface for pdf.js-extract text item
@@ -118,12 +125,18 @@ async function extractPDFWithLayout(
 ): Promise<{ text: string; pageCount: number }> {
   const { columnGapThreshold = 10, lineHeightTolerance = 3 } = options;
 
-  const pdfExtract = new PDFExtract();
+  const PDFExtractClass = await getPDFExtract();
+  const pdfExtract = new PDFExtractClass();
 
   return new Promise((resolve, reject) => {
-    pdfExtract.extractBuffer(buffer, {}, (err: Error | null, data: PDFExtractResult) => {
+    pdfExtract.extractBuffer(buffer, {}, (err: Error | null, data?: PDFExtractResult) => {
       if (err) {
         reject(err);
+        return;
+      }
+
+      if (!data) {
+        reject(new Error('PDF extraction returned no data'));
         return;
       }
 
