@@ -118,6 +118,53 @@ export async function chunkDocument(text: string, options: DocumentChunkOptions 
 }
 
 /**
+ * Recursively split a long paragraph into chunks of the target size
+ */
+function splitLongParagraph(para: string, size: number): string[] {
+  if (para.length <= size) return [para];
+
+  const chunks: string[] = [];
+  // Try splitting by sentences first
+  const sentences = para.split(/(?<=[.!?])\s+/);
+
+  let current = '';
+  for (const sentence of sentences) {
+    if (sentence.length > size) {
+      // Sentence is too long, split by words
+      if (current) {
+        chunks.push(current);
+        current = '';
+      }
+      const words = sentence.split(/\s+/);
+      for (const word of words) {
+        if ((current + ' ' + word).length <= size) {
+          current = current ? current + ' ' + word : word;
+        } else {
+          if (current) chunks.push(current);
+          // If a single word is longer than size, split it
+          if (word.length > size) {
+            for (let i = 0; i < word.length; i += size) {
+              chunks.push(word.slice(i, i + size));
+            }
+            current = '';
+          } else {
+            current = word;
+          }
+        }
+      }
+    } else if ((current + ' ' + sentence).length <= size) {
+      current = current ? current + ' ' + sentence : sentence;
+    } else {
+      if (current) chunks.push(current);
+      current = sentence;
+    }
+  }
+  if (current) chunks.push(current);
+
+  return chunks;
+}
+
+/**
  * Synchronous version using simple splitting
  */
 export function chunkDocumentSync(text: string, options: DocumentChunkOptions = {}): string[] {
@@ -148,7 +195,18 @@ export function chunkDocumentSync(text: string, options: DocumentChunkOptions = 
       current = current ? current + '\n\n' + para : para;
     } else {
       if (current) chunks.push(current);
-      current = para.length > size ? para.slice(0, size) : para;
+      // Recursively split long paragraphs instead of truncating
+      if (para.length > size) {
+        const splitChunks = splitLongParagraph(para, size);
+        // Add all but the last chunk directly
+        for (let i = 0; i < splitChunks.length - 1; i++) {
+          chunks.push(splitChunks[i]);
+        }
+        // Keep the last chunk as current for potential merging
+        current = splitChunks[splitChunks.length - 1] || '';
+      } else {
+        current = para;
+      }
     }
   }
   if (current) chunks.push(current);

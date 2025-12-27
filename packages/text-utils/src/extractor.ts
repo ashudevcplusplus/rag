@@ -73,9 +73,9 @@ const TEXT_MIME_TYPES: Set<string> = new Set([
   'application/json',
   'application/xml',
   'application/javascript',
-  // Email
+  // Email (text-based formats only)
   'message/rfc822',
-  'application/vnd.ms-outlook',
+  // Note: application/vnd.ms-outlook (.msg) is a binary OLE format, not text
   // Code
   'text/x-python',
   'text/x-java-source',
