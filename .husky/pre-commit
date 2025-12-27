@@ -9,4 +9,13 @@ npm run format:check || exit 1
 echo "🧪 Running unit tests..."
 npm run test:unit || exit 1
 
+echo "🔨 Building API..."
+npm run build || exit 1
+
+cd ..
+
+echo "📦 Running text-utils checks..."
+pnpm --filter @rag/text-utils test || exit 1
+pnpm --filter @rag/text-utils typecheck || exit 1
+
 echo "✅ All pre-commit checks passed!"
