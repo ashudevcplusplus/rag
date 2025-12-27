@@ -214,13 +214,9 @@ jobs:
   # ============================================
   # Docker Build Verification
   # ============================================
-  docker-build:
-    name: Docker - ${{ matrix.service }}
+  docker-build-api:
+    name: Docker - api
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        service: [api, embed]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -228,13 +224,34 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.service }} Docker image
+      - name: Build API Docker image
         uses: docker/build-push-action@v5
         timeout-minutes: 30
         with:
-          context: ./${{ matrix.service }}
+          context: .
+          file: ./api/Dockerfile
           push: false
-          tags: ${{ matrix.service }}:ci-${{ github.sha }}
+          tags: api:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  docker-build-embed:
+    name: Docker - embed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Embed Docker image
+        uses: docker/build-push-action@v5
+        timeout-minutes: 30
+        with:
+          context: ./embed
+          push: false
+          tags: embed:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -406,7 +423,7 @@ jobs:
   ci-status:
     name: CI Status
     runs-on: ubuntu-latest
-    needs: [api-checks, api-build, packages-checks, frontend-checks, python-checks, docker-build, security-audit, coverage-check]
+    needs: [api-checks, api-build, packages-checks, frontend-checks, python-checks, docker-build-api, docker-build-embed, security-audit, coverage-check]
     if: always()
     steps:
       - name: Check CI Status
@@ -420,7 +437,8 @@ jobs:
           echo "| Packages | ${{ needs.packages-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend | ${{ needs.frontend-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Python | ${{ needs.python-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker | ${{ needs.docker-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker API | ${{ needs.docker-build-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Embed | ${{ needs.docker-build-embed.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security | ${{ needs.security-audit.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Coverage | ${{ needs.coverage-check.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           
@@ -429,7 +447,8 @@ jobs:
              [ "${{ needs.packages-checks.result }}" != "success" ] || \
              [ "${{ needs.frontend-checks.result }}" != "success" ] || \
              [ "${{ needs.python-checks.result }}" != "success" ] || \
-             [ "${{ needs.docker-build.result }}" != "success" ] || \
+             [ "${{ needs.docker-build-api.result }}" != "success" ] || \
+             [ "${{ needs.docker-build-embed.result }}" != "success" ] || \
              [ "${{ needs.security-audit.result }}" != "success" ] || \
              [ "${{ needs.coverage-check.result }}" != "success" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
