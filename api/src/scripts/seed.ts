@@ -58,8 +58,8 @@ async function findOrCreateUser(seedData: SeedUserDTO): Promise<{ user: IUser; c
 async function findOrCreateProject(
   seedData: SeedProjectDTO
 ): Promise<{ project: IProject; created: boolean }> {
-  // Try to find by _id first, then by slug within the company
-  let existing = await projectRepository.findById(seedData._id);
+  // Try to find by _id first (including soft-deleted), then by slug within the company
+  let existing = await projectRepository.findByIdIncludingDeleted(seedData._id);
   if (!existing) {
     existing = await projectRepository.findBySlug(seedData.companyId, seedData.slug);
   }

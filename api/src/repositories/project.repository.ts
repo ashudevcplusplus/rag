@@ -31,6 +31,16 @@ export class ProjectRepository {
   }
 
   /**
+   * Find project by ID including soft-deleted projects
+   * Useful for seeding and administrative operations
+   */
+  async findByIdIncludingDeleted(id: string): Promise<IProject | null> {
+    const project = await ProjectModel.findById(id).lean();
+    if (!project) return null;
+    return toStringId(project) as unknown as IProject;
+  }
+
+  /**
    * Find multiple projects by IDs (bulk fetch to avoid N+1 queries)
    */
   async findByIds(ids: string[]): Promise<IProject[]> {
