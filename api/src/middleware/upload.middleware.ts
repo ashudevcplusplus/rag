@@ -40,6 +40,17 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/json',
   // HTML
   'text/html',
+  // Email (text-based formats only)
+  'message/rfc822',
+  // Note: application/vnd.ms-outlook (.msg) is a binary OLE format and cannot be extracted as text
+  // Code
+  'text/javascript',
+  'application/javascript',
+  'text/typescript',
+  'text/x-python',
+  'text/x-java-source',
+  'text/x-c',
+  'text/x-go',
 ]);
 
 // Allowed file extensions (as fallback when MIME type detection fails)
@@ -57,6 +68,14 @@ const ALLOWED_EXTENSIONS = new Set([
   '.json',
   '.html',
   '.htm',
+  '.eml',
+  // Note: .msg (Outlook) is a binary OLE format and cannot be extracted as text
+  '.js',
+  '.ts',
+  '.py',
+  '.java',
+  '.c',
+  '.go',
 ]);
 
 // Configure multer for file uploads

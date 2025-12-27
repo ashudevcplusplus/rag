@@ -20,8 +20,7 @@ import { IEmbedding } from '../schemas/embedding.schema';
  *   3. Use TTL or manual cleanup to sync deletions
  */
 export interface IEmbeddingDocument
-  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId' | 'deletedAt'>,
-    Document {
+  extends Omit<IEmbedding, '_id' | 'fileId' | 'projectId' | 'deletedAt'>, Document {
   fileId: Types.ObjectId;
   projectId: Types.ObjectId;
   deletedAt?: Date;

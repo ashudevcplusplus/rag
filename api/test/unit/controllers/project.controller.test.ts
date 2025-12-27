@@ -29,6 +29,8 @@ import {
   createMockFileMetadata,
   createMockCompany,
   createMockAuthenticatedRequest,
+  createMockValidatedFileRequest,
+  createMockValidatedProjectRequest,
   MockExpressResponse,
 } from '../../lib/mock-utils';
 
@@ -302,74 +304,72 @@ describe('ProjectController', () => {
   });
 
   describe('getFilePreview', () => {
-    it('should return 400 when company ID is not provided', async () => {
-      const mockReq = createMockRequest({
+    // Note: Validation tests (400/404 for company/project/file) are now in middleware tests
+    // These tests assume validateFileAccess middleware has already run
+
+    it('should return file content when embedding exists', async () => {
+      const mockEmbedding = {
+        _id: 'emb-1',
+        contents: ['chunk1', 'chunk2'],
+        chunkCount: 2,
+      };
+      (embeddingRepository.findByFileId as jest.Mock).mockResolvedValue(mockEmbedding);
+
+      const mockReq = createMockValidatedFileRequest(mockCompany, mockProject, mockFile, {
         params: { projectId, fileId },
       });
 
       await getFilePreview(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: expect.objectContaining({
+            _id: mockFile._id,
+          }),
+          chunks: mockEmbedding.contents,
+        })
+      );
     });
 
-    it('should return 404 when project not found', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue(null);
+    it('should return null content when embedding not found', async () => {
+      (embeddingRepository.findByFileId as jest.Mock).mockResolvedValue(null);
 
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId: 'non-existent', fileId },
-      });
-
-      await getFilePreview(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should return 404 when project belongs to different company', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue({
-        ...mockProject,
-        companyId: 'different-company',
-      });
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
+      const mockReq = createMockValidatedFileRequest(mockCompany, mockProject, mockFile, {
         params: { projectId, fileId },
       });
 
       await getFilePreview(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: null,
+          chunks: [],
+        })
+      );
     });
   });
 
   describe('deleteFile', () => {
-    it('should return 400 when company ID is not provided', async () => {
-      const mockReq = createMockRequest({
+    // Note: Validation tests (400/404 for company/project/file) are now in middleware tests
+    // These tests assume validateFileAccess middleware has already run
+
+    it('should delete file successfully', async () => {
+      (DeletionService.deleteFile as jest.Mock).mockResolvedValue(true);
+
+      const mockReq = createMockValidatedFileRequest(mockCompany, mockProject, mockFile, {
         params: { projectId, fileId },
       });
 
       await deleteFile(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(DeletionService.deleteFile).toHaveBeenCalledWith(fileId);
+      expect(mockRes.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
     });
 
-    it('should return 404 when project not found', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue(null);
+    it('should return 404 when deletion service returns false', async () => {
+      (DeletionService.deleteFile as jest.Mock).mockResolvedValue(false);
 
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId: 'non-existent', fileId },
-      });
-
-      await deleteFile(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should return 404 when project belongs to different company', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue({
-        ...mockProject,
-        companyId: 'different-company',
-      });
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
+      const mockReq = createMockValidatedFileRequest(mockCompany, mockProject, mockFile, {
         params: { projectId, fileId },
       });
 
@@ -380,98 +380,71 @@ describe('ProjectController', () => {
   });
 
   describe('reindexFile', () => {
-    it('should return 400 when company ID is not provided', async () => {
-      const mockReq = createMockRequest({
+    // Note: Validation tests (400/404 for company/project/file) are now in middleware tests
+    // These tests assume validateFileAccess middleware has already run
+
+    it('should return 400 when file has invalid status for reindexing', async () => {
+      const pendingFile = { ...mockFile, processingStatus: ProcessingStatus.PENDING };
+
+      const mockReq = createMockValidatedFileRequest(mockCompany, mockProject, pendingFile, {
         params: { projectId, fileId },
       });
 
       await reindexFile(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
-    });
-
-    it('should return 404 when project not found', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue(null);
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId: 'non-existent', fileId },
-      });
-
-      await reindexFile(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should return 404 when project belongs to different company', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue({
-        ...mockProject,
-        companyId: 'different-company',
-      });
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId, fileId },
-      });
-
-      await reindexFile(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
     });
   });
 
   describe('getIndexingStats', () => {
-    it('should return 400 when company ID is not provided', async () => {
-      const mockReq = createMockRequest({
-        params: { projectId },
-      });
+    // Note: Validation tests (400/404 for company/project) are now in middleware tests
+    // These tests assume validateProjectAccess middleware has already run
 
-      await getIndexingStats(
-        mockReq as unknown as Request,
-        mockRes as unknown as Response,
-        mockNext
-      );
+    it('should return indexing stats successfully', async () => {
+      // Mock countByProcessingStatus to return numbers
+      (fileMetadataRepository.countByProcessingStatus as jest.Mock).mockResolvedValue(0);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-    });
-
-    it('should return 404 when project not found', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue(null);
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId: 'non-existent' },
-      });
-
-      await getIndexingStats(
-        mockReq as unknown as Request,
-        mockRes as unknown as Response,
-        mockNext
-      );
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should return 404 when project belongs to different company', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue({
-        ...mockProject,
-        companyId: 'different-company',
-      });
-
+      // Create request with validatedProject properly set
       const mockReq = createMockAuthenticatedRequest(mockCompany, {
         params: { projectId },
+      }) as Request & { validatedProject: typeof mockProject; validatedCompanyId: string };
+      mockReq.validatedProject = mockProject;
+      mockReq.validatedCompanyId = companyId;
+
+      // The asyncHandler wrapper returns a non-async function that returns void
+      // We need to wait for the internal promise to resolve
+      await new Promise<void>((resolve) => {
+        getIndexingStats(mockReq as unknown as Request, mockRes as unknown as Response, (err) => {
+          mockNext(err);
+          resolve();
+        });
+        // Also resolve after a short delay in case no error
+        setTimeout(resolve, 100);
       });
 
-      await getIndexingStats(
-        mockReq as unknown as Request,
-        mockRes as unknown as Response,
-        mockNext
-      );
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
+      // Verify the mock was called
+      expect(fileMetadataRepository.countByProcessingStatus).toHaveBeenCalled();
+      // Check that json was called with stats object
+      expect(mockRes.json).toHaveBeenCalledWith({
+        stats: {
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          failed: 0,
+          total: 0,
+        },
+      });
     });
   });
 
   describe('bulkReindexFailed', () => {
-    it('should return 400 when company ID is not provided', async () => {
-      const mockReq = createMockRequest({
+    // Note: Validation tests (400/404 for company/project) are now in middleware tests
+    // These tests assume validateProjectAccess middleware has already run
+
+    it('should return message when no failed files exist', async () => {
+      (fileMetadataRepository.findByProcessingStatus as jest.Mock).mockResolvedValue([]);
+
+      const mockReq = createMockValidatedProjectRequest(mockCompany, mockProject, {
         params: { projectId },
       });
 
@@ -481,42 +454,10 @@ describe('ProjectController', () => {
         mockNext
       );
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-    });
-
-    it('should return 404 when project not found', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue(null);
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId: 'non-existent' },
+      expect(mockRes.json).toHaveBeenCalledWith({
+        message: 'No failed files to reindex',
+        queued: 0,
       });
-
-      await bulkReindexFailed(
-        mockReq as unknown as Request,
-        mockRes as unknown as Response,
-        mockNext
-      );
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should return 404 when project belongs to different company', async () => {
-      (projectRepository.findById as jest.Mock).mockResolvedValue({
-        ...mockProject,
-        companyId: 'different-company',
-      });
-
-      const mockReq = createMockAuthenticatedRequest(mockCompany, {
-        params: { projectId },
-      });
-
-      await bulkReindexFailed(
-        mockReq as unknown as Request,
-        mockRes as unknown as Response,
-        mockNext
-      );
-
-      expect(mockRes.status).toHaveBeenCalledWith(404);
     });
   });
 });

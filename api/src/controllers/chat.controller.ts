@@ -4,7 +4,7 @@ import { chatRequestSchema } from '../schemas/chat.schema';
 import { companyIdSchema } from '../validators/upload.validator';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
-import { AnalyticsEventType } from '../types/enums';
+import { AnalyticsEventType, EventSource } from '../types/enums';
 import { asyncHandler } from '../middleware/error.middleware';
 
 /**
@@ -38,6 +38,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
   if (chatRequest.stream) {
     // Publish analytics event for streaming
     void publishAnalytics({
+      source: EventSource.CHAT_CONTROLLER_CHAT,
       eventType: AnalyticsEventType.SEARCH,
       companyId,
       metadata: {
@@ -59,6 +60,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
 
   // Publish analytics event
   void publishAnalytics({
+    source: EventSource.CHAT_CONTROLLER_CHAT,
     eventType: AnalyticsEventType.SEARCH, // Reuse search event type for chat
     companyId,
     metadata: {
@@ -109,6 +111,7 @@ export const chatStream = asyncHandler(async (req: Request, res: Response): Prom
 
   // Publish analytics event
   void publishAnalytics({
+    source: EventSource.CHAT_CONTROLLER_STREAM,
     eventType: AnalyticsEventType.SEARCH,
     companyId,
     metadata: {

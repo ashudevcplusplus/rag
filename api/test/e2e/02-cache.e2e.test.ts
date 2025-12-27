@@ -75,7 +75,7 @@ describe('Level 2: Cache & Chunking Tests', () => {
     }
 
     const content = fs.readFileSync(testFile2000, 'utf-8');
-    const chunks = recursiveChunkText(content, 1000, 200);
+    const chunks = recursiveChunkText(content, { chunkSize: 1000, chunkOverlap: 200 });
 
     let contextBreaks = 0;
     chunks.forEach((chunk, i) => {

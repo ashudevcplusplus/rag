@@ -66,8 +66,7 @@ export type CreateConsumerChangeDTO = z.infer<typeof consumerChangeZodSchema>;
 
 // Mongoose Document Interface
 export interface IConsumerChangeDocument
-  extends Omit<IConsumerChange, '_id' | 'companyId'>,
-    Document {
+  extends Omit<IConsumerChange, '_id' | 'companyId'>, Document {
   companyId?: Types.ObjectId;
 }
 

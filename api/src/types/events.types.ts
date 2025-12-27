@@ -3,7 +3,7 @@
  * All event interfaces and types are defined here in one place
  */
 
-import { ChangeType, AnalyticsEventType, FileCleanupReason } from './enums';
+import { ChangeType, AnalyticsEventType, FileCleanupReason, EventSource } from './enums';
 
 // ============================================================================
 // Base Event Interface
@@ -116,9 +116,18 @@ export interface JobStatusResponse {
 // ============================================================================
 
 /**
+ * Base interface for all async task job data
+ * Every async event must include the source to track where it originated
+ */
+export interface BaseAsyncTaskJobData {
+  /** The source of the event - must be a predefined EventSource enum value */
+  source: EventSource;
+}
+
+/**
  * API Logging Event
  */
-export interface ApiLoggingJobData {
+export interface ApiLoggingJobData extends BaseAsyncTaskJobData {
   companyId?: string;
   method: string;
   endpoint: string;
@@ -135,7 +144,7 @@ export interface ApiLoggingJobData {
 /**
  * File Cleanup Event
  */
-export interface FileCleanupJobData {
+export interface FileCleanupJobData extends BaseAsyncTaskJobData {
   filePath: string;
   reason: FileCleanupReason;
 }
@@ -143,7 +152,7 @@ export interface FileCleanupJobData {
 /**
  * Cache Invalidation Event
  */
-export interface CacheInvalidationJobData {
+export interface CacheInvalidationJobData extends BaseAsyncTaskJobData {
   companyId: string;
   cacheKey?: string; // Optional specific key, if not provided invalidates all company cache
 }
@@ -151,7 +160,7 @@ export interface CacheInvalidationJobData {
 /**
  * Error Logging Event
  */
-export interface ErrorLoggingJobData {
+export interface ErrorLoggingJobData extends BaseAsyncTaskJobData {
   companyId?: string;
   method: string;
   endpoint: string;
@@ -165,7 +174,7 @@ export interface ErrorLoggingJobData {
 /**
  * Search Caching Event
  */
-export interface SearchCachingJobData {
+export interface SearchCachingJobData extends BaseAsyncTaskJobData {
   cacheKey: string;
   results: unknown;
   ttl: number; // Time to live in seconds
@@ -174,14 +183,14 @@ export interface SearchCachingJobData {
 /**
  * API Key Tracking Event
  */
-export interface ApiKeyTrackingJobData {
+export interface ApiKeyTrackingJobData extends BaseAsyncTaskJobData {
   companyId: string;
 }
 
 /**
  * Analytics Event
  */
-export interface AnalyticsJobData {
+export interface AnalyticsJobData extends BaseAsyncTaskJobData {
   eventType: AnalyticsEventType;
   companyId?: string;
   userId?: string;
@@ -192,7 +201,7 @@ export interface AnalyticsJobData {
 /**
  * Project Stats Event
  */
-export interface ProjectStatsJobData {
+export interface ProjectStatsJobData extends BaseAsyncTaskJobData {
   projectId: string;
   fileCount?: number; // Increment by this amount
   totalSize?: number; // Increment by this amount (bytes)
@@ -201,7 +210,7 @@ export interface ProjectStatsJobData {
 /**
  * Webhooks Event
  */
-export interface WebhooksJobData {
+export interface WebhooksJobData extends BaseAsyncTaskJobData {
   webhookUrl: string;
   eventType: string;
   payload: Record<string, unknown>;
@@ -212,7 +221,7 @@ export interface WebhooksJobData {
 /**
  * Storage Updates Event
  */
-export interface StorageUpdatesJobData {
+export interface StorageUpdatesJobData extends BaseAsyncTaskJobData {
   companyId: string;
   fileSize: number; // Size in bytes to add to storageUsed
 }

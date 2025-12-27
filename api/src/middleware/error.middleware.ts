@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AppError, ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import { publishErrorLog } from '../utils/async-events.util';
+import { EventSource } from '../types/enums';
 import { AuthenticatedRequest } from './auth.middleware';
 
 export const errorHandler = (
@@ -62,6 +63,7 @@ export const errorHandler = (
 
   // One-line event publishing
   void publishErrorLog({
+    source: EventSource.ERROR_MIDDLEWARE,
     companyId: authReq.context?.companyId,
     method: req.method,
     endpoint: req.path,

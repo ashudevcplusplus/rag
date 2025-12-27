@@ -229,3 +229,56 @@ import { twMerge } from 'tailwind-merge';
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
+
+// ============================================================================
+// Chunk Display Utilities
+// ============================================================================
+
+/**
+ * Remove overlapping content from consecutive chunks for display purposes.
+ * 
+ * When text is chunked with overlap for better search context, the same content
+ * appears at the end of one chunk and the beginning of the next. This function
+ * removes that overlap so each piece of content is shown only once.
+ * 
+ * @param chunks - Array of text chunks that may have overlapping content
+ * @param minOverlapLength - Minimum overlap length to detect (default: 20)
+ * @returns Array of chunks with overlap removed from subsequent chunks
+ */
+export function removeChunkOverlap(chunks: string[], minOverlapLength = 20): string[] {
+  if (!chunks || chunks.length <= 1) return chunks;
+
+  const result: string[] = [chunks[0]];
+
+  for (let i = 1; i < chunks.length; i++) {
+    const prevChunk = chunks[i - 1];
+    const currentChunk = chunks[i];
+
+    // Find the overlap by checking if the end of the previous chunk
+    // matches the beginning of the current chunk
+    // Use untrimmed comparison for consistency with slice operation
+    let overlapLength = 0;
+    const maxCheck = Math.min(prevChunk.length, currentChunk.length, 300);
+
+    for (let len = maxCheck; len >= minOverlapLength; len--) {
+      const prevEnd = prevChunk.slice(-len);
+      const currentStart = currentChunk.slice(0, len);
+      
+      // Compare without trimming to maintain consistency with slice positions
+      if (prevEnd === currentStart) {
+        overlapLength = len;
+        break;
+      }
+    }
+
+    if (overlapLength > 0) {
+      // Remove the overlapping portion from the beginning of the current chunk
+      const remaining = currentChunk.slice(overlapLength);
+      result.push(remaining.trimStart() || currentChunk); // Fallback to original if trimming leaves nothing
+    } else {
+      result.push(currentChunk);
+    }
+  }
+
+  return result;
+}
