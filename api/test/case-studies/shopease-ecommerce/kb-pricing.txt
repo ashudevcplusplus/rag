@@ -1,0 +1,96 @@
+# ShopEase - Pricing Plans
+
+Choose the right plan for your online business. All plans include a 14-day free trial.
+
+## Plan Comparison
+
+### Basic - $29/month
+Best for new businesses just getting started
+- Up to 100 products
+- 2 staff accounts
+- 2% transaction fee (+ payment processor fees)
+- Basic storefront themes (10 options)
+- Email support
+- Manual order creation
+- Discount codes
+- SSL certificate
+- Abandoned cart recovery
+
+### Professional - $79/month (Most Popular)
+Best for growing businesses
+- Up to 5,000 products
+- 5 staff accounts
+- 1% transaction fee
+- All premium themes (100+ options)
+- Priority email support
+- Gift cards
+- Professional reports
+- Customer segments
+- Shipping discounts (up to 50% off)
+- Third-party calculated shipping rates
+- International domains
+
+### Business - $299/month
+Best for high-volume businesses
+- Unlimited products
+- 15 staff accounts
+- 0.5% transaction fee
+- Advanced report builder
+- Phone support
+- Advanced customer segmentation
+- Automation workflows
+- Custom checkout
+- Third-party insurance rates
+- Fulfillment by ShopEase access
+- Dedicated success manager
+
+### Enterprise - Custom Pricing
+Best for large enterprises
+- Everything in Business, plus:
+- Unlimited staff accounts
+- 0% transaction fee (payment processor only)
+- Custom integrations
+- SLA guarantee (99.99% uptime)
+- Dedicated account manager
+- White-label options
+- API priority access
+- Multi-store management
+- Custom reporting
+
+## Transaction Fees
+
+In addition to monthly subscription, transaction fees apply:
+
+| Plan | ShopEase Fee | Payment Processor |
+|------|--------------|-------------------|
+| Basic | 2.0% | 2.9% + $0.30 |
+| Professional | 1.0% | 2.6% + $0.30 |
+| Business | 0.5% | 2.4% + $0.30 |
+| Enterprise | 0% | 2.2% + $0.30 |
+
+Using ShopEase Payments eliminates the ShopEase transaction fee.
+
+## Add-Ons
+
+| Feature | Price |
+|---------|-------|
+| Additional staff accounts | $15/month per account |
+| POS hardware (card reader) | $49 one-time |
+| Advanced SEO tools | $19/month |
+| B2B wholesale features | $49/month |
+| Email marketing pro | $29/month |
+| ShopEase Fulfillment | Volume-based pricing |
+
+## Refund Policy
+
+- 30-day money-back guarantee
+- Cancel anytime, no long-term contracts
+- Pro-rated refunds for annual plans
+- Contact billing@shopease.com for refunds
+
+## Discounts
+
+- Annual billing: Save 20%
+- Nonprofits: 25% off
+- Students/educators: 50% off (verification required)
+

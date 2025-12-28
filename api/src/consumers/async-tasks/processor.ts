@@ -1,7 +1,7 @@
 import { Job } from 'bullmq';
 import fs from 'fs/promises';
 import { logger } from '../../utils/logger';
-import { AsyncTaskType } from '../../types/enums';
+import { AsyncTaskType } from '@rag/types';
 import type {
   ApiLoggingJobData,
   FileCleanupJobData,

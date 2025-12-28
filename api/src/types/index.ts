@@ -1,17 +1,18 @@
 /**
- * Centralized exports for all types, enums, and events
- * Import everything from here for convenience
+ * API-specific types
+ *
+ * NOTE: All enums and shared types are in @rag/types package (single source of truth)
+ * Import enums directly from '@rag/types'
  */
 
-// Export all enums
-export * from './enums';
-
-// Export all event types
+// Export API-specific event types
 export * from './events.types';
 
-// Export other type files (for backward compatibility)
+// Export API-specific error types
 export * from './error.types';
+
+// Export API-specific vector types
 export * from './vector.types';
 
-// Re-export job types (deprecated, but kept for backward compatibility)
+// Export job types
 export * from './job.types';

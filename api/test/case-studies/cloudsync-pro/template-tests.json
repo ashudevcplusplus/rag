@@ -1,0 +1,120 @@
+{
+  "case_study": "CloudSync Pro - Template Comparison",
+  "test_date": "2025-12-27",
+  "knowledge_base": {
+    "files": 5,
+    "chunks": 23
+  },
+  "templates_tested": [
+    {
+      "template": "customer_support",
+      "description": "Default balanced customer service",
+      "questions_tested": 10,
+      "pass_rate": "100%",
+      "observations": [
+        "Professional yet friendly tone",
+        "Well-formatted responses with markdown",
+        "Handles edge cases gracefully",
+        "Offers further assistance"
+      ]
+    },
+    {
+      "template": "sales_assistant",
+      "description": "Sales-focused with lead generation",
+      "questions_tested": 3,
+      "pass_rate": "100%",
+      "observations": [
+        "Proactively offers trials and demos",
+        "Highlights value propositions and benefits",
+        "Asks qualifying questions",
+        "Suggests connecting with sales team"
+      ],
+      "sample_questions": [
+        "We are a team of 25 people looking for a cloud storage solution",
+        "Why should I choose CloudSync Pro over Dropbox?",
+        "We need unlimited storage and a dedicated account manager"
+      ]
+    },
+    {
+      "template": "technical_support",
+      "description": "Technical documentation and troubleshooting",
+      "questions_tested": 3,
+      "pass_rate": "100%",
+      "observations": [
+        "Structured responses: Identify > Solve > Explain > Alternatives",
+        "Step-by-step numbered solutions",
+        "Explains root causes",
+        "Offers validation steps"
+      ],
+      "sample_questions": [
+        "I have sync conflicts on multiple files",
+        "My 2FA codes are not working",
+        "CloudSync Pro is using too much CPU"
+      ]
+    },
+    {
+      "template": "onboarding_assistant",
+      "description": "New user onboarding",
+      "questions_tested": 3,
+      "pass_rate": "100%",
+      "observations": [
+        "Uses encouraging language and emojis",
+        "Celebrates user progress",
+        "Patient explanations for beginners",
+        "Suggests 'aha moment' activities"
+      ],
+      "sample_questions": [
+        "I just signed up. How do I get started?",
+        "How do I sync my first folder?",
+        "How does collaboration work?"
+      ]
+    },
+    {
+      "template": "faq_concise",
+      "description": "Brief FAQ-style responses",
+      "questions_tested": 4,
+      "pass_rate": "100%",
+      "observations": [
+        "1-2 sentence responses",
+        "No elaboration or follow-up offers",
+        "Direct and factual",
+        "Perfect for quick lookups"
+      ],
+      "sample_questions": [
+        "What is the price of the Professional plan?",
+        "How many users can edit a document at once?",
+        "Support response time for Pro plan?",
+        "Maximum file size for Starter plan?"
+      ]
+    },
+    {
+      "template": "ecommerce_assistant",
+      "description": "E-commerce product assistant",
+      "questions_tested": 2,
+      "pass_rate": "100%",
+      "observations": [
+        "Product recommendations based on needs",
+        "Feature comparisons between options",
+        "Practical buying advice"
+      ],
+      "sample_questions": [
+        "Which plan is best for a small business with 5 employees?",
+        "What are the differences between Starter and Professional?"
+      ]
+    }
+  ],
+  "recommendations": {
+    "website_widget": "customer_support",
+    "pricing_page": "sales_assistant",
+    "help_center": "technical_support",
+    "onboarding_flow": "onboarding_assistant",
+    "faq_page": "faq_concise",
+    "product_catalog": "ecommerce_assistant"
+  },
+  "summary": {
+    "total_templates": 6,
+    "total_questions": 25,
+    "overall_pass_rate": "100%"
+  }
+}
+

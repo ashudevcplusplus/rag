@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ChevronDown,
   AlertTriangle,
+  Timer,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -27,7 +28,7 @@ import {
   ModalFooter,
 } from '@rag/ui';
 import { projectsApi, filesApi, type IndexingStats } from '@rag/api-client';
-import { formatBytes, formatRelativeTime } from '@rag/utils';
+import { formatBytes, formatRelativeTime, formatDuration, calculateProcessingTime } from '@rag/utils';
 import type { Project, ProcessingStatus } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -142,11 +143,21 @@ export function IndexingPage() {
         acc.completed += project.indexingStats.completed;
         acc.failed += project.indexingStats.failed;
         acc.total += project.indexingStats.total;
+        // Accumulate for average calculation
+        if (project.indexingStats.averageProcessingTimeMs) {
+          acc.totalAvgTime += project.indexingStats.averageProcessingTimeMs * project.indexingStats.completed;
+          acc.completedWithTime += project.indexingStats.completed;
+        }
       }
       return acc;
     },
-    { pending: 0, processing: 0, completed: 0, failed: 0, total: 0 }
+    { pending: 0, processing: 0, completed: 0, failed: 0, total: 0, totalAvgTime: 0, completedWithTime: 0 }
   );
+  
+  // Calculate overall average processing time
+  const overallAvgProcessingTime = totalStats.completedWithTime > 0 
+    ? Math.round(totalStats.totalAvgTime / totalStats.completedWithTime) 
+    : null;
 
   // Filter files based on status
   const filteredFiles = (filesData?.files || []).filter((file) => {
@@ -209,7 +220,7 @@ export function IndexingPage() {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2.5 bg-gray-100 rounded-lg">
@@ -266,6 +277,20 @@ export function IndexingPage() {
             <div>
               <p className="text-2xl font-bold text-red-600">{totalStats.failed}</p>
               <p className="text-sm text-gray-500">Failed</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2.5 bg-purple-100 rounded-lg">
+              <Timer className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-600">
+                {overallAvgProcessingTime !== null ? formatDuration(overallAvgProcessingTime) : '—'}
+              </p>
+              <p className="text-sm text-gray-500">Avg Index Time</p>
             </div>
           </CardContent>
         </Card>
@@ -358,6 +383,16 @@ export function IndexingPage() {
                     </div>
 
                     <div className="flex items-center gap-4">
+                      {/* Average Processing Time */}
+                      {project.indexingStats?.averageProcessingTimeMs && (
+                        <div className="flex items-center gap-1 text-sm text-purple-600" title="Average indexing time per file">
+                          <Timer className="w-4 h-4" />
+                          <span className="font-medium">
+                            {formatDuration(project.indexingStats.averageProcessingTimeMs)}
+                          </span>
+                        </div>
+                      )}
+                      
                       {/* Status Badges */}
                       <div className="flex items-center gap-2">
                         {project.indexingStats?.pending ? (
@@ -433,12 +468,36 @@ export function IndexingPage() {
                                       <p className="font-medium text-gray-900 truncate">
                                         {file.originalFilename}
                                       </p>
-                                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5">
+                                      <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5 flex-wrap">
                                         <span>{formatBytes(file.size)}</span>
                                         <span>•</span>
                                         <span>{formatRelativeTime(file.uploadedAt)}</span>
                                         <span>•</span>
                                         <StatusBadge status={file.processingStatus as ProcessingStatus} />
+                                        {/* Show processing time for completed files */}
+                                        {file.processingStatus === 'COMPLETED' && (() => {
+                                          const processingTime = calculateProcessingTime(
+                                            file.processingStartedAt,
+                                            file.processingCompletedAt
+                                          );
+                                          return processingTime !== null ? (
+                                            <>
+                                              <span>•</span>
+                                              <span className="text-green-600 font-medium" title="Indexing time">
+                                                ⏱ {formatDuration(processingTime)}
+                                              </span>
+                                            </>
+                                          ) : null;
+                                        })()}
+                                        {/* Show chunk count for indexed files */}
+                                        {file.chunkCount && file.chunkCount > 0 && (
+                                          <>
+                                            <span>•</span>
+                                            <span title="Number of text chunks indexed">
+                                              {file.chunkCount} chunks
+                                            </span>
+                                          </>
+                                        )}
                                       </div>
                                     </div>
                                   </div>

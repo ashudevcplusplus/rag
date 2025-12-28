@@ -13,3 +13,4 @@ export {
   IConsumerChange,
   CreateConsumerChangeDTO,
 } from './consumer-change.model';
+export { ConversationModel, IConversationDocument } from './conversation.model';

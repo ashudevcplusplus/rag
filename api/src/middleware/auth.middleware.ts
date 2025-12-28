@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import { companyRepository } from '../repositories/company.repository';
 import { ICompany } from '../schemas/company.schema';
 import { publishApiKeyTracking } from '../utils/async-events.util';
-import { EventSource } from '../types/enums';
+import { EventSource } from '@rag/types';
 import { CacheService } from '../services/cache.service';
 
 /**

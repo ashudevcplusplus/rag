@@ -125,18 +125,18 @@ async function startServer(): Promise<void> {
       });
 
       try {
-        // 2. Close BullMQ workers (waits for current jobs to finish)
+        // 2. Close BullMQ workers in parallel (waits for current jobs to finish)
         logger.info('Closing BullMQ workers...');
-        await indexingWorker.close();
-        await consistencyWorker.close();
-        await closeAllWorkers();
+        await Promise.all([indexingWorker.close(), consistencyWorker.close(), closeAllWorkers()]);
         logger.info('Workers closed successfully');
 
-        // 3. Close queue connections
+        // 3. Close queue connections in parallel
         logger.info('Closing queue connections...');
-        await indexingQueue.close();
-        await consistencyCheckQueue.close();
-        await Promise.all(allAsyncTaskQueues.map((queue) => queue.close()));
+        await Promise.all([
+          indexingQueue.close(),
+          consistencyCheckQueue.close(),
+          ...allAsyncTaskQueues.map((queue) => queue.close()),
+        ]);
         logger.info('Queue connections closed');
 
         // 4. Close MongoDB connection

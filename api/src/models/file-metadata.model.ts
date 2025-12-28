@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IFileMetadata } from '../schemas/file-metadata.schema';
-import { UploadStatus, ProcessingStatus } from '../types/enums';
+import { ProcessingStatus, UploadStatus } from '@rag/types';
 
 export interface IFileMetadataDocument
   extends Omit<IFileMetadata, '_id' | 'projectId' | 'uploadedBy'>, Document {
@@ -116,7 +116,7 @@ const fileMetadataSchema = new Schema<IFileMetadataDocument>(
     // Embedding Configuration (stored for reindexing consistency)
     embeddingProvider: {
       type: String,
-      enum: ['inhouse', 'openai', 'gemini'],
+      enum: ['openai', 'gemini'],
     },
     embeddingModel: {
       type: String,

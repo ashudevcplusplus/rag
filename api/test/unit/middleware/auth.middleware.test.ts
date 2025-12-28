@@ -5,7 +5,7 @@ import {
   AuthenticatedRequest,
 } from '../../../src/middleware/auth.middleware';
 import { companyRepository } from '../../../src/repositories/company.repository';
-import { CompanyStatus, SubscriptionTier } from '../../../src/types/enums';
+import { CompanyStatus, SubscriptionTier } from '@rag/types';
 import { ICompany } from '../../../src/schemas/company.schema';
 
 // Mock logger

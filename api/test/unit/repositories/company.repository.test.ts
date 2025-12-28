@@ -3,7 +3,7 @@ import { CompanyModel } from '../../../src/models/company.model';
 import { UserModel } from '../../../src/models/user.model';
 import { ProjectModel } from '../../../src/models/project.model';
 import { FileMetadataModel } from '../../../src/models/file-metadata.model';
-import { SubscriptionTier, CompanyStatus } from '../../../src/types/enums';
+import { SubscriptionTier, CompanyStatus } from '@rag/types';
 import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 import { CacheService } from '../../../src/services/cache.service';

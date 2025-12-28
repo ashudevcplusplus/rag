@@ -1,6 +1,6 @@
 import { consumerChangeRepository } from '../../../src/repositories/consumer-change.repository';
 import { ConsumerChangeModel } from '../../../src/models/consumer-change.model';
-import { ChangeStatus, ChangeType } from '../../../src/types/enums';
+import { ChangeStatus, ChangeType } from '@rag/types';
 import {
   createObjectId,
   generateObjectId,

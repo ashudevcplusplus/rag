@@ -1,0 +1,154 @@
+# ShopEase - Shipping & Fulfillment Guide
+
+Everything you need to know about shipping orders from ShopEase.
+
+## Shipping Setup
+
+### Step 1: Configure Shipping Zones
+1. Go to Settings > Shipping
+2. Click "Add Shipping Zone"
+3. Define the geographic area (country, state, zip codes)
+4. Set shipping rates for that zone
+
+### Step 2: Set Shipping Rates
+
+**Flat Rate Shipping**
+- Set a fixed price regardless of order size
+- Example: $5.99 flat rate for domestic shipping
+
+**Weight-Based Shipping**
+- Rates based on total order weight
+- Example: $0.50 per pound
+
+**Price-Based Shipping**
+- Rates based on order total
+- Example: Free shipping on orders over $50
+
+**Real-Time Carrier Rates**
+- Connect UPS, FedEx, USPS, or DHL
+- Customers see live rates at checkout
+- Available on Professional plan and above
+
+### Step 3: Shipping Labels
+1. Go to Orders > Select an order
+2. Click "Create Shipping Label"
+3. Choose carrier and service
+4. Print label and attach to package
+
+## Carrier Integrations
+
+| Carrier | Services Available | Discounts |
+|---------|-------------------|-----------|
+| USPS | Priority, First Class, Media Mail | Up to 40% off |
+| UPS | Ground, 2-Day, Next Day | Up to 55% off |
+| FedEx | Ground, Express, Overnight | Up to 50% off |
+| DHL | Express, eCommerce | Up to 45% off |
+
+Discounts are available on Professional plan and above.
+
+## Shipping Best Practices
+
+### Packaging
+- Use appropriate box sizes (avoid oversized boxes)
+- Protect fragile items with bubble wrap
+- Include packing slip in every order
+- Consider branded packaging for premium experience
+
+### Order Processing Time
+- Set realistic handling times (1-3 business days typical)
+- Display estimated delivery dates at checkout
+- Update tracking information promptly
+
+### International Shipping
+- Customs forms are auto-generated
+- Declare accurate product values
+- Include HS codes for faster customs clearance
+- Consider duties-paid (DDP) option for better customer experience
+
+## Free Shipping Strategies
+
+### Threshold-Based
+- "Free shipping on orders over $50"
+- Increases average order value by 30%
+
+### Product-Specific
+- Offer free shipping on high-margin items
+- Build shipping into product price
+
+### Promotional
+- Free shipping weekends
+- Holiday free shipping events
+- Email subscriber exclusives
+
+## Returns & Exchanges
+
+### Setting Up Return Policy
+1. Go to Settings > Policies > Returns
+2. Define return window (14, 30, 60 days)
+3. Set conditions (unused, tags attached)
+4. Specify refund method (original payment, store credit)
+
+### Processing Returns
+1. Customer initiates return from order page
+2. You approve/deny the return request
+3. Provide return shipping label (optional)
+4. Receive and inspect the item
+5. Process refund or exchange
+
+### Return Shipping Options
+- Customer pays return shipping
+- Free returns (you pay)
+- Prepaid return labels (deducted from refund)
+
+## Fulfillment by ShopEase
+
+Let ShopEase handle storage and shipping for you.
+
+### How It Works
+1. Ship your inventory to ShopEase warehouse
+2. We store your products
+3. Orders are automatically picked, packed, and shipped
+4. 2-day delivery to most US addresses
+
+### Pricing
+- Storage: $0.75 per cubic foot/month
+- Pick & Pack: $2.50 per order + $0.75 per item
+- Shipping: Actual carrier rates (discounted)
+
+### Requirements
+- Professional plan or above
+- Minimum 100 orders/month
+- Products must meet size/weight requirements
+
+## Tracking & Notifications
+
+### Automatic Notifications
+- Order confirmation email
+- Shipping confirmation with tracking number
+- Out for delivery notification
+- Delivered notification
+
+### Tracking Page
+- Branded tracking page with your logo
+- Real-time carrier updates
+- Estimated delivery window
+- Upsell related products on tracking page
+
+## Common Shipping Issues
+
+### Package Delayed
+- Check carrier tracking for updates
+- File a claim if beyond expected delivery window
+- Offer customer refund or replacement
+
+### Package Lost
+- Wait 7 business days beyond expected delivery
+- File insurance claim with carrier
+- Refund customer or resend order
+- ShopEase Shipping Protection covers up to $100
+
+### Wrong Address
+- Contact carrier immediately for redirect
+- If delivered, contact customer
+- For returns, process as normal return
+

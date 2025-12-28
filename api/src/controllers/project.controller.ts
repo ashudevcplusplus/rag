@@ -12,7 +12,7 @@ import {
 } from '../schemas/project.schema';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
-import { AnalyticsEventType, ProcessingStatus, EventSource } from '../types/enums';
+import { ProcessingStatus, AnalyticsEventType, EventSource } from '@rag/types';
 import {
   sendConflictResponse,
   sendNotFoundResponse,
@@ -426,11 +426,13 @@ export const reindexFile = asyncHandler(async (req: Request, res: Response): Pro
   });
   await fileMetadataRepository.clearErrorMessage(fileId);
 
-  // Delete existing embeddings and vectors after state is updated
+  // Delete existing embeddings and vectors in parallel after state is updated
   // If this fails, file is in PENDING state and processor will handle it
   const collection = `company_${companyId}`;
-  await VectorService.deleteByFileId(collection, fileId);
-  await embeddingRepository.deleteByFileId(fileId);
+  await Promise.all([
+    VectorService.deleteByFileId(collection, fileId),
+    embeddingRepository.deleteByFileId(fileId),
+  ]);
 
   // Add to indexing queue after status is set
   // Include original embedding config to ensure vector dimension consistency
@@ -473,12 +475,13 @@ export const getIndexingStats = asyncHandler(async (req: Request, res: Response)
   const { validatedProject: project } = req as ValidatedProjectRequest;
   const projectId = project._id;
 
-  // Get counts by processing status (efficient count queries instead of loading documents)
-  const [pending, processing, completed, failed] = await Promise.all([
+  // Get counts by processing status and timing stats in parallel
+  const [pending, processing, completed, failed, timeStats] = await Promise.all([
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.PENDING),
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.PROCESSING),
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.COMPLETED),
     fileMetadataRepository.countByProcessingStatus(projectId, ProcessingStatus.FAILED),
+    fileMetadataRepository.getIndexingTimeStats(projectId),
   ]);
 
   res.json({
@@ -488,6 +491,10 @@ export const getIndexingStats = asyncHandler(async (req: Request, res: Response)
       completed,
       failed,
       total: pending + processing + completed + failed,
+      // Indexing time metrics
+      averageProcessingTimeMs: timeStats.averageTimeMs,
+      minProcessingTimeMs: timeStats.minTimeMs,
+      maxProcessingTimeMs: timeStats.maxTimeMs,
     },
   });
 });
@@ -540,11 +547,13 @@ export const bulkReindexFailed = asyncHandler(
         });
         await fileMetadataRepository.clearErrorMessage(file._id);
 
-        // Delete existing embeddings and vectors after state is updated
+        // Delete existing embeddings and vectors in parallel after state is updated
         // If this fails, file is in PENDING state and processor will handle it
         const collection = `company_${companyId}`;
-        await VectorService.deleteByFileId(collection, file._id);
-        await embeddingRepository.deleteByFileId(file._id);
+        await Promise.all([
+          VectorService.deleteByFileId(collection, file._id),
+          embeddingRepository.deleteByFileId(file._id),
+        ]);
       } catch (_dbError) {
         errors.push({ fileId: file._id, error: 'Failed to reset file state' });
         continue;

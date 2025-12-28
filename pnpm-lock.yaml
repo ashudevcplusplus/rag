@@ -32,6 +32,9 @@ importers:
       '@rag/text-utils':
         specifier: workspace:*
         version: link:../packages/text-utils
+      '@rag/types':
+        specifier: workspace:*
+        version: link:../packages/types
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3

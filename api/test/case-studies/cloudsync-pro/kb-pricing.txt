@@ -1,0 +1,77 @@
+# CloudSync Pro - Pricing Plans
+
+We offer flexible pricing plans to fit teams of all sizes. All plans include a 14-day free trial with no credit card required.
+
+## Plan Comparison
+
+### Free Plan - $0/month
+- 5 GB storage
+- 1 user
+- Basic file sync
+- Web access only
+- Community support
+- File size limit: 250 MB
+
+### Starter Plan - $9/user/month
+- 100 GB storage per user
+- 2-10 users
+- Full desktop and mobile apps
+- File version history (30 days)
+- Email support (response within 24 hours)
+- File size limit: 2 GB
+- Basic integrations (Slack, Google Workspace)
+
+### Professional Plan - $19/user/month (Most Popular)
+- 500 GB storage per user
+- 5-100 users
+- Advanced security features (SSO, 2FA)
+- File version history (180 days)
+- Priority email support (response within 4 hours)
+- File size limit: 10 GB
+- All integrations included
+- Admin dashboard and audit logs
+- Custom branding
+
+### Enterprise Plan - Custom Pricing
+- Unlimited storage
+- Unlimited users
+- Dedicated account manager
+- 24/7 phone and email support
+- SLA guarantee (99.99% uptime)
+- On-premise deployment option
+- Custom integrations
+- Training and onboarding
+- File size limit: Unlimited
+
+## Billing Information
+
+- All plans are billed monthly or annually
+- Annual billing saves 20% compared to monthly
+- Invoices are sent on the 1st of each month
+- Payment methods: Credit card, PayPal, Wire transfer (Enterprise only)
+
+## Refund Policy
+
+- Full refund within 30 days if not satisfied
+- Refunds processed within 14 business days
+- Pro-rated refunds for annual plans
+- Contact billing@cloudsyncpro.com for refund requests
+
+## Discounts
+
+- Nonprofit organizations: 50% off
+- Educational institutions: 40% off
+- Startups (under 2 years): 25% off first year
+- Annual payment: 20% off
+
+## How to Upgrade
+
+1. Log into your CloudSync Pro account
+2. Go to Settings > Subscription
+3. Click "Change Plan"
+4. Select your new plan
+5. Enter payment information
+6. Confirm the upgrade
+
+Your new features will be available immediately. You'll be charged the pro-rated difference for the current billing period.
+

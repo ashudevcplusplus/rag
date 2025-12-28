@@ -6,7 +6,7 @@ import { indexingQueue } from '../queue/queue.client';
 import { publishFileCleanup, publishProjectStats } from '../utils/async-events.util';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { companyRepository } from '../repositories/company.repository';
-import { ProcessingStatus, FileCleanupReason, EventSource } from '../types/enums';
+import { ProcessingStatus, FileCleanupReason, EventSource } from '@rag/types';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 
@@ -25,7 +25,7 @@ export class FileService {
     file: any,
     projectId: string,
     uploadedBy: string,
-    embeddingProvider?: 'inhouse' | 'openai' | 'gemini',
+    embeddingProvider?: 'openai' | 'gemini',
     embeddingModel?: string
   ): Promise<{ fileId: string; jobId: string }> {
     // Check storage limit

@@ -68,26 +68,6 @@ services:
   # Backend Services
   # ===========================================================================
 
-  embed:
-    build:
-      context: ./embed
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "5001:5001"
-    environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./embed:/app
-      - embed_cache:/root/.cache
-    command: uvicorn app:app --host 0.0.0.0 --port 5001 --reload
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
   api:
     build:
       context: .
@@ -106,12 +86,19 @@ services:
       - NODE_ENV=development
       - PORT=8000
       - QDRANT_URL=http://qdrant:6333
-      - EMBED_URL=http://embed:5001/embed
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/rag_db?authSource=admin
-      - EMBEDDING_PROVIDER=inhouse
-      - INHOUSE_EMBEDDINGS=true
+      # OpenAI Configuration for Embeddings and Chat (from .env file)
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL:-gpt-4o-mini}
+      # Gemini Configuration (optional, from .env file)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-text-embedding-004}
+      - GEMINI_CHAT_MODEL=${GEMINI_CHAT_MODEL:-gemini-1.5-flash}
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
@@ -214,7 +201,6 @@ volumes:
   qdrant_storage:
   redis_storage:
   mongodb_storage:
-  embed_cache:
   api_node_modules:
   api_pkg_node_modules:
   landing_api_node_modules:

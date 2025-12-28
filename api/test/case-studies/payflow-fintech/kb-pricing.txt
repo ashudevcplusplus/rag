@@ -1,0 +1,114 @@
+# PayFlow - Pricing & Fees
+
+PayFlow is designed to be fee-free for most common banking activities.
+
+## Account Types
+
+### PayFlow Personal (Free)
+Best for individuals
+- No monthly fees
+- No minimum balance
+- Free debit card
+- Free ATM withdrawals (55,000+ network)
+- Free instant transfers to PayFlow users
+- Free ACH transfers
+- High-yield savings (4.5% APY)
+- Credit score monitoring
+
+### PayFlow Premium - $9.99/month
+Best for power users
+- Everything in Personal, plus:
+- Premium metal debit card
+- 1% cashback on all purchases
+- Free wire transfers (domestic)
+- Priority customer support
+- Extended overdraft grace period (72 hours)
+- Free international ATM withdrawals
+- Travel insurance
+- Cell phone protection
+
+### PayFlow Business - $15/month
+Best for small businesses
+- Business checking account
+- Unlimited employee cards
+- Invoice creation
+- Accept card payments (2.6% + $0.30)
+- Accept ACH payments (1%)
+- Accounting integrations
+- Tax document generation
+- Dedicated business support
+
+### PayFlow Business Pro - $35/month
+Best for growing businesses
+- Everything in Business, plus:
+- Lower payment fees (2.4% + $0.25)
+- ACH payments (0.8%)
+- Custom payment links
+- API access
+- Multi-user permissions
+- Advanced analytics
+- Dedicated account manager
+
+## Fee Schedule
+
+### Free Services
+| Service | Fee |
+|---------|-----|
+| Account opening | Free |
+| Monthly maintenance | Free |
+| PayFlow-to-PayFlow transfers | Free |
+| ACH transfers | Free |
+| Standard debit card | Free |
+| ATM (in-network 55,000+) | Free |
+| Direct deposit | Free |
+| Bill pay | Free |
+| Mobile check deposit | Free |
+| Account statements | Free |
+
+### Paid Services
+| Service | Fee |
+|---------|-----|
+| Out-of-network ATM | $2.50 |
+| Wire transfer (domestic) | $25 |
+| Wire transfer (international) | $45 |
+| Expedited card delivery | $15 |
+| Paper statements | $5/month |
+| Cashier's check | $10 |
+| Stop payment | $25 |
+| Returned deposit item | $15 |
+| Overdraft (per occurrence) | $0 (free overdraft protection up to $100) |
+
+### Investment Fees
+| Service | Fee |
+|---------|-----|
+| Stock/ETF trades | $0 |
+| Crypto trading | 0.5% - 1.5% spread |
+| Automated investing | 0.25% annual |
+| IRA accounts | $0 |
+
+### Payment Processing (Business)
+| Payment Type | PayFlow Business | Business Pro |
+|--------------|------------------|--------------|
+| Card (Visa/MC) | 2.6% + $0.30 | 2.4% + $0.25 |
+| Card (Amex) | 3.2% + $0.30 | 3.0% + $0.25 |
+| ACH | 1.0% (max $10) | 0.8% (max $5) |
+| Invoice | Free to send | Free to send |
+
+## Savings Rates
+
+| Account Type | APY |
+|--------------|-----|
+| High-Yield Savings | 4.50% |
+| Money Market | 4.25% |
+| CD (6-month) | 4.75% |
+| CD (12-month) | 5.00% |
+| CD (24-month) | 4.50% |
+
+Rates as of December 2025. Subject to change.
+
+## Promotions
+
+- New account: $50 bonus with first direct deposit of $500+
+- Refer a friend: $25 for you, $25 for them
+- Business: First 3 months free
+

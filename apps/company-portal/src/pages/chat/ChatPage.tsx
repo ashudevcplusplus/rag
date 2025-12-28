@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Send,
   Bot,
@@ -11,6 +11,13 @@ import {
   Copy,
   Check,
   StopCircle,
+  Plus,
+  MessageSquare,
+  MoreVertical,
+  Edit3,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -19,7 +26,15 @@ import {
   Button,
   Badge,
 } from '@rag/ui';
-import { chatApi, projectsApi, type ChatMessage, type ChatResponse } from '@rag/api-client';
+import {
+  chatApi,
+  projectsApi,
+  conversationsApi,
+  type ChatMessage,
+  type ChatResponse,
+  type Conversation,
+  type ConversationMessage,
+} from '@rag/api-client';
 import { formatRelativeTime } from '@rag/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
@@ -36,6 +51,7 @@ interface Message {
 export function ChatPage() {
   const { companyId } = useAuthStore();
   const { addActivity } = useAppStore();
+  const queryClient = useQueryClient();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -43,6 +59,10 @@ export function ChatPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [showSources, setShowSources] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
+  const [editTitleValue, setEditTitleValue] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +75,80 @@ export function ChatPage() {
     enabled: !!companyId,
   });
 
+  // Fetch conversations
+  const { data: conversationsData, isLoading: conversationsLoading } = useQuery({
+    queryKey: ['conversations', companyId, selectedProjectId],
+    queryFn: () =>
+      conversationsApi.list(companyId!, {
+        limit: 50,
+        projectId: selectedProjectId || undefined,
+      }),
+    enabled: !!companyId,
+  });
+
   const projects = projectsData?.projects || [];
+  const conversations = conversationsData?.conversations || [];
+
+  // Create conversation mutation
+  const createConversationMutation = useMutation({
+    mutationFn: (data: { title?: string; projectId?: string }) =>
+      conversationsApi.create(companyId!, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', companyId] });
+      setActiveConversationId(data.conversation._id);
+      setMessages([]);
+    },
+  });
+
+  // Update conversation mutation
+  const updateConversationMutation = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) =>
+      conversationsApi.update(companyId!, id, { title }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', companyId] });
+      setEditingTitle(null);
+    },
+  });
+
+  // Delete conversation mutation
+  const deleteConversationMutation = useMutation({
+    mutationFn: (id: string) => conversationsApi.delete(companyId!, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', companyId] });
+      if (activeConversationId) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+      toast.success('Conversation deleted');
+    },
+  });
+
+  // Add message mutation
+  const addMessageMutation = useMutation({
+    mutationFn: ({
+      conversationId,
+      message,
+    }: {
+      conversationId: string;
+      message: { role: 'user' | 'assistant'; content: string; sources?: ChatResponse['sources'] };
+    }) => conversationsApi.addMessage(companyId!, conversationId, message),
+  });
+
+  // Load conversation when selected
+  useEffect(() => {
+    if (activeConversationId && companyId) {
+      conversationsApi.get(companyId, activeConversationId).then((data) => {
+        const loadedMessages: Message[] = data.conversation.messages.map((msg) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          sources: msg.sources,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(loadedMessages);
+      });
+    }
+  }, [activeConversationId, companyId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -83,7 +176,6 @@ export function ChatPage() {
       abortControllerRef.current = null;
       setIsLoading(false);
       
-      // Update the last message to remove streaming state
       setMessages((prev) =>
         prev.map((msg, i) =>
           i === prev.length - 1 && msg.isStreaming
@@ -92,6 +184,23 @@ export function ChatPage() {
         )
       );
     }
+  };
+
+  const handleNewConversation = () => {
+    createConversationMutation.mutate({
+      title: 'New Conversation',
+      projectId: selectedProjectId || undefined,
+    });
+  };
+
+  const handleSelectConversation = (conversationId: string) => {
+    setActiveConversationId(conversationId);
+  };
+
+  const generateTitle = (query: string): string => {
+    // Generate a title from the first user message
+    const words = query.split(' ').slice(0, 6).join(' ');
+    return words.length < query.length ? `${words}...` : words;
   };
 
   const handleSubmit = useCallback(
@@ -104,15 +213,18 @@ export function ChatPage() {
       setInput('');
       setIsLoading(true);
 
+      const userMessageId = `user-${Date.now()}`;
+      const assistantMessageId = `assistant-${Date.now()}`;
+
       const userMessage: Message = {
-        id: `user-${Date.now()}`,
+        id: userMessageId,
         role: 'user',
         content: query,
         timestamp: new Date(),
       };
 
       const assistantMessage: Message = {
-        id: `assistant-${Date.now()}`,
+        id: assistantMessageId,
         role: 'assistant',
         content: '',
         timestamp: new Date(),
@@ -121,14 +233,46 @@ export function ChatPage() {
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
 
+      // Create conversation if not exists
+      let conversationId = activeConversationId;
+      if (!conversationId) {
+        try {
+          const result = await conversationsApi.create(companyId!, {
+            title: generateTitle(query),
+            projectId: selectedProjectId || undefined,
+          });
+          conversationId = result.conversation._id;
+          setActiveConversationId(conversationId);
+          queryClient.invalidateQueries({ queryKey: ['conversations', companyId] });
+        } catch (error) {
+          console.error('Failed to create conversation:', error);
+          toast.error('Failed to create conversation');
+          setIsLoading(false);
+          setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
+          return;
+        }
+      }
+
+      // Save user message to conversation
+      try {
+        await addMessageMutation.mutateAsync({
+          conversationId,
+          message: { role: 'user', content: query },
+        });
+      } catch (error) {
+        console.error('Failed to save user message:', error);
+      }
+
       // Build history from previous messages
       const history: ChatMessage[] = messages.slice(-10).map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
 
+      let finalContent = '';
+      let finalSources: ChatResponse['sources'] = [];
+
       try {
-        // Use streaming API
         const controller = chatApi.streamChat(
           companyId!,
           {
@@ -137,21 +281,21 @@ export function ChatPage() {
             history,
             limit: 5,
           },
-          // On chunk
           (chunk) => {
+            finalContent += chunk;
             setMessages((prev) =>
               prev.map((msg) =>
-                msg.id === assistantMessage.id
+                msg.id === assistantMessageId
                   ? { ...msg, content: msg.content + chunk }
                   : msg
               )
             );
           },
-          // On complete
-          (sources) => {
+          async (sources) => {
+            finalSources = sources;
             setMessages((prev) =>
               prev.map((msg) =>
-                msg.id === assistantMessage.id
+                msg.id === assistantMessageId
                   ? { ...msg, isStreaming: false, sources }
                   : msg
               )
@@ -159,13 +303,26 @@ export function ChatPage() {
             setIsLoading(false);
             abortControllerRef.current = null;
             addActivity({ text: `Asked: "${query.slice(0, 50)}..."`, type: 'search' });
+
+            // Save assistant message to conversation
+            try {
+              await addMessageMutation.mutateAsync({
+                conversationId: conversationId!,
+                message: {
+                  role: 'assistant',
+                  content: finalContent,
+                  sources: finalSources,
+                },
+              });
+            } catch (error) {
+              console.error('Failed to save assistant message:', error);
+            }
           },
-          // On error
           (error) => {
             console.error('Chat error:', error);
             setMessages((prev) =>
               prev.map((msg) =>
-                msg.id === assistantMessage.id
+                msg.id === assistantMessageId
                   ? {
                       ...msg,
                       isStreaming: false,
@@ -183,12 +340,12 @@ export function ChatPage() {
         abortControllerRef.current = controller;
       } catch (error) {
         console.error('Chat error:', error);
-        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessage.id));
+        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMessageId));
         setIsLoading(false);
         toast.error('Failed to send message');
       }
     },
-    [input, isLoading, messages, companyId, selectedProjectId, addActivity]
+    [input, isLoading, messages, companyId, selectedProjectId, activeConversationId, addActivity, addMessageMutation, queryClient]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -198,13 +355,154 @@ export function ChatPage() {
     }
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
+    if (activeConversationId) {
+      try {
+        await conversationsApi.clearMessages(companyId!, activeConversationId);
+        setMessages([]);
+        toast.success('Chat cleared');
+      } catch {
+        toast.error('Failed to clear chat');
+      }
+    } else {
     setMessages([]);
     toast.success('Chat cleared');
+    }
+  };
+
+  const handleEditTitle = (id: string, currentTitle: string) => {
+    setEditingTitle(id);
+    setEditTitleValue(currentTitle);
+  };
+
+  const handleSaveTitle = () => {
+    if (editingTitle && editTitleValue.trim()) {
+      updateConversationMutation.mutate({ id: editingTitle, title: editTitleValue.trim() });
+    }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex h-[calc(100vh-8rem)] gap-4">
+      {/* Conversation Sidebar */}
+      <div
+        className={`${
+          sidebarOpen ? 'w-72' : 'w-0'
+        } transition-all duration-300 overflow-hidden flex-shrink-0`}
+      >
+        <Card className="h-full flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <Button
+              onClick={handleNewConversation}
+              className="w-full"
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              New Chat
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-2">
+            {conversationsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+              </div>
+            ) : conversations.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No conversations yet
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {conversations.map((conv) => (
+                  <div
+                    key={conv._id}
+                    className={`group relative rounded-lg transition-colors ${
+                      activeConversationId === conv._id
+                        ? 'bg-blue-50 border border-blue-200'
+                        : 'hover:bg-gray-50 border border-transparent'
+                    }`}
+                  >
+                    {editingTitle === conv._id ? (
+                      <div className="p-2">
+                        <input
+                          type="text"
+                          value={editTitleValue}
+                          onChange={(e) => setEditTitleValue(e.target.value)}
+                          onBlur={handleSaveTitle}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveTitle();
+                            if (e.key === 'Escape') setEditingTitle(null);
+                          }}
+                          className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleSelectConversation(conv._id)}
+                        className="w-full p-3 text-left"
+                      >
+                        <div className="flex items-start gap-2">
+                          <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {conv.title}
+                            </p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                              <Clock className="w-3 h-3" />
+                              {formatRelativeTime(new Date(conv.lastMessageAt))}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Conversation actions */}
+                    <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTitle(conv._id, conv.title);
+                        }}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                        title="Edit title"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Delete this conversation?')) {
+                            deleteConversationMutation.mutate(conv._id);
+                          }
+                        }}
+                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* Toggle Sidebar Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+        style={{ left: sidebarOpen ? '18rem' : '0.5rem' }}
+      >
+        {sidebarOpen ? (
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-600" />
+        )}
+      </button>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -221,7 +519,11 @@ export function ChatPage() {
           {/* Project Filter */}
           <select
             value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => {
+                setSelectedProjectId(e.target.value);
+                setActiveConversationId(null);
+                setMessages([]);
+              }}
             className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
           >
             <option value="">All Projects</option>
@@ -436,6 +738,7 @@ export function ChatPage() {
           </p>
         </div>
       </Card>
+      </div>
     </div>
   );
 }

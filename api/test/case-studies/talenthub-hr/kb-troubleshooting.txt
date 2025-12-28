@@ -1,0 +1,164 @@
+# TalentHub - Troubleshooting Guide
+
+Common issues and their solutions.
+
+## Job Posting Issues
+
+### Job Not Appearing on Job Boards
+
+**Symptoms**: Posted a job but it's not showing up on Indeed, LinkedIn, etc.
+
+**Solutions**:
+1. Check job status is "Published" (not Draft)
+2. Verify you have job board credits remaining (Settings > Integrations > Job Boards)
+3. Wait 24-48 hours for syndication to complete
+4. Ensure job description meets board requirements (no discriminatory language)
+5. Check if the job board connection is active
+
+**Note**: LinkedIn and Indeed may take up to 48 hours to index new postings.
+
+### Resume Parsing Not Working
+
+**Symptoms**: Candidate information not extracted from uploaded resumes.
+
+**Solutions**:
+1. Ensure resume is in supported format (PDF, DOCX, DOC, TXT)
+2. Check file size is under 5MB
+3. Verify resume isn't image-only (scanned documents may not parse)
+4. Try re-uploading the resume
+5. Manually enter information if parsing fails
+
+## Calendar & Scheduling Issues
+
+### Calendar Not Syncing
+
+**Symptoms**: Interview slots not showing availability correctly.
+
+**Solutions**:
+1. Go to Settings > Integrations > Calendar
+2. Click "Reconnect" to refresh the connection
+3. Ensure you granted calendar read/write permissions
+4. Check that the correct calendar is selected
+5. Wait 15 minutes for sync to complete
+
+### Candidates Can't Book Interviews
+
+**Symptoms**: Self-scheduling link shows "No available times."
+
+**Solutions**:
+1. Verify you have available time slots set up
+2. Check your working hours configuration
+3. Ensure buffer time between interviews isn't too large
+4. Confirm the scheduling link hasn't expired
+5. Test the link yourself in incognito mode
+
+## Video Interview Issues
+
+### Video Call Not Starting
+
+**Symptoms**: Can't join video interview, stuck on loading.
+
+**Solutions**:
+1. Check browser compatibility (Chrome, Firefox, Safari, Edge)
+2. Allow camera and microphone permissions
+3. Disable VPN if active
+4. Try a different browser
+5. Check internet connection speed (minimum 5 Mbps recommended)
+
+### Recording Not Available
+
+**Symptoms**: Interview recording missing or incomplete.
+
+**Solutions**:
+1. Recordings process within 1 hour after interview ends
+2. Check if recording was enabled for the interview
+3. Verify you have recording storage quota remaining
+4. Contact support if recording is still missing after 2 hours
+
+## Email & Notification Issues
+
+### Emails Not Sending
+
+**Symptoms**: Candidates not receiving emails from TalentHub.
+
+**Solutions**:
+1. Check candidate's email address is correct
+2. Verify your sending domain is authenticated (SPF, DKIM, DMARC)
+3. Ask candidates to check spam/junk folders
+4. Test with a different email address
+5. Go to Settings > Email > Test to verify email delivery
+
+### Notifications Delayed
+
+**Symptoms**: Slack/email notifications arriving late.
+
+**Solutions**:
+1. Check notification preferences in Settings > Notifications
+2. Verify Slack integration is connected
+3. Check if notifications are muted for specific channels
+4. Ensure your email client isn't grouping notifications
+
+## Account & Access Issues
+
+### Team Member Can't Access Jobs
+
+**Symptoms**: User sees "Access Denied" or missing jobs.
+
+**Solutions**:
+1. Check user's role (Admin, Recruiter, Hiring Manager, Viewer)
+2. Verify user is added to the specific job's hiring team
+3. Ensure user has the correct department access
+4. Ask admin to check permission settings
+
+### SSO Login Not Working
+
+**Symptoms**: Can't log in with company SSO.
+
+**Solutions**:
+1. Ensure SSO is configured correctly (Settings > Security > SSO)
+2. Check your identity provider (Okta, Azure AD) is connected
+3. Verify user exists in the identity provider
+4. Clear browser cache and cookies
+5. Try incognito mode
+6. Contact your IT admin if issues persist
+
+## Data & Reporting Issues
+
+### Reports Showing Wrong Numbers
+
+**Symptoms**: Analytics don't match expectations.
+
+**Solutions**:
+1. Check date range filter is set correctly
+2. Verify department/job filters aren't excluding data
+3. Refresh the report (data updates every 15 minutes)
+4. Check if archived candidates are included/excluded
+5. Export raw data to verify calculations
+
+### Candidate Data Missing
+
+**Symptoms**: Candidate information incomplete or gone.
+
+**Solutions**:
+1. Check if candidate was merged with duplicate
+2. Verify candidate wasn't archived or deleted
+3. Use search with different filters
+4. Check the candidate activity log for changes
+5. Contact support for data recovery
+
+## Contact Support
+
+If issues persist:
+
+- **Email**: support@talenthub.io
+- **Live Chat**: Available Mon-Fri, 8 AM - 8 PM EST
+- **Phone** (Professional+ plans): 1-888-TALENT-1
+- **Help Center**: help.talenthub.io
+
+When contacting support, please include:
+- Your account email
+- Browser and OS version
+- Steps to reproduce the issue
+- Screenshots or screen recordings
+- Job/Candidate IDs if applicable
+

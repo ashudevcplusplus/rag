@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 import { createWorker } from '../../utils/worker-factory';
 import { processAsyncTask } from './processor';
 import { taskQueues } from '../../queue/async-tasks.queue';
-import { AsyncTaskType } from '../../types/enums';
+import { AsyncTaskType } from '@rag/types';
 
 // Create workers for each task type dynamically
 const workers: Record<AsyncTaskType, Worker> = {} as Record<AsyncTaskType, Worker>;

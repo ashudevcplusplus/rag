@@ -3,7 +3,7 @@ import {
   CreateConsumerChangeDTO,
   IConsumerChange,
 } from '../models/consumer-change.model';
-import { ChangeStatus } from '../types/enums';
+import { ChangeStatus } from '@rag/types';
 import { toStringId } from './helpers';
 
 export class ConsumerChangeRepository {

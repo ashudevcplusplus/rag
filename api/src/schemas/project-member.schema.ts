@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProjectRole } from '../types/enums';
+import { ProjectRole } from '@rag/types';
 
 // TypeScript Interface
 export interface IProjectMember {

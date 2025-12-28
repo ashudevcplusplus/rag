@@ -4,7 +4,7 @@ import {
   UpdateFileMetadataDTO,
   IFileMetadata,
 } from '../schemas/file-metadata.schema';
-import { ProcessingStatus } from '../types/enums';
+import { ProcessingStatus } from '@rag/types';
 import { FilterQuery, UpdateQuery, Types, Model } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
 
@@ -256,8 +256,8 @@ export class FileMetadataRepository {
     const [files, total] = await Promise.all([
       FileMetadataModel.find(query)
         .select(
-          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags errorMessage'
-        ) // Only fetch needed fields
+          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags errorMessage processingStartedAt processingCompletedAt vectorIndexedAt chunkCount'
+        ) // Only fetch needed fields including timing data
         .sort({ uploadedAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -318,8 +318,8 @@ export class FileMetadataRepository {
     const [files, total] = await Promise.all([
       FileMetadataModel.find(query)
         .select(
-          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags errorMessage'
-        ) // Only fetch needed fields
+          'originalFilename size mimetype uploadedBy projectId processingStatus vectorIndexed createdAt uploadedAt tags errorMessage processingStartedAt processingCompletedAt vectorIndexedAt chunkCount'
+        ) // Only fetch needed fields including timing data
         .sort({ uploadedAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -364,6 +364,61 @@ export class FileMetadataRepository {
       .lean();
 
     return toStringIds(files) as unknown as IFileMetadata[];
+  }
+
+  /**
+   * Get indexing time statistics for a project
+   * Returns average, min, and max processing times in milliseconds
+   */
+  async getIndexingTimeStats(projectId: string): Promise<{
+    averageTimeMs: number | null;
+    minTimeMs: number | null;
+    maxTimeMs: number | null;
+    totalFilesCompleted: number;
+  }> {
+    const result = await FileMetadataModel.aggregate([
+      {
+        $match: {
+          projectId: new Types.ObjectId(projectId),
+          processingStatus: ProcessingStatus.COMPLETED,
+          processingStartedAt: { $exists: true, $ne: null },
+          processingCompletedAt: { $exists: true, $ne: null },
+          deletedAt: null,
+        },
+      },
+      {
+        $project: {
+          processingTimeMs: {
+            $subtract: ['$processingCompletedAt', '$processingStartedAt'],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          averageTimeMs: { $avg: '$processingTimeMs' },
+          minTimeMs: { $min: '$processingTimeMs' },
+          maxTimeMs: { $max: '$processingTimeMs' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    if (result.length === 0) {
+      return {
+        averageTimeMs: null,
+        minTimeMs: null,
+        maxTimeMs: null,
+        totalFilesCompleted: 0,
+      };
+    }
+
+    return {
+      averageTimeMs: Math.round(result[0].averageTimeMs),
+      minTimeMs: result[0].minTimeMs,
+      maxTimeMs: result[0].maxTimeMs,
+      totalFilesCompleted: result[0].count,
+    };
   }
 }
 

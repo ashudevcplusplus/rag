@@ -1,6 +1,6 @@
 import { Queue } from 'bullmq';
 import { CONFIG } from '../config';
-import { AsyncTaskType } from '../types/enums';
+import { AsyncTaskType } from '@rag/types';
 
 // Factory function to create queues
 function createQueue(name: string): Queue {

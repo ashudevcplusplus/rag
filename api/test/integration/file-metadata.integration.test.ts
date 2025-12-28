@@ -3,13 +3,7 @@ import { fileMetadataRepository } from '../../src/repositories/file-metadata.rep
 import { projectRepository } from '../../src/repositories/project.repository';
 import { userRepository } from '../../src/repositories/user.repository';
 import { companyRepository } from '../../src/repositories/company.repository';
-import {
-  ProcessingStatus,
-  UploadStatus,
-  SubscriptionTier,
-  UserRole,
-  Visibility,
-} from '../../src/types/enums';
+import { ProcessingStatus, UploadStatus, SubscriptionTier, UserRole, Visibility } from '@rag/types';
 
 describe('File Metadata Repository Integration Tests', () => {
   let testProjectId: string;

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AppError, ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import { publishErrorLog } from '../utils/async-events.util';
-import { EventSource } from '../types/enums';
+import { EventSource } from '@rag/types';
 import { AuthenticatedRequest } from './auth.middleware';
 
 export const errorHandler = (

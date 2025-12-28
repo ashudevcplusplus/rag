@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProjectStatus, Visibility } from '../types/enums';
+import { ProjectStatus, Visibility, ChunkSizePreset } from '@rag/types';
 
 // TypeScript Interface
 export interface IProject {
@@ -27,6 +27,7 @@ export interface IProject {
   // Settings
   settings?: {
     autoIndex?: boolean;
+    chunkSizePreset?: ChunkSizePreset;
     chunkSize?: number;
     chunkOverlap?: number;
     [key: string]: unknown;
@@ -49,6 +50,7 @@ export interface IProject {
 export const projectSettingsSchema = z
   .object({
     autoIndex: z.boolean().optional(),
+    chunkSizePreset: z.nativeEnum(ChunkSizePreset).optional(),
     chunkSize: z.number().int().positive().optional(),
     chunkOverlap: z.number().int().min(0).optional(),
   })

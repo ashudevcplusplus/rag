@@ -6,3 +6,4 @@ export { ProjectMemberRepository, projectMemberRepository } from './project-memb
 export { FileMetadataRepository, fileMetadataRepository } from './file-metadata.repository';
 export { ApiLogRepository, apiLogRepository } from './api-log.repository';
 export { EmbeddingRepository, embeddingRepository } from './embedding.repository';
+export { ConversationRepository, conversationRepository } from './conversation.repository';

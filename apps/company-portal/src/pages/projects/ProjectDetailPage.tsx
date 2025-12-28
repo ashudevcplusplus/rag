@@ -16,6 +16,7 @@ import {
   Copy,
   Check,
   RefreshCw,
+  Timer,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -31,7 +32,7 @@ import {
   Badge,
 } from '@rag/ui';
 import { projectsApi, filesApi, type FilePreviewResponse } from '@rag/api-client';
-import { formatBytes, formatRelativeTime, formatDate, removeChunkOverlap } from '@rag/utils';
+import { formatBytes, formatRelativeTime, formatDate, removeChunkOverlap, formatDuration, calculateProcessingTime } from '@rag/utils';
 import type { FileMetadata } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
@@ -312,12 +313,28 @@ export function ProjectDetailPage() {
                       <h4 className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                         {file.originalFilename}
                       </h4>
-                      <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <div className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
                         <span>{formatBytes(file.size)}</span>
                         <span>•</span>
                         <span>{file.chunkCount} chunks</span>
                         <span>•</span>
                         <span>{formatRelativeTime(file.uploadedAt)}</span>
+                        {/* Show indexing time for completed files */}
+                        {file.processingStatus === 'COMPLETED' && (() => {
+                          const processingTime = calculateProcessingTime(
+                            file.processingStartedAt,
+                            file.processingCompletedAt
+                          );
+                          return processingTime !== null ? (
+                            <>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 text-green-600" title="Indexing time">
+                                <Timer className="w-3.5 h-3.5" />
+                                {formatDuration(processingTime)}
+                              </span>
+                            </>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   </div>

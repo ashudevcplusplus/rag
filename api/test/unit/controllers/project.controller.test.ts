@@ -21,7 +21,7 @@ import { fileMetadataRepository } from '../../../src/repositories/file-metadata.
 import { embeddingRepository } from '../../../src/repositories/embedding.repository';
 import { DeletionService } from '../../../src/services/deletion.service';
 import { VectorService } from '../../../src/services/vector.service';
-import { ProcessingStatus } from '../../../src/types/enums';
+import { ProcessingStatus } from '@rag/types';
 import {
   createMockResponse,
   createMockRequest,
@@ -394,6 +394,11 @@ describe('ProjectController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
     });
+
+    // Note: Parallel deletion behavior (Promise.all for VectorService.deleteByFileId
+    // and embeddingRepository.deleteByFileId) is tested in deletion.service.test.ts
+    // Controller tests for reindexFile require complex fs/promises mocking that's
+    // difficult to set up properly due to dynamic imports.
   });
 
   describe('getIndexingStats', () => {
@@ -403,6 +408,13 @@ describe('ProjectController', () => {
     it('should return indexing stats successfully', async () => {
       // Mock countByProcessingStatus to return numbers
       (fileMetadataRepository.countByProcessingStatus as jest.Mock).mockResolvedValue(0);
+      // Mock getIndexingTimeStats to return timing stats
+      (fileMetadataRepository.getIndexingTimeStats as jest.Mock).mockResolvedValue({
+        averageTimeMs: null,
+        minTimeMs: null,
+        maxTimeMs: null,
+        totalFilesCompleted: 0,
+      });
 
       // Create request with validatedProject properly set
       const mockReq = createMockAuthenticatedRequest(mockCompany, {
@@ -424,7 +436,8 @@ describe('ProjectController', () => {
 
       // Verify the mock was called
       expect(fileMetadataRepository.countByProcessingStatus).toHaveBeenCalled();
-      // Check that json was called with stats object
+      expect(fileMetadataRepository.getIndexingTimeStats).toHaveBeenCalled();
+      // Check that json was called with stats object including timing fields
       expect(mockRes.json).toHaveBeenCalledWith({
         stats: {
           pending: 0,
@@ -432,6 +445,9 @@ describe('ProjectController', () => {
           completed: 0,
           failed: 0,
           total: 0,
+          averageProcessingTimeMs: null,
+          minProcessingTimeMs: null,
+          maxProcessingTimeMs: null,
         },
       });
     });

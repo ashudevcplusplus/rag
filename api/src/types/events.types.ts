@@ -3,7 +3,7 @@
  * All event interfaces and types are defined here in one place
  */
 
-import { ChangeType, AnalyticsEventType, FileCleanupReason, EventSource } from './enums';
+import { ChangeType, AnalyticsEventType, FileCleanupReason, EventSource } from '@rag/types';
 
 // ============================================================================
 // Base Event Interface
@@ -44,7 +44,7 @@ export interface IndexingJobData {
   filePath: string;
   mimetype: string;
   fileSizeMB: number;
-  embeddingProvider?: 'inhouse' | 'openai' | 'gemini';
+  embeddingProvider?: 'openai' | 'gemini';
   embeddingModel?: string;
 }
 

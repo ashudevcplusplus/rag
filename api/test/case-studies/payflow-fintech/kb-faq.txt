@@ -1,0 +1,106 @@
+# PayFlow - Frequently Asked Questions
+
+## Getting Started
+
+**Q: What is PayFlow?**
+A: PayFlow is a digital banking platform that offers checking, savings, payments, investing, and credit products - all from one app. It's designed to be fee-free and mobile-first.
+
+**Q: Is PayFlow a real bank?**
+A: PayFlow partners with FDIC-insured banks to hold your deposits. Your money is protected up to $250,000 per depositor, just like traditional banks.
+
+**Q: How do I open an account?**
+A: Download the app, create an account with your email and phone, verify your identity with a photo ID and selfie, and you're done. It takes about 2 minutes.
+
+**Q: Is there an age requirement?**
+A: You must be 18 or older to open a personal account. Teen accounts (13-17) are available with parental consent.
+
+**Q: Can I use PayFlow if I have bad credit?**
+A: Yes! PayFlow doesn't check your credit to open a checking or savings account. Credit products may have eligibility requirements.
+
+## Money & Transfers
+
+**Q: How do I add money to my account?**
+A: Direct deposit, bank transfer (ACH), mobile check deposit, cash deposit at retail partners (CVS, Walgreens, 7-Eleven), or wire transfer.
+
+**Q: How long do transfers take?**
+A: PayFlow-to-PayFlow: Instant. ACH transfers: 1-3 business days. Wire transfers: Same day. Direct deposit: 2 days early!
+
+**Q: Is there a limit on transfers?**
+A: ACH transfers: $25,000/day. Wire transfers: $50,000/day. PayFlow transfers: $5,000/day. Limits can be increased upon request.
+
+**Q: Can I send money internationally?**
+A: Yes, send money to 100+ countries. Fees and exchange rates vary by destination. International transfers take 1-5 business days.
+
+**Q: What is the savings APY?**
+A: Our high-yield savings account offers 4.5% APY with no minimum balance. Rates are variable and may change.
+
+## Debit Card
+
+**Q: How do I get a debit card?**
+A: A free virtual debit card is available instantly upon account opening. Physical card arrives in 7-10 business days.
+
+**Q: Where can I use my PayFlow card?**
+A: Anywhere Visa is accepted worldwide - stores, online, ATMs. Also works with Apple Pay, Google Pay, and Samsung Pay.
+
+**Q: Are there ATM fees?**
+A: No fees at 55,000+ in-network ATMs (Allpoint, MoneyPass). Out-of-network ATMs charge $2.50.
+
+**Q: What if my card is lost or stolen?**
+A: Lock your card instantly in the app. Request a replacement card (free, or $15 for expedited 2-day delivery).
+
+## Security
+
+**Q: Is my money safe?**
+A: Yes! Deposits are FDIC insured up to $250,000. We use bank-grade security including 256-bit encryption and real-time fraud monitoring.
+
+**Q: What is two-factor authentication?**
+A: An extra layer of security requiring a code from your phone or authenticator app when logging in. We strongly recommend enabling it.
+
+**Q: What if there's unauthorized activity?**
+A: Lock your card, report it in the app, and we'll investigate. You have zero liability for unauthorized transactions.
+
+**Q: How do I dispute a transaction?**
+A: Go to the transaction in your activity, tap "Report a problem," and follow the prompts. Most disputes are resolved within 10 business days.
+
+## Investing
+
+**Q: Can I buy stocks on PayFlow?**
+A: Yes! Trade stocks and ETFs commission-free. Fractional shares start at $1. Cryptocurrency trading also available.
+
+**Q: Is there a minimum to invest?**
+A: $1 for fractional shares. Some cryptocurrencies have minimums based on network fees.
+
+**Q: What about retirement accounts?**
+A: We offer Traditional IRA and Roth IRA with no fees. Automated investing portfolios available.
+
+**Q: Are there trading fees?**
+A: Stocks and ETFs: $0. Crypto: 0.5%-1.5% spread. Automated investing: 0.25% annual fee.
+
+## Business Accounts
+
+**Q: Can I use PayFlow for my business?**
+A: Yes! PayFlow Business includes checking, invoicing, payment acceptance, expense cards, and accounting integrations.
+
+**Q: How much does PayFlow Business cost?**
+A: $15/month for PayFlow Business, $35/month for Business Pro. First 3 months free for new businesses.
+
+**Q: Can I accept credit card payments?**
+A: Yes, accept Visa, Mastercard, Amex, and Discover. Rates start at 2.6% + $0.30 per transaction.
+
+**Q: Does PayFlow integrate with accounting software?**
+A: Yes, we integrate with QuickBooks, Xero, FreshBooks, and other popular accounting tools.
+
+## Support
+
+**Q: How do I contact support?**
+A: In-app chat (24/7), email support@payflow.com, or call 1-888-PAY-FLOW (7am-10pm EST).
+
+**Q: What's the typical response time?**
+A: Chat: immediate. Email: within 24 hours. Phone: average wait under 5 minutes.
+
+**Q: Is there a help center?**
+A: Yes, visit help.payflow.com for guides, FAQs, and video tutorials.
+
+**Q: Can I visit a branch?**
+A: PayFlow is digital-only with no physical branches. This is how we keep fees low and pass savings to you.
+

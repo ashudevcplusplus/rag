@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole } from '../types/enums';
+import { UserRole } from '@rag/types';
 
 // TypeScript Interface
 export interface IUser {

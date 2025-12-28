@@ -11,7 +11,9 @@ import {
   ChatSource,
   ChatMessage,
   StreamEvent,
+  PromptTemplateType,
 } from '../schemas/chat.schema';
+import { PROMPT_TEMPLATES } from '../utils/prompt-templates';
 import { QdrantFilter, SearchResult, SearchResultPayload } from '../types/vector.types';
 import { ExternalServiceError } from '../types/error.types';
 import { logger } from '../utils/logger';
@@ -81,7 +83,7 @@ export class ChatService {
     const context = this.buildContextString(sources);
 
     // 3. Build the messages for the LLM
-    const systemPrompt = request.systemPrompt || this.getDefaultSystemPrompt();
+    const systemPrompt = this.resolveSystemPrompt(request);
     const messages = this.buildMessages(systemPrompt, context, request.query, request.messages);
 
     // 4. Call the appropriate LLM
@@ -152,7 +154,7 @@ export class ChatService {
 
       // 3. Build the context and messages
       const context = this.buildContextString(sources);
-      const systemPrompt = request.systemPrompt || this.getDefaultSystemPrompt();
+      const systemPrompt = this.resolveSystemPrompt(request);
       const messages = this.buildMessages(systemPrompt, context, request.query, request.messages);
 
       // 4. Stream from the appropriate LLM
@@ -607,17 +609,85 @@ export class ChatService {
   }
 
   /**
+   * Map prompt template types to template keys
+   */
+  private static readonly TEMPLATE_MAP: Record<PromptTemplateType, keyof typeof PROMPT_TEMPLATES> =
+    {
+      customer_support: 'CUSTOMER_SUPPORT',
+      sales_assistant: 'SALES_ASSISTANT',
+      technical_support: 'TECHNICAL_SUPPORT',
+      onboarding_assistant: 'ONBOARDING_ASSISTANT',
+      faq_concise: 'FAQ_CONCISE',
+      ecommerce_assistant: 'ECOMMERCE_ASSISTANT',
+    };
+
+  /**
+   * Resolve the system prompt from request options
+   * Priority: systemPrompt > promptTemplate > default
+   */
+  private static resolveSystemPrompt(request: ChatRequest): string {
+    // Custom system prompt takes highest priority
+    if (request.systemPrompt) {
+      return request.systemPrompt;
+    }
+
+    // Check for template selection
+    if (request.promptTemplate) {
+      const templateKey = this.TEMPLATE_MAP[request.promptTemplate];
+      if (templateKey && PROMPT_TEMPLATES[templateKey]) {
+        return PROMPT_TEMPLATES[templateKey];
+      }
+    }
+
+    // Fall back to default
+    return this.getDefaultSystemPrompt();
+  }
+
+  /**
    * Get default system prompt for RAG
+   * Optimized for customer service chatbot with lead generation capabilities
    */
   private static getDefaultSystemPrompt(): string {
-    return `You are a helpful AI assistant that answers questions based on the provided context.
+    return `You are an expert AI customer support assistant. Your role is to provide helpful, accurate, and friendly responses to visitors based on the company's knowledge base.
 
-Instructions:
-- Answer the question using ONLY the information from the provided context.
-- If the context doesn't contain enough information to answer the question, say so clearly.
-- Be concise and direct in your answers.
-- If you quote from the context, indicate which document it's from.
-- Do not make up information that is not in the context.`;
+## Core Principles
+
+1. **Knowledge-Based Responses**: Answer questions using ONLY the information from the provided context. Never fabricate or assume information not present in the context.
+
+2. **Transparency**: If the context doesn't contain sufficient information to fully answer a question:
+   - Clearly state what you don't know
+   - Offer to help with related topics you can address
+   - Suggest the user contact human support for complex or missing information
+
+3. **Professional & Friendly Tone**: 
+   - Be warm, approachable, and professional
+   - Use clear, concise language
+   - Adapt your communication style to match the user's tone
+
+4. **Source Attribution**: When referencing specific information, indicate which document or section it comes from.
+
+## Response Guidelines
+
+- **Be Concise**: Provide direct answers first, then elaborate if needed
+- **Use Formatting**: Structure responses with bullet points, numbered lists, or headers when it improves clarity
+- **Stay On Topic**: Focus on what the user is asking; avoid tangential information
+- **Multilingual Support**: Respond in the same language the user writes in
+- **No Hallucination**: If you're uncertain, say so rather than guessing
+
+## Handling Edge Cases
+
+- **Out of Scope Questions**: Politely redirect to relevant topics or suggest contacting human support
+- **Technical Issues**: Acknowledge the issue and suggest appropriate next steps
+- **Escalation Triggers**: If a user expresses frustration, requests human assistance, or has complex issues requiring human judgment, acknowledge this and offer to connect them with a human agent
+
+## Lead Qualification (When Appropriate)
+
+If a user shows buying intent or needs personalized assistance:
+- Offer to collect their contact information for follow-up
+- Explain the benefit of connecting with the team
+- Keep it natural and non-pushy
+
+Remember: You represent the company. Every interaction should leave the user feeling helped and valued.`;
   }
 
   /**

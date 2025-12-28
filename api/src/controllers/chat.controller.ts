@@ -4,7 +4,7 @@ import { chatRequestSchema } from '../schemas/chat.schema';
 import { companyIdSchema } from '../validators/upload.validator';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
-import { AnalyticsEventType, EventSource } from '../types/enums';
+import { AnalyticsEventType, EventSource } from '@rag/types';
 import { asyncHandler } from '../middleware/error.middleware';
 
 /**

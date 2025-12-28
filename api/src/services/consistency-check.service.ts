@@ -45,19 +45,18 @@ export class ConsistencyCheckService {
     // Get all files for all projects
     const allFiles = await this.getCompanyFiles(companyId);
 
-    // Get all embeddings from MongoDB
-    let dbVectorCount = 0;
+    // Get all embeddings from MongoDB in parallel
     const dbFileChunkCounts = new Map<string, number>();
-    for (const file of allFiles) {
-      const embedding = await embeddingRepository.findByFileId(file.fileId);
-      if (embedding) {
-        const chunkCount = embedding.chunkCount || 0;
-        dbVectorCount += chunkCount;
-        dbFileChunkCounts.set(file.fileId, chunkCount);
-      } else {
-        dbFileChunkCounts.set(file.fileId, 0);
-      }
-    }
+    const embeddings = await Promise.all(
+      allFiles.map((file) => embeddingRepository.findByFileId(file.fileId))
+    );
+    let dbVectorCount = 0;
+    embeddings.forEach((embedding, idx) => {
+      const file = allFiles[idx];
+      const chunkCount = embedding?.chunkCount || 0;
+      dbVectorCount += chunkCount;
+      dbFileChunkCounts.set(file.fileId, chunkCount);
+    });
 
     // Get collection info from Qdrant
     const collection = `company_${companyId}`;
@@ -286,18 +285,18 @@ export class ConsistencyCheckService {
     companyId: string
   ): Promise<Array<{ fileId: string; fileName: string; projectId: string }>> {
     const projects = await projectRepository.findByCompanyId(companyId);
-    const allFiles: Array<{ fileId: string; fileName: string; projectId: string }> = [];
-    for (const project of projects) {
-      const files = await fileMetadataRepository.findByProjectId(project._id);
-      for (const file of files) {
-        allFiles.push({
-          fileId: file._id,
-          fileName: file.originalFilename,
-          projectId: project._id,
-        });
-      }
-    }
-    return allFiles;
+    // Fetch files for all projects in parallel
+    const filesArrays = await Promise.all(
+      projects.map((project) => fileMetadataRepository.findByProjectId(project._id))
+    );
+    // Flatten results with project context
+    return filesArrays.flatMap((files, idx) =>
+      files.map((file) => ({
+        fileId: file._id,
+        fileName: file.originalFilename,
+        projectId: projects[idx]._id,
+      }))
+    );
   }
 
   /**

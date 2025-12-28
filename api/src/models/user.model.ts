@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IUser } from '../schemas/user.schema';
-import { UserRole } from '../types/enums';
+import { UserRole } from '@rag/types';
 
 export interface IUserDocument extends Omit<IUser, '_id' | 'companyId' | 'fullName'>, Document {
   companyId: Types.ObjectId;

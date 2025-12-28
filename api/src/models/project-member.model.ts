@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IProjectMember } from '../schemas/project-member.schema';
-import { ProjectRole } from '../types/enums';
+import { ProjectRole } from '@rag/types';
 
 export interface IProjectMemberDocument
   extends

@@ -185,39 +185,6 @@ jobs:
         run: pnpm --filter @rag/${{ matrix.app }} build
 
   # ============================================
-  # Python Embed Service: Lint & Type Check
-  # ============================================
-  python-checks:
-    name: Python - Embed Service
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./embed
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: embed/requirements*.txt
-
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
-
-      - name: Lint with ruff
-        run: ruff check . --output-format=github
-        continue-on-error: true
-
-      - name: Type check with mypy
-        run: mypy app.py --ignore-missing-imports
-
-  # ============================================
   # Docker Build Verification
   # ============================================
   docker-build-api:
@@ -238,26 +205,6 @@ jobs:
           file: ./api/Dockerfile
           push: false
           tags: api:ci-${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  docker-build-embed:
-    name: Docker - embed
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Embed Docker image
-        uses: docker/build-push-action@v5
-        timeout-minutes: 30
-        with:
-          context: ./embed
-          push: false
-          tags: embed:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -429,7 +376,7 @@ jobs:
   ci-status:
     name: CI Status
     runs-on: ubuntu-latest
-    needs: [api-checks, api-build, packages-checks, frontend-checks, python-checks, docker-build-api, docker-build-embed, security-audit, coverage-check]
+    needs: [api-checks, api-build, packages-checks, frontend-checks, docker-build-api, security-audit, coverage-check]
     if: always()
     steps:
       - name: Check CI Status
@@ -442,9 +389,7 @@ jobs:
           echo "| API Build | ${{ needs.api-build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Packages | ${{ needs.packages-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend | ${{ needs.frontend-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python | ${{ needs.python-checks.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docker API | ${{ needs.docker-build-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Embed | ${{ needs.docker-build-embed.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security | ${{ needs.security-audit.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Coverage | ${{ needs.coverage-check.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           
@@ -452,9 +397,7 @@ jobs:
              [ "${{ needs.api-build.result }}" != "success" ] || \
              [ "${{ needs.packages-checks.result }}" != "success" ] || \
              [ "${{ needs.frontend-checks.result }}" != "success" ] || \
-             [ "${{ needs.python-checks.result }}" != "success" ] || \
              [ "${{ needs.docker-build-api.result }}" != "success" ] || \
-             [ "${{ needs.docker-build-embed.result }}" != "success" ] || \
              [ "${{ needs.security-audit.result }}" != "success" ] || \
              [ "${{ needs.coverage-check.result }}" != "success" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY

@@ -12,11 +12,11 @@
 # =============================================================================
 
 .PHONY: help setup dev dev-bg dev-verbose down logs logs-all logs-debug clean rebuild status \
-        infra api apps embed \
-        logs-api logs-apps logs-infra logs-embed \
+        infra api apps \
+        logs-api logs-apps logs-infra \
         install test test-unit test-integration test-e2e test-coverage test-watch \
         lint lint-fix format check \
-        shell-api shell-embed shell-mongo shell-redis \
+        shell-api shell-mongo shell-redis \
         db-seed db-reset db-shell \
         health verify pre-commit
 
@@ -59,7 +59,6 @@ help:
 	@echo "$(BOLD)║$(RESET)    make logs-api     View API logs only (errors/warnings)                $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)    make logs-apps    View frontend app logs only                         $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)    make logs-infra   View infrastructure logs (MongoDB, Redis, Qdrant)   $(BOLD)║$(RESET)"
-	@echo "$(BOLD)║$(RESET)    make logs-embed   View embedding service logs                         $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)                                                                          $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)  $(GREEN)🧪 TESTING$(RESET)                                                             $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)    make test         Run all tests                                       $(BOLD)║$(RESET)"
@@ -89,7 +88,6 @@ help:
 	@echo "$(BOLD)║$(RESET)                                                                          $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)  $(GREEN)🐚 SHELL ACCESS$(RESET)                                                        $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)    make shell-api    Open shell in API container                         $(BOLD)║$(RESET)"
-	@echo "$(BOLD)║$(RESET)    make shell-embed  Open shell in embed container                       $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)    make shell-mongo  Open MongoDB shell                                  $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)    make shell-redis  Open Redis CLI                                      $(BOLD)║$(RESET)"
 	@echo "$(BOLD)║$(RESET)                                                                          $(BOLD)║$(RESET)"
@@ -203,8 +201,8 @@ dev:
 	@echo "$(YELLOW)Starting apps (showing errors/warnings only)...$(RESET)"
 	@echo "$(YELLOW)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(RESET)"
 	@echo ""
-	@docker compose -f docker-compose.dev.yml up --build -d api landing-page-api embed company-portal landing-page
-	@docker compose -f docker-compose.dev.yml logs -f api landing-page-api embed company-portal landing-page 2>&1 | grep -E --line-buffered '\[error\]|\[warn\]|error:|Error:|ERROR|WARN|warning:|Warning:|Exception|Traceback|failed|Failed|FAILED|panic|PANIC|VITE.*ready|Started|server started|Uvicorn running'
+	@docker compose -f docker-compose.dev.yml up --build -d api landing-page-api company-portal landing-page
+	@docker compose -f docker-compose.dev.yml logs -f api landing-page-api company-portal landing-page 2>&1 | grep -E --line-buffered '\[error\]|\[warn\]|error:|Error:|ERROR|WARN|warning:|Warning:|Exception|Traceback|failed|Failed|FAILED|panic|PANIC|VITE.*ready|Started|server started|Uvicorn running'
 
 # Start in background
 dev-bg:
@@ -234,13 +232,13 @@ down:
 logs:
 	@echo "$(YELLOW)📋 Showing errors and warnings only (use 'make logs-debug' for all logs)$(RESET)"
 	@echo ""
-	@docker compose -f docker-compose.dev.yml logs -f api landing-page-api embed company-portal landing-page 2>&1 | grep -E --line-buffered '\[error\]|\[warn\]|error:|Error:|ERROR|WARN|warning:|Warning:|Exception|Traceback|failed|Failed|FAILED|panic|PANIC|VITE.*ready|Started|server started|Uvicorn running'
+	@docker compose -f docker-compose.dev.yml logs -f api landing-page-api company-portal landing-page 2>&1 | grep -E --line-buffered '\[error\]|\[warn\]|error:|Error:|ERROR|WARN|warning:|Warning:|Exception|Traceback|failed|Failed|FAILED|panic|PANIC|VITE.*ready|Started|server started|Uvicorn running'
 
 # View all log levels (debug, info, warn, error) for apps
 logs-debug:
 	@echo "$(YELLOW)📋 Showing all log levels for apps$(RESET)"
 	@echo ""
-	@docker compose -f docker-compose.dev.yml logs -f api landing-page-api embed company-portal landing-page
+	@docker compose -f docker-compose.dev.yml logs -f api landing-page-api company-portal landing-page
 
 # View ALL logs including infrastructure (mongodb, redis, qdrant)
 logs-all:
@@ -265,7 +263,7 @@ infra:
 # Start API + infrastructure
 api: infra
 	@echo "$(YELLOW)🔧 Starting API services...$(RESET)"
-	@docker compose -f docker-compose.dev.yml up --build embed api
+	@docker compose -f docker-compose.dev.yml up --build api
 
 # Start frontend apps
 apps:
@@ -284,9 +282,6 @@ logs-apps:
 
 logs-infra:
 	@docker compose -f docker-compose.dev.yml logs -f mongodb redis qdrant
-
-logs-embed:
-	@docker compose -f docker-compose.dev.yml logs -f embed
 
 # =============================================================================
 # Testing Commands
@@ -405,9 +400,6 @@ db-shell:
 shell-api:
 	@docker compose -f docker-compose.dev.yml exec api sh
 
-shell-embed:
-	@docker compose -f docker-compose.dev.yml exec embed sh
-
 shell-mongo:
 	@docker compose -f docker-compose.dev.yml exec mongodb mongosh -u admin -p admin123
 
@@ -433,7 +425,6 @@ health:
 	@echo ""
 	@printf "  API (8000):            " && curl -sf http://localhost:8000/health > /dev/null && echo "$(GREEN)✓ Healthy$(RESET)" || echo "$(RED)✗ Unhealthy$(RESET)"
 	@printf "  Landing API (8001):    " && curl -sf http://localhost:8001/health > /dev/null && echo "$(GREEN)✓ Healthy$(RESET)" || echo "$(RED)✗ Unhealthy$(RESET)"
-	@printf "  Embed (5001):          " && curl -sf http://localhost:5001/health > /dev/null && echo "$(GREEN)✓ Healthy$(RESET)" || echo "$(RED)✗ Unhealthy$(RESET)"
 	@printf "  Company Portal (3000): " && curl -sf http://localhost:3000 > /dev/null && echo "$(GREEN)✓ Healthy$(RESET)" || echo "$(RED)✗ Unhealthy$(RESET)"
 	@printf "  Landing Page (3001):   " && curl -sf http://localhost:3001 > /dev/null && echo "$(GREEN)✓ Healthy$(RESET)" || echo "$(RED)✗ Unhealthy$(RESET)"
 	@printf "  Qdrant (6333):         " && curl -sf http://localhost:6333 > /dev/null && echo "$(GREEN)✓ Healthy$(RESET)" || echo "$(RED)✗ Unhealthy$(RESET)"

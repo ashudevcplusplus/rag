@@ -13,6 +13,7 @@ module.exports = {
   // Map workspace packages to their source
   moduleNameMapper: {
     '^@rag/text-utils$': '<rootDir>/../packages/text-utils/src/index.ts',
+    '^@rag/types$': '<rootDir>/../packages/types/src/index.ts',
   },
 
   // Coverage configuration

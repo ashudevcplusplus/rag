@@ -1,0 +1,112 @@
+# CloudSync Pro - Troubleshooting Guide
+
+This guide covers common issues and their solutions.
+
+## Sync Issues
+
+### Files Not Syncing
+
+**Symptoms**: Files are stuck on "Syncing" or changes aren't appearing on other devices.
+
+**Solutions**:
+1. Check your internet connection
+2. Verify you have sufficient storage space (both local and cloud)
+3. Ensure the file isn't open in another application
+4. Restart the CloudSync Pro app
+5. Check if the file is in the excluded files list (Settings > Sync > Excluded Files)
+
+**File Types That Cannot Sync**:
+- System files (e.g., desktop.ini, .DS_Store)
+- Temporary files (~$filename.docx)
+- Files larger than your plan's limit
+- Files with invalid characters: \ / : * ? " < > |
+
+### Sync Conflicts
+
+**What causes conflicts**: When the same file is edited on multiple devices before syncing.
+
+**Resolution**:
+1. CloudSync Pro automatically creates conflict copies
+2. Find conflict copies named "filename (conflicted copy DATE).ext"
+3. Compare both versions and merge changes manually
+4. Delete the unwanted version
+
+## Login & Account Issues
+
+### Forgot Password
+
+1. Go to cloudsyncpro.com/reset-password
+2. Enter your email address
+3. Check your inbox for the reset link (valid for 24 hours)
+4. Create a new password (minimum 8 characters, must include number and symbol)
+
+### Two-Factor Authentication (2FA) Issues
+
+**Lost access to authenticator app**:
+1. Use one of your backup codes (provided during 2FA setup)
+2. If no backup codes, contact support with ID verification
+
+**2FA not working**:
+1. Ensure your device time is correct (auto-sync recommended)
+2. Try entering the code immediately after it refreshes
+3. Regenerate 2FA in Settings > Security
+
+### Account Locked
+
+Your account may be locked after 5 failed login attempts.
+
+**To unlock**:
+1. Wait 15 minutes for automatic unlock
+2. Or use "Forgot Password" to reset immediately
+3. Contact support if problem persists
+
+## Performance Issues
+
+### Slow Upload/Download
+
+**Possible causes and solutions**:
+1. Check your internet speed at speedtest.net
+2. Adjust bandwidth limits: Settings > Network > Bandwidth
+3. Reduce number of concurrent uploads: Settings > Advanced > Max Concurrent Transfers
+4. Use wired connection instead of WiFi when possible
+5. Temporarily pause other bandwidth-heavy applications
+
+### High CPU/Memory Usage
+
+1. Check how many files are being synced
+2. Exclude large folders that don't need real-time sync
+3. Update to the latest version of CloudSync Pro
+4. Reduce sync frequency: Settings > Sync > Check for changes every X minutes
+
+## Mobile App Issues
+
+### App Crashing
+
+1. Force close and restart the app
+2. Check for app updates in App Store/Play Store
+3. Clear app cache: Settings > App > CloudSync Pro > Clear Cache
+4. Reinstall the app (your synced files are safe in the cloud)
+
+### Photos Not Backing Up
+
+1. Ensure photo backup is enabled: Settings > Photos > Auto Backup
+2. Grant photo library permission to CloudSync Pro
+3. Check if you're on WiFi (Settings > Photos > WiFi Only)
+4. Verify sufficient cloud storage
+
+## Contact Support
+
+If your issue isn't resolved:
+
+- Email: support@cloudsyncpro.com
+- Live Chat: Available Mon-Fri, 9 AM - 6 PM EST
+- Phone (Enterprise only): 1-800-CLOUDSYNC
+- Community Forum: community.cloudsyncpro.com
+
+Please include:
+- Your account email
+- Device and OS version
+- CloudSync Pro version (Help > About)
+- Steps to reproduce the issue
+- Screenshots if applicable
+

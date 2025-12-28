@@ -14,14 +14,29 @@ const router = Router({ mergeParams: true });
  * Request body:
  * - query: string (required) - The user's question
  * - messages: ChatMessage[] (optional) - Conversation history
- * - systemPrompt: string (optional) - Custom system prompt
+ *
+ * System Prompt Options (choose one):
+ * - promptTemplate: string (optional) - Use a predefined prompt template:
+ *     - 'customer_support' - Default customer service (balanced)
+ *     - 'sales_assistant' - Sales-focused with lead generation
+ *     - 'technical_support' - Technical documentation and troubleshooting
+ *     - 'onboarding_assistant' - New user onboarding
+ *     - 'faq_concise' - Brief FAQ-style responses
+ *     - 'ecommerce_assistant' - E-commerce product specialist
+ * - systemPrompt: string (optional) - Custom system prompt (overrides template)
+ *
+ * RAG Settings:
  * - limit: number (optional, default: 5) - Number of context chunks to retrieve
  * - rerank: boolean (optional, default: true) - Whether to rerank results
  * - filter: object (optional) - Filter by fileId, fileIds, or projectId
+ * - embeddingProvider: 'openai' | 'gemini' (optional) - Embedding provider for RAG
+ *
+ * LLM Settings:
  * - llmProvider: 'openai' | 'gemini' (optional) - LLM provider to use
- * - embeddingProvider: 'inhouse' | 'openai' | 'gemini' (optional) - Embedding provider for RAG
  * - maxTokens: number (optional) - Max tokens for response
- * - temperature: number (optional) - LLM temperature
+ * - temperature: number (optional) - LLM temperature (0-2)
+ *
+ * Response Settings:
  * - includeSources: boolean (optional, default: true) - Include source documents in response
  * - stream: boolean (optional, default: false) - Stream response via SSE
  *

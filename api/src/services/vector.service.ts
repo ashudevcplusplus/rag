@@ -3,9 +3,7 @@ import { CONFIG } from '../config';
 import {
   VectorPoint,
   SearchResult,
-  EmbeddingResponse,
   QdrantFilter,
-  RerankResponse,
   SearchResultPayload,
 } from '../types/vector.types';
 import { ExternalServiceError } from '../types/error.types';
@@ -20,12 +18,12 @@ interface QdrantError extends Error {
   status?: number;
 }
 
-export type EmbeddingProvider = 'inhouse' | 'openai' | 'gemini';
+export type EmbeddingProvider = 'openai' | 'gemini';
 
 export class VectorService {
   /**
    * Get embeddings from the specified or configured provider
-   * Supports: inhouse (Python service), openai, or gemini
+   * Supports: openai or gemini
    * @param texts - Array of texts to embed
    * @param taskType - 'document' or 'query' (affects Gemini embeddings)
    * @param provider - Optional provider override. If not provided, uses CONFIG.EMBEDDING_PROVIDER
@@ -35,24 +33,16 @@ export class VectorService {
     taskType: 'document' | 'query' = 'document',
     provider?: EmbeddingProvider
   ): Promise<number[][]> {
-    // Determine provider: use provided, then CONFIG.EMBEDDING_PROVIDER, otherwise fall back to INHOUSE_EMBEDDINGS
-    const effectiveProvider =
-      provider || CONFIG.EMBEDDING_PROVIDER || (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+    const effectiveProvider = provider || CONFIG.EMBEDDING_PROVIDER || 'openai';
 
-    // Route to appropriate embedding service based on configuration
     switch (effectiveProvider) {
       case 'gemini':
-        // Use Gemini embedding service
         return GeminiEmbeddingService.getEmbeddings(texts, {
           taskType: taskType === 'query' ? 'retrieval_query' : 'retrieval_document',
         });
       case 'openai':
-        // Use OpenAI embedding service
-        return EmbeddingService.getEmbeddings(texts);
-      case 'inhouse':
       default:
-        // Use in-house Python embedding service
-        return this.getInhouseEmbeddings(texts);
+        return EmbeddingService.getEmbeddings(texts);
     }
   }
 
@@ -60,18 +50,15 @@ export class VectorService {
    * Get embedding dimensions for a given provider
    */
   static getEmbeddingDimensions(provider?: EmbeddingProvider): number {
-    const effectiveProvider =
-      provider || CONFIG.EMBEDDING_PROVIDER || (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+    const effectiveProvider = provider || CONFIG.EMBEDDING_PROVIDER || 'openai';
 
     switch (effectiveProvider) {
       case 'gemini':
         return GeminiEmbeddingService.getEmbeddingDimensions();
       case 'openai':
+      default:
         // OpenAI text-embedding-3-small = 1536, text-embedding-3-large = 3072
         return CONFIG.OPENAI_EMBEDDING_MODEL.includes('large') ? 3072 : 1536;
-      case 'inhouse':
-      default:
-        return 384; // all-MiniLM-L6-v2
     }
   }
 
@@ -79,77 +66,14 @@ export class VectorService {
    * Get model name for a given provider
    */
   static getModelName(provider?: EmbeddingProvider): string {
-    const effectiveProvider =
-      provider || CONFIG.EMBEDDING_PROVIDER || (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+    const effectiveProvider = provider || CONFIG.EMBEDDING_PROVIDER || 'openai';
 
     switch (effectiveProvider) {
       case 'gemini':
         return CONFIG.GEMINI_EMBEDDING_MODEL;
       case 'openai':
-        return CONFIG.OPENAI_EMBEDDING_MODEL;
-      case 'inhouse':
       default:
-        return 'all-MiniLM-L6-v2';
-    }
-  }
-
-  /**
-   * Get embeddings from in-house Python embed service
-   */
-  private static async getInhouseEmbeddings(texts: string[]): Promise<number[][]> {
-    try {
-      logger.debug('Requesting in-house embeddings', {
-        count: texts.length,
-        url: CONFIG.EMBED_URL,
-      });
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-      try {
-        const response = await fetch(CONFIG.EMBED_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texts }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error('Embedding service returned error', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText,
-            url: CONFIG.EMBED_URL,
-          });
-          throw new ExternalServiceError(
-            'Embedding service',
-            `${response.status}: ${response.statusText}`
-          );
-        }
-
-        const data = (await response.json()) as EmbeddingResponse;
-        const embeddings = data.embeddings || data.vectors || [];
-
-        logger.debug('In-house embeddings received', { count: embeddings.length });
-        return embeddings;
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        throw fetchError;
-      }
-    } catch (error) {
-      const errorDetails = {
-        message: error instanceof Error ? error.message : String(error),
-        name: error instanceof Error ? error.name : 'Unknown',
-        stack: error instanceof Error ? error.stack : undefined,
-        cause: error instanceof Error && 'cause' in error ? error.cause : undefined,
-        url: CONFIG.EMBED_URL,
-        textsCount: texts.length,
-      };
-      logger.error('Failed to get in-house embeddings', errorDetails);
-      throw error;
+        return CONFIG.OPENAI_EMBEDDING_MODEL;
     }
   }
 
@@ -182,7 +106,7 @@ export class VectorService {
         });
         throw new ExternalServiceError(
           'Qdrant',
-          `Collection ${collectionName} has dimension ${currentDimensions} but expected ${expectedDimensions} for provider ${provider || CONFIG.EMBEDDING_PROVIDER || 'inhouse'}. Please recreate the collection or use a different provider.`
+          `Collection ${collectionName} has dimension ${currentDimensions} but expected ${expectedDimensions} for provider ${provider || CONFIG.EMBEDDING_PROVIDER}. Please recreate the collection or use a different provider.`
         );
       }
     } catch (error) {
@@ -192,7 +116,7 @@ export class VectorService {
         logger.info('Creating collection', {
           collection: collectionName,
           vectorSize,
-          provider: provider || CONFIG.EMBEDDING_PROVIDER || 'inhouse',
+          provider: provider || CONFIG.EMBEDDING_PROVIDER,
         });
         // Collection doesn't exist, create it with correct dimensions
         await qdrant.createCollection(collectionName, {
@@ -340,32 +264,67 @@ export class VectorService {
   }
 
   /**
-   * Rerank documents using cross-encoder
+   * Rerank documents using embedding similarity
+   * Uses the configured embedding provider for consistency
+   * @param query - The search query
+   * @param documents - Array of document texts to rerank
+   * @returns Array of relevance scores (higher = more relevant)
    */
   static async rerank(query: string, documents: string[]): Promise<number[]> {
     try {
-      logger.debug('Reranking documents', { count: documents.length, url: CONFIG.RERANK_URL });
+      logger.debug('Reranking with embedding similarity', { count: documents.length });
 
-      const response = await fetch(CONFIG.RERANK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, documents }),
+      // Get embeddings for query and all documents in parallel
+      const [queryEmbeddings, docEmbeddings] = await Promise.all([
+        this.getEmbeddings([query], 'query'),
+        this.getEmbeddings(documents, 'document'),
+      ]);
+
+      const queryVector = queryEmbeddings[0];
+
+      // Calculate cosine similarity between query and each document
+      const scores = docEmbeddings.map((docVector) => {
+        return this.cosineSimilarity(queryVector, docVector);
       });
 
-      if (!response.ok) {
-        throw new ExternalServiceError('Rerank service', response.statusText);
-      }
+      logger.debug('Reranking complete', {
+        count: documents.length,
+        minScore: Math.min(...scores).toFixed(3),
+        maxScore: Math.max(...scores).toFixed(3),
+      });
 
-      const data = (await response.json()) as RerankResponse;
-      return data.scores;
+      return scores;
     } catch (error) {
       logger.error('Failed to rerank', {
-        error,
+        error: error instanceof Error ? error.message : String(error),
         docsCount: documents.length,
-        url: CONFIG.RERANK_URL,
       });
       throw error;
     }
+  }
+
+  /**
+   * Calculate cosine similarity between two vectors
+   */
+  private static cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length !== b.length) {
+      throw new Error(`Vector dimension mismatch: ${a.length} vs ${b.length}`);
+    }
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < a.length; i++) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+
+    const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+    if (magnitude === 0) return 0;
+
+    return dotProduct / magnitude;
   }
 
   /**

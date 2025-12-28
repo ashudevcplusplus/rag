@@ -2,7 +2,7 @@ import { projectRepository } from '../../../src/repositories/project.repository'
 import { ProjectModel } from '../../../src/models/project.model';
 import { FileMetadataModel } from '../../../src/models/file-metadata.model';
 import { EmbeddingModel } from '../../../src/models/embedding.model';
-import { ProjectStatus, Visibility } from '../../../src/types/enums';
+import { ProjectStatus, Visibility } from '@rag/types';
 
 // Type for mock documents
 interface MockDocument {

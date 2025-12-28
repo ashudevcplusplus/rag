@@ -1,0 +1,123 @@
+# TalentHub - Hiring Best Practices Guide
+
+This guide covers best practices for using TalentHub to optimize your hiring process.
+
+## Writing Effective Job Descriptions
+
+### Structure
+1. **Job Title**: Use standard titles (avoid creative titles that reduce searchability)
+2. **Company Overview**: 2-3 sentences about your company and culture
+3. **Role Summary**: What the person will do and their impact
+4. **Responsibilities**: 5-7 bullet points of key duties
+5. **Requirements**: Must-have qualifications (be realistic)
+6. **Nice-to-Haves**: Preferred but not required skills
+7. **Benefits & Perks**: Salary range, benefits, remote policy
+8. **How to Apply**: Clear instructions
+
+### Tips for Better Applications
+- Include salary range (increases applications by 30%)
+- Limit requirements to true must-haves
+- Use inclusive language (TalentHub has a built-in bias checker)
+- Keep it under 700 words
+- Add company photos and videos
+
+## Setting Up Your Hiring Pipeline
+
+### Recommended Stages
+1. **New** - Unreviewed applications
+2. **Screening** - Initial resume review
+3. **Phone Screen** - 15-30 min intro call
+4. **Technical Interview** - Skills assessment
+5. **Onsite/Final** - Team interviews
+6. **Offer** - Offer extended
+7. **Hired** - Accepted offer
+
+### Automation Tips
+- Auto-reject candidates who don't meet minimum requirements
+- Send automatic acknowledgment emails
+- Set up reminders for stale candidates (no action in 7 days)
+- Use templates for common rejection and advancement emails
+
+## Conducting Effective Interviews
+
+### Structured Interviews
+TalentHub supports structured interviews with scorecards:
+- Define evaluation criteria before interviews
+- Use the same questions for all candidates
+- Score candidates immediately after interviews
+- Compare candidates objectively
+
+### Interview Scorecard Categories
+- Technical Skills (1-5 rating)
+- Communication (1-5 rating)
+- Problem Solving (1-5 rating)
+- Culture Fit (1-5 rating)
+- Overall Recommendation (Strong No, No, Maybe, Yes, Strong Yes)
+
+### Video Interview Tips
+- Test your setup before the interview
+- Use TalentHub's built-in video platform for automatic recording
+- Enable live transcription for notes
+- Share interview recordings with hiring team for async review
+
+## Making Faster Hiring Decisions
+
+### Reduce Time-to-Hire
+- Set SLAs for each pipeline stage (e.g., screen within 48 hours)
+- Use TalentHub's AI ranking to prioritize top candidates
+- Schedule interviews in batches
+- Make decisions within 24 hours of final interviews
+
+### Collaborative Hiring
+- Assign specific interviewers to each stage
+- Use @mentions to get quick feedback
+- Set up hiring team Slack notifications
+- Use the "thumbs up/down" quick feedback feature
+
+## Extending Offers
+
+### Best Practices
+- Call the candidate before sending written offer
+- Use TalentHub's offer letter templates
+- Set a reasonable deadline (3-5 business days)
+- Be prepared to negotiate
+
+### Offer Letter Contents
+- Job title and start date
+- Compensation (salary, bonus, equity)
+- Benefits summary
+- At-will employment statement
+- Contingencies (background check, references)
+
+## Onboarding New Hires
+
+### Pre-Start Checklist
+- [ ] Send welcome email with first-day details
+- [ ] Collect tax forms and ID documents
+- [ ] Set up email and system access
+- [ ] Order equipment (laptop, badge, etc.)
+- [ ] Assign onboarding buddy
+- [ ] Schedule first-week meetings
+
+### First Week Agenda
+- Day 1: Welcome, team intros, setup
+- Day 2-3: Role-specific training
+- Day 4-5: Shadow team members
+- End of Week: Check-in with manager
+
+## Metrics to Track
+
+### Key Recruiting Metrics
+| Metric | Benchmark |
+|--------|-----------|
+| Time to Fill | 30-45 days |
+| Time to Hire | 20-30 days |
+| Application to Hire Ratio | 50:1 |
+| Interview to Offer Ratio | 4:1 |
+| Offer Acceptance Rate | 85%+ |
+| Quality of Hire | 4+ rating at 90 days |
+| Source of Hire | Track by channel |
+| Cost per Hire | $3,000-5,000 |
+
+TalentHub automatically tracks these metrics in the Analytics dashboard.
+

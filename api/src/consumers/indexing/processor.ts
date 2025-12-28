@@ -10,7 +10,13 @@ import {
 import { VectorService, EmbeddingProvider } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
-import { FileCleanupReason, ProcessingStatus, EventSource } from '../../types/enums';
+import {
+  ProcessingStatus,
+  ChunkSizePreset,
+  getChunkConfig,
+  FileCleanupReason,
+  EventSource,
+} from '@rag/types';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
 import { projectRepository } from '../../repositories/project.repository';
@@ -86,8 +92,27 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     }
 
     // Get chunking settings from project, with defaults
-    const chunkSize = project.settings?.chunkSize ?? 1000;
-    const chunkOverlap = project.settings?.chunkOverlap ?? 200;
+    // Priority: explicit values > preset values > defaults
+    let chunkSize = 1000;
+    let chunkOverlap = 200;
+
+    if (
+      project.settings?.chunkSizePreset &&
+      project.settings.chunkSizePreset !== ChunkSizePreset.CUSTOM
+    ) {
+      // Use preset values
+      const presetConfig = getChunkConfig(project.settings.chunkSizePreset);
+      chunkSize = presetConfig.chunkSize;
+      chunkOverlap = presetConfig.chunkOverlap;
+    }
+
+    // Explicit values override preset
+    if (project.settings?.chunkSize) {
+      chunkSize = project.settings.chunkSize;
+    }
+    if (project.settings?.chunkOverlap !== undefined) {
+      chunkOverlap = project.settings.chunkOverlap;
+    }
 
     // Update file status to PROCESSING
     await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.PROCESSING);
@@ -203,10 +228,13 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     }
 
     // Determine provider and model name
-    const effectiveProvider: EmbeddingProvider =
-      (embeddingProvider as EmbeddingProvider) ||
-      (CONFIG.EMBEDDING_PROVIDER as EmbeddingProvider) ||
-      (CONFIG.INHOUSE_EMBEDDINGS ? 'inhouse' : 'openai');
+    // Sanitize provider: only 'openai' and 'gemini' are valid (legacy 'inhouse' is no longer supported)
+    const validProviders: EmbeddingProvider[] = ['openai', 'gemini'];
+    const effectiveProvider: EmbeddingProvider = validProviders.includes(
+      embeddingProvider as EmbeddingProvider
+    )
+      ? (embeddingProvider as EmbeddingProvider)
+      : CONFIG.EMBEDDING_PROVIDER;
     const effectiveModelName = embeddingModel || VectorService.getModelName(effectiveProvider);
     const vectorDimensions = VectorService.getEmbeddingDimensions(effectiveProvider);
 
@@ -225,13 +253,16 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       },
     });
 
-    // Update vector indexing status
+    // Update vector indexing status and project stats in parallel
     const collection = `company_${companyId}`;
-    await fileMetadataRepository.updateVectorIndexed(fileId, true, collection, chunks.length);
-    await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.COMPLETED);
+    const [, , meta] = await Promise.all([
+      fileMetadataRepository.updateVectorIndexed(fileId, true, collection, chunks.length),
+      fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.COMPLETED),
+      fileMetadataRepository.findById(fileId),
+      projectRepository.updateStats(projectId, { vectorCount: chunks.length }),
+    ]);
 
     // One-line event publishing for storage update
-    const meta = await fileMetadataRepository.findById(fileId);
     if (meta) {
       void publishStorageUpdate({
         source: EventSource.INDEXING_PROCESSOR,
@@ -239,11 +270,6 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
         fileSize: meta.size,
       });
     }
-
-    // Update project stats (increment vector count)
-    await projectRepository.updateStats(projectId, {
-      vectorCount: chunks.length,
-    });
 
     // One-line event publishing for file cleanup
     void publishFileCleanup({
