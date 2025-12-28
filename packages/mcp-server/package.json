@@ -1,6 +1,7 @@
 {
   "name": "@rag/mcp-server",
   "version": "1.0.0",
+  "type": "module",
   "description": "MCP Server for RAG API - enables AI agents to interact with the RAG system",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@rag/types": "workspace:*",
     "zod": "^4.1.12"
   },
   "devDependencies": {
