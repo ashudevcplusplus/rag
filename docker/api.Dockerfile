@@ -33,6 +33,10 @@ RUN pnpm install --ignore-scripts
 COPY api/src/ ./api/src/
 COPY packages/ ./packages/
 
+# Build types package (required - exports from ./dist/index.js)
+WORKDIR /app/packages/types
+RUN pnpm run build
+
 # Build text-utils package (required - exports from ./dist/index.js)
 WORKDIR /app/packages/text-utils
 RUN pnpm run build
