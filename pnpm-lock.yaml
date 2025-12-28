@@ -409,6 +409,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
         version: 1.25.1(@cfworker/json-schema@4.1.1)(hono@4.11.3)(zod@4.2.1)
+      '@rag/types':
+        specifier: workspace:*
+        version: link:../types
       zod:
         specifier: ^4.1.12
         version: 4.2.1
