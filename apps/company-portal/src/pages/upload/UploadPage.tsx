@@ -387,7 +387,7 @@ export function UploadPage() {
             }}
             className={`
               border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
-              transition-all duration-200
+              transition-all duration-200 min-h-[200px] flex items-center justify-center
               ${
                 !selectedProjectId
                   ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
@@ -407,7 +407,7 @@ export function UploadPage() {
               disabled={!selectedProjectId}
             />
 
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-4 pointer-events-none">
               <div
                 className={`p-4 rounded-full ${
                   selectedProjectId ? 'bg-blue-100' : 'bg-gray-100'
@@ -420,7 +420,7 @@ export function UploadPage() {
                 />
               </div>
 
-              <div>
+              <div className="text-center">
                 <p className="text-lg font-medium text-gray-900">
                   {selectedProjectId
                     ? 'Drop files here or click to browse'
@@ -460,7 +460,10 @@ export function UploadPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="font-medium text-gray-900 truncate">
+                      <p 
+                        className="font-medium text-gray-900 truncate"
+                        title={uploadFile.file.name}
+                      >
                         {uploadFile.file.name}
                       </p>
                       <div className="flex items-center gap-2">

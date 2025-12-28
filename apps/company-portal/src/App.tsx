@@ -39,31 +39,31 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const { apiKey, companyId, apiUrl, logout } = useAuthStore();
+  const { token, companyId, apiUrl, logout } = useAuthStore();
 
   // Configure API client synchronously on first render
   useLayoutEffect(() => {
     configureApiClient({
       baseUrl: apiUrl,
-      apiKey: apiKey || undefined,
+      token: token || undefined, // JWT token for authenticated requests
       companyId: companyId || undefined,
       onUnauthorized: () => {
         logout();
       },
     });
-  }, [apiKey, companyId, apiUrl, logout]);
+  }, [token, companyId, apiUrl, logout]);
 
   // Also configure on mount to ensure it's set before any API calls
   useEffect(() => {
     configureApiClient({
       baseUrl: apiUrl,
-      apiKey: apiKey || undefined,
+      token: token || undefined, // JWT token for authenticated requests
       companyId: companyId || undefined,
       onUnauthorized: () => {
         logout();
       },
     });
-  }, [apiKey, companyId, apiUrl, logout]);
+  }, [token, companyId, apiUrl, logout]);
 
   return (
     <Routes>

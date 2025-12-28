@@ -10,6 +10,7 @@ import {
 
 const router = Router({ mergeParams: true });
 
+// User CRUD routes
 router.post('/', createUser);
 router.get('/', listUsers);
 router.get('/:userId', getUser);

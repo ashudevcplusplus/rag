@@ -4,11 +4,13 @@ import { apiLoggingMiddleware } from '../middleware/api-logging.middleware';
 import companyRoutes from './company.routes';
 import jobRoutes from './job.routes';
 import healthRoutes from './health.routes';
+import authRoutes from './auth.routes';
 
 const router = Router();
 
 // Public Routes
 router.use('/', healthRoutes);
+router.use('/v1/auth', authRoutes); // Public auth routes (login without API key)
 
 // Protected Routes
 router.use('/v1', authenticateRequest as RequestHandler);

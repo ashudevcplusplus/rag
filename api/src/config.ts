@@ -6,6 +6,10 @@ export const CONFIG = {
     process.env.MONGODB_URI || 'mongodb://admin:admin123@localhost:27017/rag_db?authSource=admin',
   PORT: parseInt(process.env.PORT || '8000', 10),
 
+  // JWT Configuration
+  JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+
   // Embeddings Configuration
   // Embedding provider: 'openai' | 'gemini'
   EMBEDDING_PROVIDER: (process.env.EMBEDDING_PROVIDER || 'openai') as 'openai' | 'gemini',

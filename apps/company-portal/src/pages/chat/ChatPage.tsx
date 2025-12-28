@@ -443,7 +443,10 @@ export function ChatPage() {
                         <div className="flex items-start gap-2">
                           <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p 
+                              className="text-sm font-medium text-gray-900 truncate"
+                              title={conv.title}
+                            >
                               {conv.title}
                             </p>
                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
@@ -637,7 +640,10 @@ export function ChatPage() {
                                 className="p-2 bg-white rounded-lg border border-gray-200 text-sm"
                               >
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="font-medium text-gray-700 truncate">
+                                  <span 
+                                    className="font-medium text-gray-700 truncate"
+                                    title={source.fileName || 'Unknown file'}
+                                  >
                                     {source.fileName || 'Unknown file'}
                                   </span>
                                   <Badge variant="default" className="text-xs">

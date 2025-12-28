@@ -8,6 +8,7 @@ import {
   setUserActive,
 } from '../../../src/controllers/user.controller';
 import { userRepository } from '../../../src/repositories/user.repository';
+import { companyRepository } from '../../../src/repositories/company.repository';
 import {
   createMockResponse,
   createMockRequest,
@@ -19,6 +20,7 @@ import {
 
 // Mock dependencies
 jest.mock('../../../src/repositories/user.repository');
+jest.mock('../../../src/repositories/company.repository');
 jest.mock('../../../src/utils/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -62,6 +64,8 @@ describe('UserController', () => {
         email: 'newuser@example.com',
         passwordHash: 'hashedpassword123',
       };
+      (companyRepository.findById as jest.Mock).mockResolvedValue(mockCompany);
+      (userRepository.countByCompanyId as jest.Mock).mockResolvedValue(1);
       (userRepository.findByEmail as jest.Mock).mockResolvedValue(null);
       (userRepository.hashPassword as jest.Mock).mockResolvedValue('hashedpassword123');
       (userRepository.create as jest.Mock).mockResolvedValue(createdUser);
@@ -105,6 +109,8 @@ describe('UserController', () => {
     });
 
     it('should return 409 when email already exists', async () => {
+      (companyRepository.findById as jest.Mock).mockResolvedValue(mockCompany);
+      (userRepository.countByCompanyId as jest.Mock).mockResolvedValue(1);
       (userRepository.findByEmail as jest.Mock).mockResolvedValue(mockUser);
 
       const mockReq = createMockAuthenticatedRequest(mockCompany, {
@@ -117,6 +123,8 @@ describe('UserController', () => {
       });
 
       await createUser(mockReq as unknown as Request, mockRes as unknown as Response, mockNext);
+      // Flush promise queue since asyncHandler doesn't return the promise
+      await new Promise(process.nextTick);
 
       expect(userRepository.findByEmail).toHaveBeenCalledWith('test@example.com');
       expect(mockRes.status).toHaveBeenCalledWith(409);

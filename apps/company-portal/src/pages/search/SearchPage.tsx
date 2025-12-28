@@ -284,7 +284,7 @@ export function SearchPage() {
                   className="group flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
                 >
                   <Search className="w-3 h-3" />
-                  {truncate(search, 40)}
+                  <span title={search}>{truncate(search, 40)}</span>
                 </button>
               ))}
             </div>

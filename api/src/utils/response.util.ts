@@ -45,6 +45,13 @@ export function sendBadRequestResponse(res: Response, message: string): void {
 }
 
 /**
+ * Send 401 Unauthorized response
+ */
+export function sendUnauthorizedResponse(res: Response, message: string): void {
+  sendErrorResponse(res, 401, message);
+}
+
+/**
  * Handle controller errors (ZodError, ValidationError, and generic errors)
  */
 export function handleControllerError(res: Response, error: unknown, context: string): void {

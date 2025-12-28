@@ -63,10 +63,11 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   label?: string;
   error?: string;
   hint?: string;
+  resize?: boolean;
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, error, hint, id, ...props }, ref) => {
+  ({ className, label, error, hint, id, resize = false, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
@@ -86,7 +87,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             'block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400',
             'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none',
             'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed',
-            'transition-colors duration-200 resize-none',
+            'transition-colors duration-200',
+            resize ? 'resize-y' : 'resize-none',
             error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
             className
           )}

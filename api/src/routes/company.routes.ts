@@ -7,6 +7,7 @@ import {
   clearCache,
   getCompanyVectors,
   getCompanyStats,
+  getCompany,
 } from '../controllers/company.controller';
 import { companyRateLimiter } from '../middleware/company-rate-limiter.middleware';
 import { uploadLimiter, searchLimiter } from '../middleware/rate-limiter.middleware';
@@ -28,6 +29,7 @@ router.use('/:companyId/chat', chatRoutes);
 router.use('/:companyId/conversations', conversationRoutes);
 
 // Company specific routes
+router.get('/:companyId', getCompany);
 router.get('/:companyId/stats', getCompanyStats);
 router.post(
   '/:companyId/uploads',

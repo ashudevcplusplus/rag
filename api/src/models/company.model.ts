@@ -44,7 +44,7 @@ const companySchema = new Schema<ICompanyDocument>(
     },
     maxUsers: {
       type: Number,
-      default: 5,
+      default: 4,
     },
     maxProjects: {
       type: Number,

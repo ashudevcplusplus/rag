@@ -53,6 +53,7 @@ jest.mock('../../../src/controllers/company.controller', () => {
     clearCache: handler('clearCache'),
     getCompanyVectors: handler('getCompanyVectors'),
     getCompanyStats: handler('getCompanyStats'),
+    getCompany: handler('getCompany'),
   };
 });
 
