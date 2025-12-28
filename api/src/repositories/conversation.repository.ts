@@ -23,13 +23,24 @@ export class ConversationRepository {
     data: CreateConversationDTO,
     userId?: string
   ): Promise<IConversation> {
+    // Build initial messages array if initialMessage is provided
+    const messages: ConversationMessage[] = [];
+    if (data.initialMessage) {
+      messages.push({
+        id: `msg_${Date.now()}`,
+        role: 'user',
+        content: data.initialMessage,
+        timestamp: new Date(),
+      });
+    }
+
     const conversation = new ConversationModel({
       companyId,
       userId: userId || undefined,
       projectId: data.projectId || undefined,
       title: data.title || 'New Conversation',
-      messages: [],
-      messageCount: 0,
+      messages,
+      messageCount: messages.length,
       lastMessageAt: new Date(),
     });
     const saved = await conversation.save();

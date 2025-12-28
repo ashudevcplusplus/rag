@@ -21,7 +21,7 @@ import { fileMetadataRepository } from '../../../src/repositories/file-metadata.
 import { embeddingRepository } from '../../../src/repositories/embedding.repository';
 import { DeletionService } from '../../../src/services/deletion.service';
 import { VectorService } from '../../../src/services/vector.service';
-import { ProcessingStatus } from '../../../src/types/enums';
+import { ProcessingStatus } from '@rag/types';
 import {
   createMockResponse,
   createMockRequest,

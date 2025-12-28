@@ -12,7 +12,7 @@ import type {
   WebhooksJobData,
   StorageUpdatesJobData,
 } from '../types/events.types';
-import { AsyncTaskType } from '../types/enums';
+import { AsyncTaskType } from '@rag/types';
 
 // Default job options
 const DEFAULT_OPTS = {

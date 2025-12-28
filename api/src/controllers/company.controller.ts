@@ -10,7 +10,7 @@ import { VectorService } from '../services/vector.service';
 import { CacheService } from '../services/cache.service';
 import { fileService } from '../services/file.service';
 import { ConsistencyCheckService } from '../services/consistency-check.service';
-import { AnalyticsEventType, EventSource } from '../types/enums';
+import { AnalyticsEventType, EventSource } from '@rag/types';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
 import {

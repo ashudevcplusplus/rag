@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ProjectStatus, Visibility, ChunkSizePreset } from '../types/enums';
+import { ProjectStatus, Visibility, ChunkSizePreset } from '@rag/types';
 
 // TypeScript Interface
 export interface IProject {

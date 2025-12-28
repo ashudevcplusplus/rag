@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { z } from 'zod';
-import { ChangeType, ChangeStatus } from '../types/enums';
+import { ChangeType, ChangeStatus } from '@rag/types';
 
 // TypeScript Interface
 export interface IConsumerChange {

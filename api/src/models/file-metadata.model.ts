@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 import { IFileMetadata } from '../schemas/file-metadata.schema';
-import { UploadStatus, ProcessingStatus } from '../types/enums';
+import { ProcessingStatus, UploadStatus } from '@rag/types';
 
 export interface IFileMetadataDocument
   extends Omit<IFileMetadata, '_id' | 'projectId' | 'uploadedBy'>, Document {

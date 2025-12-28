@@ -12,7 +12,7 @@ import {
 } from '../schemas/project.schema';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
-import { AnalyticsEventType, ProcessingStatus, EventSource } from '../types/enums';
+import { ProcessingStatus, AnalyticsEventType, EventSource } from '@rag/types';
 import {
   sendConflictResponse,
   sendNotFoundResponse,

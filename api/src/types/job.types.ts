@@ -1,8 +1,7 @@
 /**
- * DEPRECATED: Import from centralized files instead:
- * - /types/events.types.ts for event interfaces
- * - /types/enums.ts for all enums
+ * Job types - re-exports from events.types.ts
+ *
+ * NOTE: For enums, import directly from '@rag/types'
  */
 
 export * from './events.types';
-export { ChangeType } from './enums';

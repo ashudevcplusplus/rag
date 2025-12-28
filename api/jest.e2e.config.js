@@ -6,6 +6,11 @@ module.exports = {
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
+  // Map workspace packages to their source
+  moduleNameMapper: {
+    '^@rag/text-utils$': '<rootDir>/../packages/text-utils/src/index.ts',
+    '^@rag/types$': '<rootDir>/../packages/types/src/index.ts',
+  },
   testTimeout: 120000,
   verbose: true,
 };

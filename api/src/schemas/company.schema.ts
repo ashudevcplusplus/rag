@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SubscriptionTier, CompanyStatus } from '../types/enums';
+import { SubscriptionTier, CompanyStatus } from '@rag/types';
 
 // TypeScript Interface
 export interface ICompany {

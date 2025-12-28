@@ -26,7 +26,7 @@ import {
   ChangeType,
   ProcessingStatus,
   UploadStatus,
-} from '../../src/types/enums';
+} from '@rag/types';
 import { AuthenticatedRequest } from '../../src/middleware/auth.middleware';
 
 // ============================================================================

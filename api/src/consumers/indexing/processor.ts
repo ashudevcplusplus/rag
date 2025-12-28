@@ -11,12 +11,12 @@ import { VectorService, EmbeddingProvider } from '../../services/vector.service'
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
 import {
-  FileCleanupReason,
   ProcessingStatus,
-  EventSource,
-  getChunkConfig,
   ChunkSizePreset,
-} from '../../types/enums';
+  getChunkConfig,
+  FileCleanupReason,
+  EventSource,
+} from '@rag/types';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
 import { projectRepository } from '../../repositories/project.repository';
@@ -228,7 +228,13 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
     }
 
     // Determine provider and model name
-    const effectiveProvider: EmbeddingProvider = embeddingProvider || CONFIG.EMBEDDING_PROVIDER;
+    // Sanitize provider: only 'openai' and 'gemini' are valid (legacy 'inhouse' is no longer supported)
+    const validProviders: EmbeddingProvider[] = ['openai', 'gemini'];
+    const effectiveProvider: EmbeddingProvider = validProviders.includes(
+      embeddingProvider as EmbeddingProvider
+    )
+      ? (embeddingProvider as EmbeddingProvider)
+      : CONFIG.EMBEDDING_PROVIDER;
     const effectiveModelName = embeddingModel || VectorService.getModelName(effectiveProvider);
     const vectorDimensions = VectorService.getEmbeddingDimensions(effectiveProvider);
 

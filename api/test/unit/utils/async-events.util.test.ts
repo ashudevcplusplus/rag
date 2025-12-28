@@ -1,9 +1,4 @@
-import {
-  AsyncTaskType,
-  AnalyticsEventType,
-  FileCleanupReason,
-  EventSource,
-} from '../../../src/types/enums';
+import { AsyncTaskType, AnalyticsEventType, FileCleanupReason, EventSource } from '@rag/types';
 
 // Mock the queue before importing the module
 const mockAdd = jest.fn().mockResolvedValue(undefined);

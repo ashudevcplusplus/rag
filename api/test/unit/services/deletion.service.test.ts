@@ -5,7 +5,7 @@ import { VectorService } from '../../../src/services/vector.service';
 import { CacheService } from '../../../src/services/cache.service';
 import { ConsistencyCheckService } from '../../../src/services/consistency-check.service';
 import { embeddingRepository } from '../../../src/repositories/embedding.repository';
-import { ProjectStatus } from '../../../src/types/enums';
+import { ProjectStatus } from '@rag/types';
 import { Types } from 'mongoose';
 import { createObjectId, generateObjectId } from '../../lib/mock-utils';
 

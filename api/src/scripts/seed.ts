@@ -2,7 +2,7 @@ import { database } from '../config/database';
 import { companyRepository } from '../repositories/company.repository';
 import { userRepository } from '../repositories/user.repository';
 import { projectRepository } from '../repositories/project.repository';
-import { SubscriptionTier, UserRole, Visibility } from '../types/enums';
+import { SubscriptionTier, UserRole, Visibility } from '@rag/types';
 import { logger } from '../utils/logger';
 import { CreateCompanyDTO, ICompany } from '../schemas/company.schema';
 import { CreateUserDTO, IUser } from '../schemas/user.schema';

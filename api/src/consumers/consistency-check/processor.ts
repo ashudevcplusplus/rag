@@ -5,7 +5,7 @@ import {
   CleanupOrphanedJobData,
   CheckAndFixJobData,
 } from '../../types/job.types';
-import { ChangeType, ChangeStatus } from '../../types/enums';
+import { ChangeType, ChangeStatus } from '@rag/types';
 import { ConsistencyCheckService } from '../../services/consistency-check.service';
 import { consumerChangeRepository } from '../../repositories/consumer-change.repository';
 import { logger } from '../../utils/logger';

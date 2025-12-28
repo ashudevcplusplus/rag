@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UploadStatus, ProcessingStatus } from '../types/enums';
+import { ProcessingStatus, UploadStatus } from '@rag/types';
 
 // TypeScript Interface
 export interface IFileMetadata {

@@ -2,7 +2,7 @@ import { database } from '../../src/config/database';
 import { companyRepository } from '../../src/repositories/company.repository';
 import { userRepository } from '../../src/repositories/user.repository';
 import { projectRepository } from '../../src/repositories/project.repository';
-import { SubscriptionTier, CompanyStatus, UserRole, Visibility } from '../../src/types/enums';
+import { SubscriptionTier, CompanyStatus, UserRole, Visibility } from '@rag/types';
 
 describe('Database Integration Tests with Seed Data', () => {
   let testCompanyId: string;
