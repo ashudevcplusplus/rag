@@ -539,7 +539,7 @@ export function ProjectsPage() {
               setFormData((prev) => ({ ...prev, description: e.target.value }))
             }
             placeholder="Project description..."
-            rows={3}
+            rows={4}
           />
 
           {/* Chunk Size Preset */}
@@ -691,7 +691,7 @@ export function ProjectsPage() {
               setEditFormData((prev) => ({ ...prev, description: e.target.value }))
             }
             placeholder="Project description..."
-            rows={3}
+            rows={4}
           />
 
           <div>

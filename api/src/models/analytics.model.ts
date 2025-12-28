@@ -29,7 +29,6 @@ const analyticsSchema = new Schema<IAnalytics>(
     timestamp: {
       type: Date,
       default: Date.now,
-      index: true,
     },
     ipAddress: {
       type: String,
@@ -50,6 +49,8 @@ const analyticsSchema = new Schema<IAnalytics>(
 analyticsSchema.index({ companyId: 1, eventType: 1, timestamp: -1 });
 
 // TTL index - auto-delete analytics data older than 90 days
-analyticsSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7776000 }); // 90 days
+// The compound index { companyId: 1, eventType: 1, timestamp: -1 } cannot be used for TTL, so we need this standalone index
+// Using a unique index name to avoid Mongoose duplicate index warnings
+analyticsSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7776000, name: 'timestamp_ttl' }); // 90 days
 
 export const AnalyticsModel = mongoose.model<IAnalytics>('Analytics', analyticsSchema);

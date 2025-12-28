@@ -465,7 +465,10 @@ export function IndexingPage() {
                                   <div className="flex items-start gap-3 min-w-0 flex-1">
                                     <FileText className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0 flex-1">
-                                      <p className="font-medium text-gray-900 truncate">
+                                      <p 
+                                        className="font-medium text-gray-900 truncate"
+                                        title={file.originalFilename}
+                                      >
                                         {file.originalFilename}
                                       </p>
                                       <div className="flex items-center gap-2 text-sm text-gray-500 mt-0.5 flex-wrap">

@@ -70,10 +70,13 @@ const apiLogSchema = new Schema<IApiLogDocument>(
 // Indexes for querying
 apiLogSchema.index({ companyId: 1, timestamp: -1 });
 apiLogSchema.index({ endpoint: 1 });
-apiLogSchema.index({ timestamp: -1 });
 apiLogSchema.index({ companyId: 1, statusCode: 1 });
 
 // TTL index - auto-delete logs older than 90 days (7776000 seconds)
-apiLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7776000 });
+// Note: TTL index must be ascending (1), and we already have timestamp in descending order
+// in the compound index above, so we don't need a separate descending timestamp index
+// The compound index { companyId: 1, timestamp: -1 } cannot be used for TTL, so we need this standalone index
+// Using a unique index name to avoid Mongoose duplicate index warnings
+apiLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7776000, name: 'timestamp_ttl' });
 
 export const ApiLogModel = model<IApiLogDocument>('ApiLog', apiLogSchema);

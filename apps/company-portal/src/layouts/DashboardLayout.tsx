@@ -177,11 +177,19 @@ export function DashboardLayout() {
                   name={user ? `${user.firstName} ${user.lastName}` : 'User'}
                   size="sm"
                 />
-                <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                <div className="flex-1 text-left min-w-0">
+                  <p 
+                    className="text-sm font-medium text-gray-900 truncate"
+                    title={user ? `${user.firstName} ${user.lastName}` : 'User'}
+                  >
                     {user ? `${user.firstName} ${user.lastName}` : 'User'}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                  <p 
+                    className="text-xs text-gray-500 truncate"
+                    title={user?.email}
+                  >
+                    {user?.email}
+                  </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-gray-400" />
               </button>

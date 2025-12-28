@@ -275,7 +275,7 @@ export function SettingsPage() {
                 <input
                   type="checkbox"
                   defaultChecked={company?.settings?.notifications?.email}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-6 h-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
               </label>
 
@@ -289,7 +289,7 @@ export function SettingsPage() {
                 <input
                   type="checkbox"
                   defaultChecked={company?.settings?.notifications?.slack}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-6 h-6 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
               </label>
             </div>
