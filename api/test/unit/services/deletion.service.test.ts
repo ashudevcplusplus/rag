@@ -190,6 +190,48 @@ describe('DeletionService', () => {
       expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalled();
     });
 
+    it('should continue if embedding deletion fails (parallel error handling)', async () => {
+      (FileMetadataModel.findById as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFile),
+      });
+      (ProjectModel.findById as jest.Mock).mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockProject),
+      });
+      (embeddingRepository.deleteByFileId as jest.Mock).mockRejectedValue(
+        new Error('MongoDB error')
+      );
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockFile);
+      (ProjectModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockProject);
+
+      // Should not throw, should continue with deletion even if embedding deletion fails
+      const result = await DeletionService.deleteFile(mockFileId);
+
+      expect(result).toBe(true);
+      expect(FileMetadataModel.findByIdAndUpdate).toHaveBeenCalled();
+    });
+
+    it('should execute vector and embedding deletions in parallel', async () => {
+      (FileMetadataModel.findById as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFile),
+      });
+      (ProjectModel.findById as jest.Mock).mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockProject),
+      });
+      (FileMetadataModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockFile);
+      (ProjectModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockProject);
+
+      await DeletionService.deleteFile(mockFileId);
+
+      // Both deletions should be called (they run in parallel via Promise.all)
+      expect(VectorService.deleteByFileId).toHaveBeenCalledWith(
+        `company_${mockCompanyId}`,
+        mockFileId
+      );
+      expect(embeddingRepository.deleteByFileId).toHaveBeenCalledWith(mockFileId);
+    });
+
     it('should not decrement vector count if chunkCount is 0', async () => {
       const fileWithNoChunks: MockFileDocument = { ...mockFile, chunkCount: 0 };
 
@@ -296,6 +338,46 @@ describe('DeletionService', () => {
       (FileMetadataModel.updateMany as jest.Mock).mockResolvedValue({ modifiedCount: 2 });
       (ProjectModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockProject);
 
+      const result = await DeletionService.deleteProject(mockProjectId);
+
+      expect(result).toBe(true);
+      expect(ProjectModel.findByIdAndUpdate).toHaveBeenCalled();
+    });
+
+    it('should delete all embeddings in parallel for project files', async () => {
+      (ProjectModel.findById as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockProject),
+      });
+      (FileMetadataModel.find as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFiles),
+      });
+      (FileMetadataModel.updateMany as jest.Mock).mockResolvedValue({ modifiedCount: 2 });
+      (ProjectModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockProject);
+
+      await DeletionService.deleteProject(mockProjectId);
+
+      // Verify embedding deletion called for each file (in parallel via Promise.all)
+      expect(embeddingRepository.deleteByFileId).toHaveBeenCalledTimes(mockFiles.length);
+      mockFiles.forEach((file) => {
+        expect(embeddingRepository.deleteByFileId).toHaveBeenCalledWith(file._id.toString());
+      });
+    });
+
+    it('should continue if some embedding deletions fail (parallel error handling)', async () => {
+      (ProjectModel.findById as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockProject),
+      });
+      (FileMetadataModel.find as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFiles),
+      });
+      // First call succeeds, second call fails
+      (embeddingRepository.deleteByFileId as jest.Mock)
+        .mockResolvedValueOnce(1)
+        .mockRejectedValueOnce(new Error('DB error'));
+      (FileMetadataModel.updateMany as jest.Mock).mockResolvedValue({ modifiedCount: 2 });
+      (ProjectModel.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockProject);
+
+      // Should continue with deletion even if some embeddings fail
       const result = await DeletionService.deleteProject(mockProjectId);
 
       expect(result).toBe(true);

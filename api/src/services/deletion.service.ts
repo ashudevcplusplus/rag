@@ -34,17 +34,18 @@ export class DeletionService {
       });
     }
 
-    // Delete vectors from Qdrant if file was indexed
+    // Delete vectors from Qdrant and embeddings from MongoDB in parallel
     if (file.vectorIndexed && project && file._id) {
       try {
         const collection = `company_${project.companyId}`;
-        await VectorService.deleteByFileId(collection, file._id.toString());
-
-        // Also delete embeddings from MongoDB
-        await embeddingRepository.deleteByFileId(file._id.toString());
+        const fileIdStr = file._id.toString();
+        await Promise.all([
+          VectorService.deleteByFileId(collection, fileIdStr),
+          embeddingRepository.deleteByFileId(fileIdStr),
+        ]);
       } catch (error) {
         // Log error but don't fail the deletion
-        logger.error('Failed to delete vectors from Qdrant when deleting file', {
+        logger.error('Failed to delete vectors/embeddings when deleting file', {
           fileId,
           error,
         });
@@ -100,19 +101,18 @@ export class DeletionService {
     }).lean();
     const fileIds = files.map((f) => f._id.toString());
 
-    // Delete all vectors from Qdrant for all files in the project
+    // Delete all vectors from Qdrant and embeddings from MongoDB in parallel
     if (fileIds.length > 0 && project.companyId) {
       try {
         const collection = `company_${project.companyId.toString()}`;
-        await VectorService.deleteByProjectId(collection, projectId, fileIds);
-
-        // Delete embeddings from MongoDB for all files
-        for (const fileId of fileIds) {
-          await embeddingRepository.deleteByFileId(fileId);
-        }
+        await Promise.all([
+          VectorService.deleteByProjectId(collection, projectId, fileIds),
+          // Delete all embeddings in parallel
+          Promise.all(fileIds.map((fileId) => embeddingRepository.deleteByFileId(fileId))),
+        ]);
       } catch (error) {
         // Log error but don't fail the deletion
-        logger.error('Failed to delete vectors from Qdrant when deleting project', {
+        logger.error('Failed to delete vectors/embeddings when deleting project', {
           projectId,
           fileCount: fileIds.length,
           error,

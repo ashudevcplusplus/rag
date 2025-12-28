@@ -112,6 +112,69 @@ describe('ConsistencyCheckService', () => {
         'Company not found'
       );
     });
+
+    it('should fetch embeddings for all files in parallel', async () => {
+      // Setup multiple files
+      const files = [
+        { _id: 'file-1', originalFilename: 'test1.txt' },
+        { _id: 'file-2', originalFilename: 'test2.txt' },
+        { _id: 'file-3', originalFilename: 'test3.txt' },
+      ];
+      (fileMetadataRepository.findByProjectId as jest.Mock).mockResolvedValue(files);
+
+      // Mock embeddings for each file
+      (embeddingRepository.findByFileId as jest.Mock).mockImplementation((fileId: string) => {
+        return Promise.resolve({ fileId, chunkCount: 5 });
+      });
+
+      // Mock Qdrant counts
+      (VectorService.countByFileIds as jest.Mock).mockResolvedValue(
+        new Map([
+          ['file-1', 5],
+          ['file-2', 5],
+          ['file-3', 5],
+        ])
+      );
+      (VectorService.getUniqueFileIds as jest.Mock).mockResolvedValue(
+        new Set(['file-1', 'file-2', 'file-3'])
+      );
+
+      const report = await ConsistencyCheckService.checkCompany(mockCompanyId);
+
+      // All files should have embeddings fetched (in parallel via Promise.all)
+      expect(embeddingRepository.findByFileId).toHaveBeenCalledTimes(3);
+      expect(report.dbVectorCount).toBe(15); // 5 chunks * 3 files
+    });
+
+    it('should fetch files for all projects in parallel', async () => {
+      // Setup multiple projects
+      const projects = [{ _id: 'project-1' }, { _id: 'project-2' }];
+      (projectRepository.findByCompanyId as jest.Mock).mockResolvedValue(projects);
+
+      // Mock files for each project
+      (fileMetadataRepository.findByProjectId as jest.Mock).mockImplementation(
+        (projectId: string) => {
+          return Promise.resolve([{ _id: `file-${projectId}`, originalFilename: 'test.txt' }]);
+        }
+      );
+
+      // Mock embeddings
+      (embeddingRepository.findByFileId as jest.Mock).mockResolvedValue({
+        fileId: 'mock',
+        chunkCount: 5,
+      });
+
+      // Mock Qdrant
+      (VectorService.countByFileIds as jest.Mock).mockResolvedValue(new Map());
+      (VectorService.getUniqueFileIds as jest.Mock).mockResolvedValue(new Set());
+
+      await ConsistencyCheckService.checkCompany(mockCompanyId);
+
+      // Files should be fetched for all projects (in parallel via Promise.all)
+      expect(fileMetadataRepository.findByProjectId).toHaveBeenCalledTimes(2);
+      expect(fileMetadataRepository.findByProjectId).toHaveBeenCalledWith('project-1');
+      expect(fileMetadataRepository.findByProjectId).toHaveBeenCalledWith('project-2');
+    });
   });
 
   describe('cleanupOrphanedVectors', () => {

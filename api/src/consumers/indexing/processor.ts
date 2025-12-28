@@ -247,13 +247,16 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       },
     });
 
-    // Update vector indexing status
+    // Update vector indexing status and project stats in parallel
     const collection = `company_${companyId}`;
-    await fileMetadataRepository.updateVectorIndexed(fileId, true, collection, chunks.length);
-    await fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.COMPLETED);
+    const [, , meta] = await Promise.all([
+      fileMetadataRepository.updateVectorIndexed(fileId, true, collection, chunks.length),
+      fileMetadataRepository.updateProcessingStatus(fileId, ProcessingStatus.COMPLETED),
+      fileMetadataRepository.findById(fileId),
+      projectRepository.updateStats(projectId, { vectorCount: chunks.length }),
+    ]);
 
     // One-line event publishing for storage update
-    const meta = await fileMetadataRepository.findById(fileId);
     if (meta) {
       void publishStorageUpdate({
         source: EventSource.INDEXING_PROCESSOR,
@@ -261,11 +264,6 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
         fileSize: meta.size,
       });
     }
-
-    // Update project stats (increment vector count)
-    await projectRepository.updateStats(projectId, {
-      vectorCount: chunks.length,
-    });
 
     // One-line event publishing for file cleanup
     void publishFileCleanup({

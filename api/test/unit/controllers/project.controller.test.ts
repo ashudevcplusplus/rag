@@ -394,6 +394,11 @@ describe('ProjectController', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
     });
+
+    // Note: Parallel deletion behavior (Promise.all for VectorService.deleteByFileId
+    // and embeddingRepository.deleteByFileId) is tested in deletion.service.test.ts
+    // Controller tests for reindexFile require complex fs/promises mocking that's
+    // difficult to set up properly due to dynamic imports.
   });
 
   describe('getIndexingStats', () => {
