@@ -115,6 +115,18 @@ export class ConversationRepository {
     messageId: string,
     updates: Partial<ConversationMessage>
   ): Promise<IConversation | null> {
+    // Build $set object dynamically to only update provided fields
+    const setFields: Record<string, unknown> = {
+      lastMessageAt: new Date(),
+    };
+
+    if (updates.content !== undefined) {
+      setFields['messages.$.content'] = updates.content;
+    }
+    if (updates.sources !== undefined) {
+      setFields['messages.$.sources'] = updates.sources;
+    }
+
     const conversation = await ConversationModel.findOneAndUpdate(
       {
         _id: id,
@@ -123,11 +135,7 @@ export class ConversationRepository {
         deletedAt: null,
       },
       {
-        $set: {
-          'messages.$.content': updates.content,
-          'messages.$.sources': updates.sources,
-          lastMessageAt: new Date(),
-        },
+        $set: setFields,
       },
       { new: true, runValidators: true }
     ).lean();

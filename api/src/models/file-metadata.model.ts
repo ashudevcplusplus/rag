@@ -116,7 +116,7 @@ const fileMetadataSchema = new Schema<IFileMetadataDocument>(
     // Embedding Configuration (stored for reindexing consistency)
     embeddingProvider: {
       type: String,
-      enum: ['inhouse', 'openai', 'gemini'],
+      enum: ['openai', 'gemini'],
     },
     embeddingModel: {
       type: String,

@@ -62,7 +62,7 @@ export const chatRequestSchema = z.object({
   llmProvider: z.enum(['openai', 'gemini']).optional(),
 
   // Embedding provider override for RAG search
-  embeddingProvider: z.enum(['inhouse', 'openai', 'gemini']).optional(),
+  embeddingProvider: z.enum(['openai', 'gemini']).optional(),
 
   // Response settings
   maxTokens: z.number().int().min(100).max(4096).optional(),

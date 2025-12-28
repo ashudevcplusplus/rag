@@ -29,7 +29,7 @@ const router = Router({ mergeParams: true });
  * - limit: number (optional, default: 5) - Number of context chunks to retrieve
  * - rerank: boolean (optional, default: true) - Whether to rerank results
  * - filter: object (optional) - Filter by fileId, fileIds, or projectId
- * - embeddingProvider: 'inhouse' | 'openai' | 'gemini' (optional) - Embedding provider for RAG
+ * - embeddingProvider: 'openai' | 'gemini' (optional) - Embedding provider for RAG
  *
  * LLM Settings:
  * - llmProvider: 'openai' | 'gemini' (optional) - LLM provider to use

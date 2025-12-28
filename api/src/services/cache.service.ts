@@ -67,7 +67,7 @@ export class CacheService {
     limit: number,
     filter?: Record<string, unknown>,
     rerank: boolean = false,
-    embeddingProvider?: 'inhouse' | 'openai' | 'gemini'
+    embeddingProvider?: 'openai' | 'gemini'
   ): string {
     const normalizedQuery = query.trim().toLowerCase();
     // Use sorted stringify for deterministic filter serialization

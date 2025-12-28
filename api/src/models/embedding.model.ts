@@ -52,7 +52,7 @@ const embeddingSchema = new Schema<IEmbeddingDocument>(
     },
     provider: {
       type: String,
-      enum: ['inhouse', 'openai', 'gemini'],
+      enum: ['openai', 'gemini'],
       required: true,
     },
     modelName: {

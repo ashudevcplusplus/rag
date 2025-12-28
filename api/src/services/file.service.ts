@@ -25,7 +25,7 @@ export class FileService {
     file: any,
     projectId: string,
     uploadedBy: string,
-    embeddingProvider?: 'inhouse' | 'openai' | 'gemini',
+    embeddingProvider?: 'openai' | 'gemini',
     embeddingModel?: string
   ): Promise<{ fileId: string; jobId: string }> {
     // Check storage limit

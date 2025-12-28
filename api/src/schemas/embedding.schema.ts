@@ -12,7 +12,7 @@ export interface IEmbedding {
   vectors: number[][];
 
   // Embedding Provider Info
-  provider: 'inhouse' | 'openai' | 'gemini';
+  provider: 'openai' | 'gemini';
   modelName: string;
   vectorDimensions: number;
 
@@ -33,7 +33,7 @@ export const createEmbeddingSchema = z.object({
   chunkCount: z.number().int().min(0),
   contents: z.array(z.string()),
   vectors: z.array(z.array(z.number())),
-  provider: z.enum(['inhouse', 'openai', 'gemini']),
+  provider: z.enum(['openai', 'gemini']),
   modelName: z.string().min(1),
   vectorDimensions: z.number().int().min(1),
   metadata: z.record(z.string(), z.unknown()).optional(),
