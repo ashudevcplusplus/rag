@@ -84,8 +84,20 @@ export const authenticateRequest = async (
         return;
       }
 
-      // Get company from user's companyId
-      const company = await companyRepository.findById(payload.companyId);
+      // Verify user's current company matches the token's company
+      // This prevents stale tokens from granting access after user is transferred
+      if (user.companyId !== payload.companyId) {
+        logger.warn('JWT company mismatch: user transferred to different company', {
+          userId: payload.userId,
+          tokenCompanyId: payload.companyId,
+          currentCompanyId: user.companyId,
+        });
+        res.status(401).json({ error: 'Token invalid: user company has changed' });
+        return;
+      }
+
+      // Get company from user's current companyId in database
+      const company = await companyRepository.findById(user.companyId);
       if (!company) {
         res.status(401).json({ error: 'Company not found' });
         return;

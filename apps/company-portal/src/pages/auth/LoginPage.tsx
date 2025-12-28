@@ -165,7 +165,11 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Demo credentials hint */}
+          {/* 
+            WARNING: Demo credentials section - FOR DEVELOPMENT ENVIRONMENT ONLY
+            This should NOT be displayed in production environments.
+            Remove or conditionally render based on environment (e.g., process.env.NODE_ENV === 'development')
+          */}
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</p>
             <div className="text-xs text-blue-700 space-y-1">

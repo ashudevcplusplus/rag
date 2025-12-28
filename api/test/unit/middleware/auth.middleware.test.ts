@@ -22,8 +22,24 @@ jest.mock('../../../src/utils/logger', () => ({
 jest.mock('../../../src/repositories/company.repository', () => ({
   companyRepository: {
     validateApiKey: jest.fn(),
+    findById: jest.fn(),
   },
 }));
+
+// Mock user repository
+jest.mock('../../../src/repositories/user.repository', () => ({
+  userRepository: {
+    findById: jest.fn(),
+  },
+}));
+
+// Mock JWT utility
+jest.mock('../../../src/utils/jwt.util', () => ({
+  verifyToken: jest.fn(),
+}));
+
+import { userRepository } from '../../../src/repositories/user.repository';
+import { verifyToken } from '../../../src/utils/jwt.util';
 
 describe('Auth Middleware', () => {
   let mockRequest: Partial<AuthenticatedRequest>;
@@ -292,12 +308,132 @@ describe('Auth Middleware', () => {
       // JWT tokens are now supported via Authorization: Bearer header
       mockRequest.headers!['authorization'] = 'Bearer invalid-token';
       delete mockRequest.headers!['x-api-key'];
+      (verifyToken as jest.Mock).mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
 
       await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
 
       // Invalid token should return 401
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should authenticate with valid JWT when user companyId matches token', async () => {
+      mockRequest.headers!['authorization'] = 'Bearer valid-token';
+      delete mockRequest.headers!['x-api-key'];
+
+      const tokenPayload = {
+        userId: 'user-123',
+        companyId: 'company-123',
+        email: 'test@example.com',
+        role: 'ADMIN',
+      };
+
+      const mockUser = {
+        _id: 'user-123',
+        companyId: 'company-123',
+        email: 'test@example.com',
+        isActive: true,
+      };
+
+      (verifyToken as jest.Mock).mockReturnValue(tokenPayload);
+      (userRepository.findById as jest.Mock).mockResolvedValue(mockUser);
+      (companyRepository.findById as jest.Mock).mockResolvedValue(mockCompany);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(verifyToken).toHaveBeenCalledWith('valid-token');
+      expect(userRepository.findById).toHaveBeenCalledWith('user-123');
+      expect(companyRepository.findById).toHaveBeenCalledWith('company-123');
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockResponse.status).not.toHaveBeenCalled();
+
+      const authenticatedReq = mockRequest as AuthenticatedRequest;
+      expect(authenticatedReq.context?.authMethod).toBe('jwt');
+    });
+
+    it('should reject JWT when user has been transferred to different company', async () => {
+      mockRequest.headers!['authorization'] = 'Bearer stale-token';
+      delete mockRequest.headers!['x-api-key'];
+
+      // Token was issued when user was in company-123
+      const tokenPayload = {
+        userId: 'user-123',
+        companyId: 'company-123',
+        email: 'test@example.com',
+        role: 'ADMIN',
+      };
+
+      // But user has since been transferred to company-456
+      const mockUser = {
+        _id: 'user-123',
+        companyId: 'company-456',
+        email: 'test@example.com',
+        isActive: true,
+      };
+
+      (verifyToken as jest.Mock).mockReturnValue(tokenPayload);
+      (userRepository.findById as jest.Mock).mockResolvedValue(mockUser);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Token invalid: user company has changed',
+      });
+      expect(mockNext).not.toHaveBeenCalled();
+      // Should NOT call findById for company since we reject early
+      expect(companyRepository.findById).not.toHaveBeenCalled();
+    });
+
+    it('should reject JWT when user account is inactive', async () => {
+      mockRequest.headers!['authorization'] = 'Bearer valid-token';
+      delete mockRequest.headers!['x-api-key'];
+
+      const tokenPayload = {
+        userId: 'user-123',
+        companyId: 'company-123',
+        email: 'test@example.com',
+        role: 'ADMIN',
+      };
+
+      const mockUser = {
+        _id: 'user-123',
+        companyId: 'company-123',
+        email: 'test@example.com',
+        isActive: false,
+      };
+
+      (verifyToken as jest.Mock).mockReturnValue(tokenPayload);
+      (userRepository.findById as jest.Mock).mockResolvedValue(mockUser);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'User account is inactive' });
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should reject JWT when user no longer exists', async () => {
+      mockRequest.headers!['authorization'] = 'Bearer valid-token';
+      delete mockRequest.headers!['x-api-key'];
+
+      const tokenPayload = {
+        userId: 'user-123',
+        companyId: 'company-123',
+        email: 'test@example.com',
+        role: 'ADMIN',
+      };
+
+      (verifyToken as jest.Mock).mockReturnValue(tokenPayload);
+      (userRepository.findById as jest.Mock).mockResolvedValue(null);
+
+      await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'User not found' });
       expect(mockNext).not.toHaveBeenCalled();
     });
 
