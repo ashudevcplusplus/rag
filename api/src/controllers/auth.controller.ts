@@ -3,10 +3,15 @@ import { z } from 'zod';
 import { userRepository } from '../repositories/user.repository';
 import { companyRepository } from '../repositories/company.repository';
 import { logger } from '../utils/logger';
-import { sendBadRequestResponse, sendUnauthorizedResponse } from '../utils/response.util';
+import {
+  sendBadRequestResponse,
+  sendNotFoundResponse,
+  sendUnauthorizedResponse,
+} from '../utils/response.util';
 import { removePasswordHash } from '../utils/object.util';
 import { asyncHandler } from '../middleware/error.middleware';
 import { generateToken } from '../utils/jwt.util';
+import { AuthenticatedUserRequest } from '../middleware/user-auth.middleware';
 
 // Login schema - just email and password
 const publicLoginSchema = z.object({
@@ -97,3 +102,32 @@ export const publicLogin = asyncHandler(async (req: Request, res: Response): Pro
     token,
   });
 });
+
+/**
+ * Get current authenticated user info
+ * Requires JWT token authentication
+ */
+export const getCurrentUser = asyncHandler(
+  async (req: AuthenticatedUserRequest, res: Response): Promise<void> => {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      sendUnauthorizedResponse(res, 'Authentication required');
+      return;
+    }
+
+    // Fetch fresh user data from database
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      sendNotFoundResponse(res, 'User not found');
+      return;
+    }
+
+    // Remove sensitive data
+    const userResponse = removePasswordHash(user);
+
+    res.json({
+      user: userResponse,
+    });
+  }
+);

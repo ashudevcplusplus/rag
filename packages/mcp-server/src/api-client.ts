@@ -34,7 +34,7 @@ export class ApiClient {
    */
   async initialize(): Promise<void> {
     if (this.config.token) {
-      // Use provided token - we'll get user info on first authenticated request
+      // Use provided token - fetch user info to get companyId
       this.authState = {
         token: this.config.token,
         user: {
@@ -47,6 +47,9 @@ export class ApiClient {
         },
         companyId: '',
       };
+      
+      // Fetch user info to get the real companyId
+      await this.fetchCurrentUserInfo();
       return;
     }
 
@@ -58,6 +61,37 @@ export class ApiClient {
     throw new Error(
       'Authentication required. Provide either RAG_USER_EMAIL and RAG_USER_PASSWORD, or RAG_TOKEN'
     );
+  }
+
+  /**
+   * Fetch current user info using the token to populate auth state
+   */
+  private async fetchCurrentUserInfo(): Promise<void> {
+    if (!this.authState?.token) {
+      throw new Error('No token available');
+    }
+
+    const response = await fetch(`${this.baseUrl}/v1/auth/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.authState.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch user info: ${errorText}`);
+    }
+
+    const data = (await response.json()) as { user: AuthState['user'] };
+    
+    // Update auth state with real user info
+    this.authState = {
+      token: this.authState.token,
+      user: data.user,
+      companyId: data.user.companyId,
+    };
   }
 
   /**
