@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { userRepository } from '../repositories/user.repository';
+import { companyRepository } from '../repositories/company.repository';
 import { createUserSchema, updateUserSchema, userIdSchema } from '../schemas/user.schema';
 import { logger } from '../utils/logger';
 import {
@@ -19,6 +20,20 @@ export const createUser = asyncHandler(async (req: Request, res: Response): Prom
   const companyId = getCompanyId(req);
   if (!companyId) {
     sendBadRequestResponse(res, 'Company ID required');
+    return;
+  }
+
+  // Check user limit (default 4 users per company)
+  const company = await companyRepository.findById(companyId);
+  if (!company) {
+    sendNotFoundResponse(res, 'Company');
+    return;
+  }
+
+  const userCount = await userRepository.countByCompanyId(companyId);
+  const maxUsers = company.maxUsers || 4;
+  if (userCount >= maxUsers) {
+    sendBadRequestResponse(res, `Maximum user limit (${maxUsers}) reached for this company`);
     return;
   }
 

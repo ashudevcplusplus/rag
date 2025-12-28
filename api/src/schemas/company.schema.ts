@@ -71,7 +71,7 @@ export const createCompanySchema = z.object({
   email: z.string().email().toLowerCase().trim(),
   subscriptionTier: z.nativeEnum(SubscriptionTier).optional().default(SubscriptionTier.FREE),
   storageLimit: z.number().int().positive().optional().default(5368709120), // 5GB
-  maxUsers: z.number().int().positive().optional().default(5),
+  maxUsers: z.number().int().positive().optional().default(4),
   maxProjects: z.number().int().positive().optional().default(10),
   settings: companySettingsSchema,
   apiKey: z.string().optional(),

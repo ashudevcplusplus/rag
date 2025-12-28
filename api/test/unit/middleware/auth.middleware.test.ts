@@ -81,13 +81,15 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).not.toHaveBeenCalled();
     });
 
-    it('should reject request without API key', async () => {
+    it('should reject request without API key or token', async () => {
       delete mockRequest.headers!['x-api-key'];
 
       await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Authorization token or API key required',
+      });
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -132,6 +134,7 @@ describe('Auth Middleware', () => {
         company: mockCompany,
         companyId: 'company-123',
         apiKey: 'valid-key-123',
+        authMethod: 'api-key',
       });
     });
 
@@ -164,6 +167,7 @@ describe('Auth Middleware', () => {
         company: mockCompany,
         companyId: 'company-123',
         apiKey: 'valid-key-123',
+        authMethod: 'api-key',
       };
 
       authorizeCompany(mockRequest as Request, mockResponse as Response, mockNext);
@@ -177,6 +181,7 @@ describe('Auth Middleware', () => {
         company: mockCompany,
         companyId: 'company-123',
         apiKey: 'valid-key-123',
+        authMethod: 'api-key',
       };
 
       authorizeCompany(mockRequest as Request, mockResponse as Response, mockNext);
@@ -190,6 +195,7 @@ describe('Auth Middleware', () => {
         company: mockCompany,
         companyId: 'company-123',
         apiKey: 'valid-key-123',
+        authMethod: 'api-key',
       };
 
       authorizeCompany(mockRequest as Request, mockResponse as Response, mockNext);
@@ -264,9 +270,11 @@ describe('Auth Middleware', () => {
 
       await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
 
-      // /metrics is not a public endpoint, requires API key
+      // /metrics is not a public endpoint, requires authorization
       expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        error: 'Authorization token or API key required',
+      });
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -280,16 +288,16 @@ describe('Auth Middleware', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403);
     });
 
-    it('should not support Authorization header as fallback', async () => {
-      // Only x-api-key header is supported, not Authorization: Bearer
-      mockRequest.headers!['authorization'] = 'Bearer valid-key-123';
+    it('should support Authorization header with Bearer token', async () => {
+      // JWT tokens are now supported via Authorization: Bearer header
+      mockRequest.headers!['authorization'] = 'Bearer invalid-token';
       delete mockRequest.headers!['x-api-key'];
 
       await authenticateRequest(mockRequest as Request, mockResponse as Response, mockNext);
 
-      // Implementation only checks x-api-key, not Authorization header
+      // Invalid token should return 401
       expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'API key required' });
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
       expect(mockNext).not.toHaveBeenCalled();
     });
 

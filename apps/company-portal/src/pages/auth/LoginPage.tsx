@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button, Input, Card, CardContent } from '@rag/ui';
-import { checkHealth, configureApiClient } from '@rag/api-client';
-import { UserRole, SubscriptionTier, CompanyStatus } from '@rag/types';
+import { configureApiClient, usersApi, companyApi } from '@rag/api-client';
+import { SubscriptionTier, CompanyStatus } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
 
@@ -14,126 +14,89 @@ export function LoginPage() {
   const { addActivity } = useAppStore();
 
   const [formData, setFormData] = useState({
-    apiUrl: apiUrl || 'http://localhost:8000',
-    apiKey: '',
-    companyId: '',
-    companyName: '',
     email: '',
-    firstName: '',
-    lastName: '',
+    password: '',
   });
 
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'credentials' | 'profile'>('credentials');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleTestConnection = async () => {
-    setIsLoading(true);
-    try {
-      // Configure API client with current form data
-      configureApiClient({
-        baseUrl: formData.apiUrl,
-        apiKey: formData.apiKey || undefined,
-        companyId: formData.companyId || undefined,
-      });
-      await checkHealth();
-      toast.success('Connection successful!');
-    } catch (error) {
-      const apiError = error as { error?: string; message?: string };
-      toast.error(apiError?.error || 'Failed to connect to API');
-      console.error('Connection test error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmitCredentials = async (e: React.FormEvent) => {
+  const handleSubmitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.apiKey || !formData.companyId) {
-      toast.error('Please enter API Key and Company ID');
+    if (!formData.email || !formData.password) {
+      toast.error('Please enter email and password');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Configure API client with form data and test connection
-      setApiUrl(formData.apiUrl);
+      // Configure API client with just the base URL
       configureApiClient({
-        baseUrl: formData.apiUrl,
-        apiKey: formData.apiKey,
-        companyId: formData.companyId,
+        baseUrl: apiUrl,
       });
-      await checkHealth();
-      setStep('profile');
-    } catch (error) {
-      const apiError = error as { error?: string; message?: string };
-      toast.error(apiError?.error || 'Failed to connect. Check your API URL and credentials.');
-      console.error('Credentials submit error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleSubmitProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.companyName || !formData.email || !formData.firstName) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Create mock user and company from form data
-      // In a real app, this would call an auth endpoint
-      const mockUser = {
-        _id: formData.companyId + '_user',
-        companyId: formData.companyId,
+      // Call the login endpoint (just email and password)
+      const loginResponse = await usersApi.login({
         email: formData.email,
-        emailVerified: true,
-        firstName: formData.firstName,
-        lastName: formData.lastName || '',
-        role: UserRole.OWNER,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        password: formData.password,
+      });
 
-      const mockCompany = {
-        _id: formData.companyId,
-        name: formData.companyName,
-        slug: formData.companyName.toLowerCase().replace(/\s+/g, '-'),
-        email: formData.email,
-        subscriptionTier: SubscriptionTier.PROFESSIONAL,
-        storageLimit: 5368709120,
-        storageUsed: 0,
-        maxUsers: 10,
-        maxProjects: 50,
-        status: CompanyStatus.ACTIVE,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      // Configure API client with the token
+      configureApiClient({
+        baseUrl: apiUrl,
+        token: loginResponse.token,
+        companyId: loginResponse.user.companyId,
+      });
+
+      // Fetch company details using the token
+      let company;
+      try {
+        const companyResponse = await companyApi.get(loginResponse.user.companyId);
+        company = companyResponse.company;
+      } catch {
+        // If we can't fetch company details, create a minimal company object
+        company = {
+          _id: loginResponse.user.companyId,
+          name: 'Company',
+          slug: 'company',
+          email: loginResponse.user.email,
+          subscriptionTier: SubscriptionTier.FREE,
+          storageLimit: 5368709120,
+          storageUsed: 0,
+          maxUsers: 4,
+          maxProjects: 10,
+          status: CompanyStatus.ACTIVE,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
 
       login({
-        user: mockUser,
-        company: mockCompany,
-        apiKey: formData.apiKey,
+        user: loginResponse.user,
+        company,
+        token: loginResponse.token,
       });
 
       addActivity({
-        text: `Logged in as ${formData.firstName} ${formData.lastName}`,
+        text: `Logged in as ${loginResponse.user.firstName} ${loginResponse.user.lastName}`,
         type: 'user',
       });
 
-      toast.success('Welcome to RAG Portal!');
+      toast.success(`Welcome back, ${loginResponse.user.firstName}!`);
       navigate('/dashboard');
-    } catch {
-      toast.error('Login failed. Please try again.');
+    } catch (error) {
+      const apiError = error as { error?: string; message?: string; statusCode?: number };
+      if (apiError.statusCode === 401) {
+        toast.error(apiError.error || 'Invalid email or password');
+      } else {
+        toast.error(apiError.error || 'Login failed. Please check your credentials.');
+      }
+      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -149,142 +112,67 @@ export function LoginPage() {
 
       <Card>
         <CardContent className="p-8">
-          {step === 'credentials' ? (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Connect to API</h2>
-                <p className="text-gray-600 mt-1">
-                  Enter your API credentials to get started
-                </p>
-              </div>
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
+            <p className="text-gray-600 mt-1">
+              Enter your credentials to access your account
+            </p>
+          </div>
 
-              <form onSubmit={handleSubmitCredentials} className="space-y-5">
-                <Input
-                  label="API URL"
-                  name="apiUrl"
-                  value={formData.apiUrl}
-                  onChange={handleChange}
-                  placeholder="http://localhost:8000"
-                />
+          <form onSubmit={handleSubmitLogin} className="space-y-5">
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="john@company.com"
+              autoComplete="email"
+            />
 
-                <Input
-                  label="Company ID"
-                  name="companyId"
-                  value={formData.companyId}
-                  onChange={handleChange}
-                  placeholder="Enter your company ID"
-                />
-
-                <div>
-                  <Input
-                    label="API Key"
-                    name="apiKey"
-                    type={showApiKey ? 'text' : 'password'}
-                    value={formData.apiKey}
-                    onChange={handleChange}
-                    placeholder="Enter your API key"
-                    rightIcon={
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="focus:outline-none"
-                      >
-                        {showApiKey ? (
-                          <EyeOff className="w-5 h-5" />
-                        ) : (
-                          <Eye className="w-5 h-5" />
-                        )}
-                      </button>
-                    }
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
+            <div>
+              <Input
+                label="Password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                rightIcon={
+                  <button
                     type="button"
-                    variant="outline"
-                    onClick={handleTestConnection}
-                    isLoading={isLoading}
-                    className="flex-1"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="focus:outline-none"
                   >
-                    Test Connection
-                  </Button>
-                  <Button
-                    type="submit"
-                    isLoading={isLoading}
-                    rightIcon={<ArrowRight className="w-4 h-4" />}
-                    className="flex-1"
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </form>
-            </>
-          ) : (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Your Profile</h2>
-                <p className="text-gray-600 mt-1">
-                  Tell us a bit about yourself
-                </p>
-              </div>
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                }
+              />
+            </div>
 
-              <form onSubmit={handleSubmitProfile} className="space-y-5">
-                <Input
-                  label="Company Name"
-                  name="companyName"
-                  value={formData.companyName}
-                  onChange={handleChange}
-                  placeholder="Your company name"
-                />
+            <Button
+              type="submit"
+              isLoading={isLoading}
+              rightIcon={<LogIn className="w-4 h-4" />}
+              className="w-full"
+            >
+              Sign In
+            </Button>
+          </form>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    label="First Name"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    placeholder="John"
-                  />
-                  <Input
-                    label="Last Name"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    placeholder="Doe"
-                  />
-                </div>
-
-                <Input
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="john@company.com"
-                />
-
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep('credentials')}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    isLoading={isLoading}
-                    rightIcon={<ArrowRight className="w-4 h-4" />}
-                    className="flex-1"
-                  >
-                    Sign In
-                  </Button>
-                </div>
-              </form>
-            </>
-          )}
+          {/* Demo credentials hint */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</p>
+            <div className="text-xs text-blue-700 space-y-1">
+              <p><span className="font-medium">Email:</span> john.doe@acme-corp.com</p>
+              <p><span className="font-medium">Password:</span> password123</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

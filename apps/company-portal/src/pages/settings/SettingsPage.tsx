@@ -24,7 +24,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { useAppStore } from '../../store/app.store';
 
 export function SettingsPage() {
-  const { user, company, companyId, apiKey, apiUrl, setApiUrl, logout } =
+  const { user, company, companyId, token, apiUrl, setApiUrl, logout } =
     useAuthStore();
   const { addActivity, clearActivities } = useAppStore();
 
@@ -193,9 +193,9 @@ export function SettingsPage() {
             />
 
             <div>
-              <label className="text-sm text-gray-500">API Key</label>
+              <label className="text-sm text-gray-500">Authentication</label>
               <p className="font-mono text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded-lg mt-1">
-                {apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : 'Not set'}
+                {token ? 'Authenticated via JWT token' : 'Not authenticated'}
               </p>
             </div>
 

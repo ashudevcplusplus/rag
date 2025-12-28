@@ -22,6 +22,7 @@ import type {
 export interface ApiClientConfig {
   baseUrl: string;
   apiKey?: string;
+  token?: string; // JWT token for authenticated requests
   companyId?: string;
   onUnauthorized?: () => void;
 }
@@ -36,6 +37,14 @@ export function configureApiClient(newConfig: Partial<ApiClientConfig>): void {
 
 export function getApiConfig(): ApiClientConfig {
   return { ...config };
+}
+
+export function setToken(token: string | null): void {
+  config.token = token || undefined;
+}
+
+export function clearToken(): void {
+  config.token = undefined;
 }
 
 // ============================================================================
@@ -59,7 +68,10 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     ...headers,
   };
 
-  if (config.apiKey) {
+  // Use JWT token if available, otherwise fall back to API key
+  if (config.token) {
+    requestHeaders['Authorization'] = `Bearer ${config.token}`;
+  } else if (config.apiKey) {
     requestHeaders['x-api-key'] = config.apiKey;
   }
 
@@ -413,7 +425,9 @@ export const filesApi = {
 
   async download(companyId: string, projectId: string, fileId: string, filename: string): Promise<void> {
     const headers: Record<string, string> = {};
-    if (config.apiKey) {
+    if (config.token) {
+      headers['Authorization'] = `Bearer ${config.token}`;
+    } else if (config.apiKey) {
       headers['x-api-key'] = config.apiKey;
     }
 
@@ -500,7 +514,9 @@ export const chatApi = {
       'Content-Type': 'application/json',
     };
 
-    if (config.apiKey) {
+    if (config.token) {
+      headers['Authorization'] = `Bearer ${config.token}`;
+    } else if (config.apiKey) {
       headers['x-api-key'] = config.apiKey;
     }
 
@@ -595,7 +611,29 @@ export const jobsApi = {
 // Users API
 // ============================================================================
 
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  message: string;
+  user: User;
+  token: string;
+}
+
 export const usersApi = {
+  /**
+   * Public login - just email and password
+   * Uses the public auth endpoint
+   */
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    return request(`/v1/auth/login`, {
+      method: 'POST',
+      body: credentials,
+    });
+  },
+
   async list(
     companyId: string,
     params?: { page?: number; limit?: number }

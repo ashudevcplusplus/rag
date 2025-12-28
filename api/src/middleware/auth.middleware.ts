@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import { companyRepository } from '../repositories/company.repository';
+import { userRepository } from '../repositories/user.repository';
 import { ICompany } from '../schemas/company.schema';
 import { publishApiKeyTracking } from '../utils/async-events.util';
 import { EventSource } from '@rag/types';
 import { CacheService } from '../services/cache.service';
+import { verifyToken, JWTPayload } from '../utils/jwt.util';
 
 /**
  * Get company from cache or database
@@ -36,7 +38,10 @@ export interface AuthenticatedRequest extends Request {
   context?: {
     company: ICompany;
     companyId: string;
-    apiKey: string;
+    apiKey?: string;
+    // User context (when authenticated via JWT)
+    user?: JWTPayload & { isActive: boolean };
+    authMethod: 'api-key' | 'jwt';
   };
 }
 
@@ -46,6 +51,7 @@ export const authenticateRequest = async (
   next: NextFunction
 ): Promise<void> => {
   const apiKey = req.headers['x-api-key'] as string;
+  const authHeader = req.headers.authorization;
 
   // Allow health check without auth
   if (req.path === '/health' || req.path.startsWith('/admin/queues')) {
@@ -53,17 +59,72 @@ export const authenticateRequest = async (
     return;
   }
 
-  // Check for API key
-  if (!apiKey) {
-    logger.warn('Authentication failed: Missing API key', {
-      path: req.path,
-      ip: req.ip,
-    });
-    res.status(401).json({ error: 'API key required' });
-    return;
-  }
-
   try {
+    // Try JWT token authentication first (Bearer token)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+
+      let payload: JWTPayload;
+      try {
+        payload = verifyToken(token);
+      } catch {
+        res.status(401).json({ error: 'Invalid or expired token' });
+        return;
+      }
+
+      // Verify user still exists and is active
+      const user = await userRepository.findById(payload.userId);
+      if (!user) {
+        res.status(401).json({ error: 'User not found' });
+        return;
+      }
+
+      if (!user.isActive) {
+        res.status(401).json({ error: 'User account is inactive' });
+        return;
+      }
+
+      // Get company from user's companyId
+      const company = await companyRepository.findById(payload.companyId);
+      if (!company) {
+        res.status(401).json({ error: 'Company not found' });
+        return;
+      }
+
+      if (company.status !== 'ACTIVE') {
+        res.status(403).json({ error: `Company account is ${company.status.toLowerCase()}` });
+        return;
+      }
+
+      // Attach context with user info
+      const authReq = req as AuthenticatedRequest;
+      authReq.context = {
+        company,
+        companyId: company._id,
+        user: { ...payload, isActive: user.isActive },
+        authMethod: 'jwt',
+      };
+
+      logger.debug('Request authenticated via JWT', {
+        path: req.path,
+        userId: payload.userId,
+        companyId: company._id,
+      });
+
+      next();
+      return;
+    }
+
+    // Fall back to API key authentication
+    if (!apiKey) {
+      logger.warn('Authentication failed: Missing credentials', {
+        path: req.path,
+        ip: req.ip,
+      });
+      res.status(401).json({ error: 'Authorization token or API key required' });
+      return;
+    }
+
     // Validate API key (cached in Redis for performance)
     const company = await getCompanyByApiKey(apiKey);
 
@@ -94,9 +155,10 @@ export const authenticateRequest = async (
       company,
       companyId: company._id,
       apiKey,
+      authMethod: 'api-key',
     };
 
-    logger.debug('Request authenticated', {
+    logger.debug('Request authenticated via API key', {
       path: req.path,
       companyId: company._id,
       companyName: company.name,

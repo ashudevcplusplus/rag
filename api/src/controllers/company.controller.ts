@@ -640,3 +640,23 @@ export const getCompanyStats = asyncHandler(async (req: Request, res: Response):
 
   res.json(stats);
 });
+
+/**
+ * Get company details
+ */
+export const getCompany = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { companyId } = companyIdSchema.parse(req.params);
+
+  const company = await companyRepository.findById(companyId);
+
+  if (!company) {
+    sendNotFoundResponse(res, 'Company');
+    return;
+  }
+
+  // Remove sensitive fields
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { apiKey, apiKeyHash, ...safeCompany } = company;
+
+  res.json({ company: safeCompany });
+});

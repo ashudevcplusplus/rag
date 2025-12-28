@@ -6,14 +6,14 @@ interface AuthState {
   // Auth state
   user: User | null;
   company: Company | null;
-  apiKey: string | null;
+  token: string | null; // JWT token for authenticated requests
   companyId: string | null;
   apiUrl: string;
   isAuthenticated: boolean;
   isLoading: boolean;
 
   // Actions
-  login: (data: { user: User; company: Company; apiKey: string }) => void;
+  login: (data: { user: User; company: Company; token: string }) => void;
   logout: () => void;
   setApiUrl: (url: string) => void;
   setLoading: (loading: boolean) => void;
@@ -29,18 +29,18 @@ export const useAuthStore = create<AuthState>()(
       // Initial state
       user: null,
       company: null,
-      apiKey: null,
+      token: null,
       companyId: null,
       apiUrl: DEFAULT_API_URL,
       isAuthenticated: false,
       isLoading: false,
 
       // Actions
-      login: ({ user, company, apiKey }) => {
+      login: ({ user, company, token }) => {
         set({
           user,
           company,
-          apiKey,
+          token,
           companyId: company._id,
           isAuthenticated: true,
           isLoading: false,
@@ -51,7 +51,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           company: null,
-          apiKey: null,
+          token: null,
           companyId: null,
           isAuthenticated: false,
           isLoading: false,
@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         company: state.company,
-        apiKey: state.apiKey,
+        token: state.token,
         companyId: state.companyId,
         apiUrl: state.apiUrl,
         isAuthenticated: state.isAuthenticated,

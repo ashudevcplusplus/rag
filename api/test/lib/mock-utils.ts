@@ -190,6 +190,7 @@ export function createMockAuthenticatedRequest(
     company,
     companyId: company._id,
     apiKey: company.apiKey,
+    authMethod: 'api-key',
   };
   return req;
 }
