@@ -132,3 +132,49 @@ export type StreamEventData =
       provider: 'openai' | 'gemini';
     }
   | { message: string }; // type: 'error'
+
+// ===== Document Context Schemas =====
+
+/**
+ * Request schema for getting chunk context (neighboring chunks)
+ */
+export const getChunkContextRequestSchema = z.object({
+  chunkIndex: z.number().int().min(0),
+  windowSize: z.number().int().min(1).max(10).optional().default(2),
+});
+
+export type GetChunkContextRequest = z.infer<typeof getChunkContextRequestSchema>;
+
+/**
+ * Document chunk structure
+ */
+export interface DocumentChunk {
+  chunkIndex: number;
+  content: string;
+}
+
+/**
+ * Response for getting all document chunks
+ */
+export interface DocumentChunksResponse {
+  fileId: string;
+  fileName: string;
+  projectId?: string;
+  totalChunks: number;
+  chunks: DocumentChunk[];
+  fullContent: string;
+}
+
+/**
+ * Response for getting chunk context (neighboring chunks)
+ */
+export interface ChunkContextResponse {
+  fileId: string;
+  fileName: string;
+  projectId?: string;
+  targetChunkIndex: number;
+  totalChunks: number;
+  windowSize: number;
+  chunks: DocumentChunk[];
+  combinedContent: string;
+}

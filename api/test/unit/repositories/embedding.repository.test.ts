@@ -309,4 +309,176 @@ describe('EmbeddingRepository', () => {
       expect(result).toBe(0);
     });
   });
+
+  describe('findAllChunksByFileId', () => {
+    it('should return all chunks for a file sorted by index', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({
+          contents: ['chunk 0 content', 'chunk 1 content', 'chunk 2 content'],
+        }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findAllChunksByFileId(mockFileId);
+
+      expect(result).toEqual([
+        { chunkIndex: 0, content: 'chunk 0 content' },
+        { chunkIndex: 1, content: 'chunk 1 content' },
+        { chunkIndex: 2, content: 'chunk 2 content' },
+      ]);
+      expect(EmbeddingModel.findOne).toHaveBeenCalledWith({
+        fileId: mockFileId,
+        deletedAt: null,
+      });
+    });
+
+    it('should return null if file not found', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findAllChunksByFileId('non-existent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null if contents is empty', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({ contents: null }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findAllChunksByFileId(mockFileId);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findChunkRange', () => {
+    it('should return chunks within the specified range', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({
+          contents: ['chunk 0', 'chunk 1', 'chunk 2', 'chunk 3', 'chunk 4'],
+          chunkCount: 5,
+        }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findChunkRange(mockFileId, 1, 3);
+
+      expect(result).toEqual([
+        { chunkIndex: 1, content: 'chunk 1' },
+        { chunkIndex: 2, content: 'chunk 2' },
+        { chunkIndex: 3, content: 'chunk 3' },
+      ]);
+    });
+
+    it('should clamp startIndex to 0 if negative', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({
+          contents: ['chunk 0', 'chunk 1', 'chunk 2'],
+          chunkCount: 3,
+        }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findChunkRange(mockFileId, -2, 1);
+
+      expect(result).toEqual([
+        { chunkIndex: 0, content: 'chunk 0' },
+        { chunkIndex: 1, content: 'chunk 1' },
+      ]);
+    });
+
+    it('should clamp endIndex to last chunk if out of bounds', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({
+          contents: ['chunk 0', 'chunk 1', 'chunk 2'],
+          chunkCount: 3,
+        }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findChunkRange(mockFileId, 1, 10);
+
+      expect(result).toEqual([
+        { chunkIndex: 1, content: 'chunk 1' },
+        { chunkIndex: 2, content: 'chunk 2' },
+      ]);
+    });
+
+    it('should return null if file not found', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findChunkRange('non-existent', 0, 2);
+
+      expect(result).toBeNull();
+    });
+
+    it('should return empty array if range has no content', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({
+          contents: [],
+          chunkCount: 0,
+        }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.findChunkRange(mockFileId, 0, 2);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getChunkCount', () => {
+    it('should return chunk count for a file', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue({ chunkCount: 5 }),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.getChunkCount(mockFileId);
+
+      expect(result).toBe(5);
+      expect(EmbeddingModel.findOne).toHaveBeenCalledWith({
+        fileId: mockFileId,
+        deletedAt: null,
+      });
+    });
+
+    it('should return null if file not found', async () => {
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null),
+      };
+
+      (EmbeddingModel.findOne as jest.Mock).mockReturnValue(mockQuery);
+
+      const result = await embeddingRepository.getChunkCount('non-existent');
+
+      expect(result).toBeNull();
+    });
+  });
 });

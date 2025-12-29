@@ -561,6 +561,40 @@ const tools: Tool[] = [
       properties: {},
     },
   },
+
+  // ===== DOCUMENT CONTEXT TOOLS =====
+  {
+    name: 'document_get_chunks',
+    description:
+      'Get all chunks of a document. Returns the full document content split into chunks. Use this when the agent needs to read the entire document or when a user asks to "read the document" or "show the full content".',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        fileId: { type: 'string', description: 'The file ID of the document to retrieve' },
+      },
+      required: ['fileId'],
+    },
+  },
+  {
+    name: 'document_get_chunk_context',
+    description:
+      'Get neighboring chunks around a specific chunk for more context. Use this when you have a search result with a chunk and need to see the surrounding content for better understanding. For example, if a search returns chunk #5, use this to get chunks #3-7 for context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        fileId: { type: 'string', description: 'The file ID of the document' },
+        chunkIndex: { type: 'number', description: 'The chunk index to get context for (0-based)' },
+        windowSize: {
+          type: 'number',
+          description: 'Number of chunks before and after the target chunk to include (default: 2, max: 10)',
+          default: 2,
+        },
+      },
+      required: ['fileId', 'chunkIndex'],
+    },
+  },
 ];
 
 // Tool handler function
@@ -871,6 +905,23 @@ async function handleToolCall(
 
       case 'health_check':
         result = await apiClient.healthCheck();
+        break;
+
+      // Document Context
+      case 'document_get_chunks':
+        result = await apiClient.getDocumentChunks(
+          args.companyId as string | undefined,
+          args.fileId as string
+        );
+        break;
+
+      case 'document_get_chunk_context':
+        result = await apiClient.getChunkContext(
+          args.companyId as string | undefined,
+          args.fileId as string,
+          args.chunkIndex as number,
+          args.windowSize as number | undefined
+        );
         break;
 
       default:

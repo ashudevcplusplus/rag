@@ -108,6 +108,71 @@ export class EmbeddingRepository {
     );
     return result.modifiedCount;
   }
+
+  /**
+   * Get all chunks for a file with their content
+   * Returns chunks sorted by index
+   */
+  async findAllChunksByFileId(
+    fileId: string
+  ): Promise<{ chunkIndex: number; content: string }[] | null> {
+    const embedding = await EmbeddingModel.findOne({ fileId, deletedAt: null })
+      .select('contents')
+      .lean();
+
+    if (!embedding || !embedding.contents) return null;
+
+    return embedding.contents.map((content, index) => ({
+      chunkIndex: index,
+      content,
+    }));
+  }
+
+  /**
+   * Get a range of chunks for a file (for context window)
+   * @param fileId - The file ID
+   * @param startIndex - Starting chunk index (inclusive)
+   * @param endIndex - Ending chunk index (inclusive)
+   * @returns Array of chunks within the range, or null if file not found
+   */
+  async findChunkRange(
+    fileId: string,
+    startIndex: number,
+    endIndex: number
+  ): Promise<{ chunkIndex: number; content: string }[] | null> {
+    const embedding = await EmbeddingModel.findOne({ fileId, deletedAt: null })
+      .select('contents chunkCount')
+      .lean();
+
+    if (!embedding || !embedding.contents) return null;
+
+    const results: { chunkIndex: number; content: string }[] = [];
+    const validStart = Math.max(0, startIndex);
+    const validEnd = Math.min(embedding.contents.length - 1, endIndex);
+
+    for (let i = validStart; i <= validEnd; i++) {
+      if (embedding.contents[i]) {
+        results.push({
+          chunkIndex: i,
+          content: embedding.contents[i],
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get chunk count for a file
+   */
+  async getChunkCount(fileId: string): Promise<number | null> {
+    const embedding = await EmbeddingModel.findOne({ fileId, deletedAt: null })
+      .select('chunkCount')
+      .lean();
+
+    if (!embedding) return null;
+    return embedding.chunkCount;
+  }
 }
 
 export const embeddingRepository = new EmbeddingRepository();

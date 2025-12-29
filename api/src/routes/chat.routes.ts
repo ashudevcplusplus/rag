@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { chat, chatStream } from '../controllers/chat.controller';
+import {
+  chat,
+  chatStream,
+  getDocumentChunks,
+  getChunkContext,
+} from '../controllers/chat.controller';
 import { searchLimiter } from '../middleware/rate-limiter.middleware';
 
 const router = Router({ mergeParams: true });
@@ -81,5 +86,43 @@ router.post('/', searchLimiter, chat);
  * ```
  */
 router.post('/stream', searchLimiter, chatStream);
+
+/**
+ * GET /v1/companies/:companyId/documents/:fileId/chunks
+ *
+ * Get all chunks of a document.
+ * Returns the full document content split into chunks, along with the combined full text.
+ * Useful for agents that need to read the entire document.
+ *
+ * Response:
+ * - fileId: string - The file ID
+ * - fileName: string - Original filename
+ * - projectId: string (optional) - Project ID
+ * - totalChunks: number - Total number of chunks
+ * - chunks: DocumentChunk[] - Array of { chunkIndex, content }
+ * - fullContent: string - All chunks combined into one string
+ */
+router.get('/documents/:fileId/chunks', getDocumentChunks);
+
+/**
+ * GET /v1/companies/:companyId/documents/:fileId/chunks/:chunkIndex/context
+ *
+ * Get neighboring chunks around a specific chunk for context.
+ * Useful when an agent retrieves a chunk from search and needs more context.
+ *
+ * Query params:
+ * - windowSize: number (optional, default: 2) - Number of chunks before and after to include
+ *
+ * Response:
+ * - fileId: string - The file ID
+ * - fileName: string - Original filename
+ * - projectId: string (optional) - Project ID
+ * - targetChunkIndex: number - The originally requested chunk index
+ * - totalChunks: number - Total number of chunks in the document
+ * - windowSize: number - The window size used
+ * - chunks: DocumentChunk[] - Array of { chunkIndex, content } including target and neighbors
+ * - combinedContent: string - All chunks in the window combined into one string
+ */
+router.get('/documents/:fileId/chunks/:chunkIndex/context', getChunkContext);
 
 export default router;

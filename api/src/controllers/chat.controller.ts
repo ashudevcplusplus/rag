@@ -1,11 +1,19 @@
 import { Request, Response } from 'express';
 import { ChatService } from '../services/chat.service';
-import { chatRequestSchema } from '../schemas/chat.schema';
+import {
+  chatRequestSchema,
+  getChunkContextRequestSchema,
+  DocumentChunksResponse,
+  ChunkContextResponse,
+} from '../schemas/chat.schema';
 import { companyIdSchema } from '../validators/upload.validator';
 import { logger } from '../utils/logger';
 import { publishAnalytics } from '../utils/async-events.util';
 import { AnalyticsEventType, EventSource } from '@rag/types';
 import { asyncHandler } from '../middleware/error.middleware';
+import { embeddingRepository } from '../repositories/embedding.repository';
+import { fileMetadataRepository } from '../repositories/file-metadata.repository';
+import { NotFoundError } from '../types/error.types';
 
 /**
  * Chat endpoint - RAG-powered Q&A
@@ -125,4 +133,103 @@ export const chatStream = asyncHandler(async (req: Request, res: Response): Prom
 
   // Handle streaming
   await ChatService.chatStream(companyId, chatRequest, res);
+});
+
+/**
+ * Get all chunks of a document
+ * GET /v1/companies/:companyId/documents/:fileId/chunks
+ *
+ * Returns all chunks of a document, useful when the agent needs
+ * to read the full document content.
+ */
+export const getDocumentChunks = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    // Validate company ID
+    const { companyId } = companyIdSchema.parse(req.params);
+    const { fileId } = req.params;
+
+    logger.info('Get document chunks request', { companyId, fileId });
+
+    // Get file metadata to verify it exists and belongs to this company
+    const file = await fileMetadataRepository.findById(fileId);
+    if (!file) {
+      throw new NotFoundError('File not found');
+    }
+
+    // Get all chunks
+    const chunks = await embeddingRepository.findAllChunksByFileId(fileId);
+    if (!chunks) {
+      throw new NotFoundError('Document chunks not found. File may not be indexed yet.');
+    }
+
+    const response: DocumentChunksResponse = {
+      fileId,
+      fileName: file.originalFilename || file.filename,
+      projectId: file.projectId,
+      totalChunks: chunks.length,
+      chunks,
+      fullContent: chunks.map((c) => c.content).join('\n\n'),
+    };
+
+    res.json(response);
+  }
+);
+
+/**
+ * Get neighboring chunks around a specific chunk (context window)
+ * GET /v1/companies/:companyId/documents/:fileId/chunks/:chunkIndex/context
+ *
+ * Returns the target chunk along with surrounding chunks for context.
+ * Useful when the agent needs more context around a retrieved chunk.
+ *
+ * Query params:
+ * - windowSize: number (optional, default: 2) - Number of chunks before and after to include
+ */
+export const getChunkContext = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  // Validate company ID
+  const { companyId } = companyIdSchema.parse(req.params);
+  const { fileId, chunkIndex: chunkIndexStr } = req.params;
+
+  // Parse and validate request
+  const chunkIndex = parseInt(chunkIndexStr, 10);
+  const windowSize = parseInt(req.query.windowSize as string, 10) || 2;
+
+  getChunkContextRequestSchema.parse({ chunkIndex, windowSize });
+
+  logger.info('Get chunk context request', { companyId, fileId, chunkIndex, windowSize });
+
+  // Get file metadata to verify it exists
+  const file = await fileMetadataRepository.findById(fileId);
+  if (!file) {
+    throw new NotFoundError('File not found');
+  }
+
+  // Get total chunk count
+  const totalChunks = await embeddingRepository.getChunkCount(fileId);
+  if (totalChunks === null) {
+    throw new NotFoundError('Document chunks not found. File may not be indexed yet.');
+  }
+
+  // Calculate range
+  const startIndex = Math.max(0, chunkIndex - windowSize);
+  const endIndex = Math.min(totalChunks - 1, chunkIndex + windowSize);
+
+  // Get chunk range
+  const chunks = await embeddingRepository.findChunkRange(fileId, startIndex, endIndex);
+  if (!chunks || chunks.length === 0) {
+    throw new NotFoundError('Chunks not found for the specified range');
+  }
+
+  const response: ChunkContextResponse = {
+    fileId,
+    fileName: file.originalFilename || file.filename,
+    projectId: file.projectId,
+    targetChunkIndex: chunkIndex,
+    totalChunks,
+    windowSize,
+    chunks,
+    combinedContent: chunks.map((c) => c.content).join('\n\n'),
+  };
+
+  res.json(response);
 });
