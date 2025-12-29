@@ -405,6 +405,7 @@ export function createMockUploadFile(overrides?: Partial<MockFile>): MockFile {
 export function createMockChatRequest(overrides?: Partial<ChatRequest>): ChatRequest {
   return {
     query: 'What is the meaning of life?',
+    projectId: generateObjectId(), // projectId is now required
     limit: 5,
     includeSources: true,
     rerank: false,

@@ -46,6 +46,7 @@ interface Message {
   sources?: ChatResponse['sources'];
   timestamp: Date;
   isStreaming?: boolean;
+  isThinking?: boolean;
 }
 
 export function ChatPage() {
@@ -187,9 +188,13 @@ export function ChatPage() {
   };
 
   const handleNewConversation = () => {
+    if (!selectedProjectId) {
+      toast.error('Please select a project first');
+      return;
+    }
     createConversationMutation.mutate({
       title: 'New Conversation',
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId,
     });
   };
 
@@ -210,6 +215,12 @@ export function ChatPage() {
       const query = input.trim();
       if (!query || isLoading) return;
 
+      // Validate projectId is selected
+      if (!selectedProjectId) {
+        toast.error('Please select a project first');
+        return;
+      }
+
       setInput('');
       setIsLoading(true);
 
@@ -229,6 +240,7 @@ export function ChatPage() {
         content: '',
         timestamp: new Date(),
         isStreaming: true,
+        isThinking: true,
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
@@ -239,7 +251,7 @@ export function ChatPage() {
         try {
           const result = await conversationsApi.create(companyId!, {
             title: generateTitle(query),
-            projectId: selectedProjectId || undefined,
+            projectId: selectedProjectId, // Required - validated above
           });
           conversationId = result.conversation._id;
           setActiveConversationId(conversationId);
@@ -277,7 +289,7 @@ export function ChatPage() {
           companyId!,
           {
             query,
-            projectId: selectedProjectId || undefined,
+            projectId: selectedProjectId, // Required - validated above
             history,
             limit: 5,
           },
@@ -286,7 +298,7 @@ export function ChatPage() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantMessageId
-                  ? { ...msg, content: msg.content + chunk }
+                  ? { ...msg, content: msg.content + chunk, isThinking: false }
                   : msg
               )
             );
@@ -296,7 +308,7 @@ export function ChatPage() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantMessageId
-                  ? { ...msg, isStreaming: false, sources }
+                  ? { ...msg, isStreaming: false, isThinking: false, sources }
                   : msg
               )
             );
@@ -326,6 +338,7 @@ export function ChatPage() {
                   ? {
                       ...msg,
                       isStreaming: false,
+                      isThinking: false,
                       content: `Error: ${error.message || 'Failed to get response'}`,
                     }
                   : msg
@@ -519,7 +532,7 @@ export function ChatPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Project Filter */}
+          {/* Project Filter - REQUIRED */}
           <select
             value={selectedProjectId}
               onChange={(e) => {
@@ -527,9 +540,12 @@ export function ChatPage() {
                 setActiveConversationId(null);
                 setMessages([]);
               }}
-            className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            className={`px-3 py-2 rounded-lg border ${
+              !selectedProjectId ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+            } text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none`}
+            required
           >
-            <option value="">All Projects</option>
+            <option value="" disabled>Select a project *</option>
             {projects.map((project) => (
               <option key={project._id} value={project._id}>
                 {project.name}
@@ -565,6 +581,13 @@ export function ChatPage() {
                 Ask questions about your documents. The AI will search through your
                 uploaded files and provide relevant answers.
               </p>
+              {!selectedProjectId && (
+                <div className="mt-4 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 font-medium">
+                    ⚠️ Please select a project from the dropdown above to start chatting
+                  </p>
+                </div>
+              )}
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
                 {[
                   'What are the key points in my documents?',
@@ -604,12 +627,23 @@ export function ChatPage() {
                         : 'bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md'
                     } px-4 py-3`}
                   >
-                    <div className="whitespace-pre-wrap break-words">
-                      {message.content}
-                      {message.isStreaming && (
-                        <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
-                      )}
-                    </div>
+                    {message.isThinking && message.content === '' ? (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <div className="flex gap-1">
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-sm italic">Thinking...</span>
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap break-words">
+                        {message.content}
+                        {message.isStreaming && !message.isThinking && (
+                          <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+                        )}
+                      </div>
+                    )}
 
                     {/* Sources */}
                     {message.sources && message.sources.length > 0 && (

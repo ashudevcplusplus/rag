@@ -181,6 +181,16 @@ export const getJobStatus = asyncHandler(async (req: Request, res: Response): Pr
   res.json({ id: job.id, state, progress, result, reason });
 });
 
+/**
+ * Search company's vector store with multi-layer security
+ *
+ * Security layers:
+ * 1. Collection scoping: company_${companyId}
+ * 2. Qdrant filter: companyId + fileId (defense-in-depth)
+ * 3. Project validation: ensures project belongs to company (when projectId filter provided)
+ *
+ * Supports filtering by projectId, fileId, fileIds
+ */
 export const searchCompany = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { companyId } = companyIdSchema.parse(req.params);
   const { query, limit, filter, rerank, embeddingProvider } = searchQuerySchema.parse(req.body);
@@ -305,10 +315,14 @@ export const searchCompany = asyncHandler(async (req: Request, res: Response): P
       }
     }
 
-    // Build the final filter
+    // Build the final filter with defense-in-depth companyId check
     if (allowedFileIds && allowedFileIds.length > 0) {
       qdrantFilter = {
         must: [
+          {
+            key: 'companyId',
+            match: { value: companyId },
+          },
           {
             key: 'fileId',
             match:

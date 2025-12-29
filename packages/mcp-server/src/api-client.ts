@@ -2,6 +2,8 @@ import type {
   MCPServerConfig,
   ChatRequest,
   ChatResponse,
+  ChatV2Request,
+  ChatV2Response,
   SearchRequest,
   SearchResult,
   CreateProjectRequest,
@@ -212,6 +214,14 @@ export class ApiClient {
   async chat(companyId: string | undefined, request: ChatRequest): Promise<ChatResponse> {
     const id = this.getCompanyId(companyId);
     return this.request<ChatResponse>('POST', `/v1/companies/${id}/chat`, request);
+  }
+
+  /**
+   * ChatV2 - Enhanced chat with search modes, follow-ups, and confidence scoring
+   */
+  async chatV2(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
+    const id = this.getCompanyId(companyId);
+    return this.request<ChatV2Response>('POST', `/v1/companies/${id}/chat/v2`, request);
   }
 
   // ===== SEARCH ENDPOINTS =====

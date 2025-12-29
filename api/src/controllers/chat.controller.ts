@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ChatService } from '../services/chat.service';
+import { SmartAgentService } from '../services/smart-agent.service';
 import { chatRequestSchema } from '../schemas/chat.schema';
 import { companyIdSchema } from '../validators/upload.validator';
 import { logger } from '../utils/logger';
@@ -25,6 +26,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
 
   logger.info('Chat request received', {
     companyId,
+    projectId: chatRequest.projectId,
     queryLength: chatRequest.query.length,
     hasHistory: !!(chatRequest.messages && chatRequest.messages.length > 0),
     limit: chatRequest.limit,
@@ -33,6 +35,10 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
     embeddingProvider: chatRequest.embeddingProvider,
     stream: chatRequest.stream,
   });
+
+  // Use Smart Agent Service (agentic RAG) by default
+  // Set useLegacyChat=true in request to use old ChatService
+  const useLegacyChat = (req.body as { useLegacyChat?: boolean }).useLegacyChat === true;
 
   // If streaming is requested, use the streaming endpoint
   if (chatRequest.stream) {
@@ -43,6 +49,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
       companyId,
       metadata: {
         type: 'chat_stream',
+        projectId: chatRequest.projectId,
         queryLength: chatRequest.query.length,
         limit: chatRequest.limit,
         rerank: chatRequest.rerank,
@@ -51,12 +58,16 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
     });
 
     // Handle streaming - this will set headers and stream response
+    // Note: Smart Agent streaming not yet implemented, using legacy for now
     await ChatService.chatStream(companyId, chatRequest, res);
     return;
   }
 
   // Process non-streaming chat request
-  const response = await ChatService.chat(companyId, chatRequest);
+  // Use Smart Agent Service for better retrieval and answer quality
+  const response = useLegacyChat
+    ? await ChatService.chat(companyId, chatRequest)
+    : await SmartAgentService.chat(companyId, chatRequest);
 
   // Publish analytics event
   void publishAnalytics({
@@ -65,6 +76,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
     companyId,
     metadata: {
       type: 'chat',
+      projectId: chatRequest.projectId,
       queryLength: chatRequest.query.length,
       limit: chatRequest.limit,
       rerank: chatRequest.rerank,
@@ -101,6 +113,7 @@ export const chatStream = asyncHandler(async (req: Request, res: Response): Prom
 
   logger.info('Streaming chat request received', {
     companyId,
+    projectId: chatRequest.projectId,
     queryLength: chatRequest.query.length,
     hasHistory: !!(chatRequest.messages && chatRequest.messages.length > 0),
     limit: chatRequest.limit,
@@ -116,6 +129,7 @@ export const chatStream = asyncHandler(async (req: Request, res: Response): Prom
     companyId,
     metadata: {
       type: 'chat_stream',
+      projectId: chatRequest.projectId,
       queryLength: chatRequest.query.length,
       limit: chatRequest.limit,
       rerank: chatRequest.rerank,

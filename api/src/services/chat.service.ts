@@ -323,7 +323,17 @@ export class ChatService {
   }
 
   /**
-   * Retrieve relevant context using RAG
+   * Retrieve relevant context using RAG with multi-layer security
+   *
+   * Security layers:
+   * 1. Collection scoping: company_${companyId}
+   * 2. Project ownership validation
+   * 3. Qdrant filter: companyId + fileId (defense-in-depth)
+   *
+   * @param companyId - Authenticated company ID
+   * @param request - Chat request with required projectId
+   * @returns Array of relevant document chunks with metadata
+   * @private
    */
   private static async retrieveContext(
     companyId: string,
@@ -331,95 +341,80 @@ export class ChatService {
   ): Promise<ChatSource[]> {
     const collection = `company_${companyId}`;
 
-    // Build Qdrant filter from request filter
-    let qdrantFilter: QdrantFilter | undefined = undefined;
+    // projectId is required - verify it belongs to this company
+    const project = await projectRepository.findById(request.projectId);
+    if (!project) {
+      logger.warn('Project not found for chat', {
+        projectId: request.projectId,
+        companyId,
+      });
+      return [];
+    }
+
+    if (String(project.companyId) !== companyId) {
+      logger.warn('Project does not belong to company', {
+        projectId: request.projectId,
+        projectCompanyId: project.companyId,
+        requestedCompanyId: companyId,
+      });
+      return []; // Return empty instead of throwing to avoid leaking info
+    }
+
+    // Get all files from the project
+    const projectFiles = await fileMetadataRepository.findByProjectId(request.projectId);
+    let allowedFileIds = projectFiles.map((f) => f._id);
+
+    if (allowedFileIds.length === 0) {
+      logger.debug('No files found for project', { projectId: request.projectId });
+      return [];
+    }
+
+    logger.debug('Filtering by project files', {
+      projectId: request.projectId,
+      fileCount: allowedFileIds.length,
+    });
+
+    // Apply additional filters if specified
     if (request.filter) {
-      let allowedFileIds: string[] | undefined = undefined;
-
-      // Handle projectId filter - fetch all file IDs for the project
-      if (request.filter.projectId) {
-        // Verify project belongs to this company
-        const project = await projectRepository.findById(request.filter.projectId);
-        if (!project) {
-          logger.warn('Project not found for chat filter', {
-            projectId: request.filter.projectId,
-            companyId,
-          });
-          return [];
-        }
-
-        if (String(project.companyId) !== companyId) {
-          logger.warn('Project does not belong to company', {
-            projectId: request.filter.projectId,
-            projectCompanyId: project.companyId,
-            requestedCompanyId: companyId,
-          });
-          return []; // Return empty instead of throwing to avoid leaking info
-        }
-
-        const projectFiles = await fileMetadataRepository.findByProjectId(request.filter.projectId);
-        allowedFileIds = projectFiles.map((f) => f._id);
-
-        if (allowedFileIds.length === 0) {
-          logger.debug('No files found for project', { projectId: request.filter.projectId });
-          return [];
-        }
-
-        logger.debug('Filtering by project files', {
-          projectId: request.filter.projectId,
-          fileCount: allowedFileIds.length,
-        });
-      }
-
-      // Handle fileId filter - intersect with project files if both specified
+      // Handle fileId filter - intersect with project files
       if (request.filter.fileId) {
-        if (allowedFileIds) {
-          // Intersect: only allow if file is in project
-          if (!allowedFileIds.includes(request.filter.fileId)) {
-            logger.debug('FileId not in project, returning empty', {
-              fileId: request.filter.fileId,
-              projectId: request.filter.projectId,
-            });
-            return [];
-          }
-          allowedFileIds = [request.filter.fileId];
-        } else {
-          allowedFileIds = [request.filter.fileId];
+        if (!allowedFileIds.includes(request.filter.fileId)) {
+          logger.debug('FileId not in project, returning empty', {
+            fileId: request.filter.fileId,
+            projectId: request.projectId,
+          });
+          return [];
         }
+        allowedFileIds = [request.filter.fileId];
       }
 
-      // Handle fileIds filter - intersect with project files if both specified
+      // Handle fileIds filter - intersect with project files
       if (request.filter.fileIds && request.filter.fileIds.length > 0) {
-        if (allowedFileIds) {
-          // Intersect: only keep files that are in both lists
-          const fileIdsSet = new Set(request.filter.fileIds);
-          allowedFileIds = allowedFileIds.filter((id) => fileIdsSet.has(id));
-          if (allowedFileIds.length === 0) {
-            logger.debug('No intersection between fileIds and project files', {
-              projectId: request.filter.projectId,
-            });
-            return [];
-          }
-        } else {
-          allowedFileIds = request.filter.fileIds;
+        const fileIdsSet = new Set(request.filter.fileIds);
+        allowedFileIds = allowedFileIds.filter((id) => fileIdsSet.has(id));
+        if (allowedFileIds.length === 0) {
+          logger.debug('No intersection between fileIds and project files', {
+            projectId: request.projectId,
+          });
+          return [];
         }
-      }
-
-      // Build the final filter
-      if (allowedFileIds && allowedFileIds.length > 0) {
-        qdrantFilter = {
-          must: [
-            {
-              key: 'fileId',
-              match:
-                allowedFileIds.length === 1
-                  ? { value: allowedFileIds[0] }
-                  : { any: allowedFileIds },
-            },
-          ],
-        };
       }
     }
+
+    // Build the Qdrant filter with defense-in-depth companyId check
+    const qdrantFilter: QdrantFilter = {
+      must: [
+        {
+          key: 'companyId',
+          match: { value: companyId },
+        },
+        {
+          key: 'fileId',
+          match:
+            allowedFileIds.length === 1 ? { value: allowedFileIds[0] } : { any: allowedFileIds },
+        },
+      ],
+    };
 
     // Perform search
     let results: SearchResult[];

@@ -49,7 +49,7 @@ const tools: Tool[] = [
   {
     name: 'rag_chat',
     description:
-      'Send a message to the RAG-powered chat endpoint. Retrieves relevant context from indexed documents and generates an AI response. Supports conversation history, system prompts, and various configuration options.',
+      'Send a message to the Smart Agent RAG-powered chat endpoint. Uses intelligent query planning, multi-query search, and context expansion for better answers. Users don\'t need to know file names - just ask questions naturally. Supports conversation history, system prompts, and various configuration options.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -96,6 +96,82 @@ const tools: Tool[] = [
         maxTokens: { type: 'number', description: 'Max tokens for response (100-4096)' },
         temperature: { type: 'number', description: 'LLM temperature (0-2)' },
         includeSources: { type: 'boolean', description: 'Include source documents', default: true },
+        useLegacyChat: { type: 'boolean', description: 'Use legacy chat service instead of Smart Agent (default: false, uses Smart Agent)', default: false },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'rag_chat_v2',
+    description:
+      'ChatV2 - Enhanced RAG-powered chat with multiple search modes, confidence scoring, and suggested follow-ups. Features: smart/fast/deep search modes, response format options, query analysis, and processing time metrics.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        query: { type: 'string', description: 'The question or message to send' },
+        messages: {
+          type: 'array',
+          description: 'Conversation history for multi-turn chat',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string', enum: ['user', 'assistant', 'system'] },
+              content: { type: 'string' },
+            },
+            required: ['role', 'content'],
+          },
+        },
+        searchMode: {
+          type: 'string',
+          enum: ['smart', 'fast', 'deep'],
+          description: 'Search mode: smart (balanced, default), fast (lowest latency), deep (highest quality)',
+          default: 'smart',
+        },
+        responseFormat: {
+          type: 'string',
+          enum: ['text', 'markdown', 'structured'],
+          description: 'Response format',
+          default: 'markdown',
+        },
+        includeReasoning: { type: 'boolean', description: 'Include thinking/reasoning process', default: false },
+        language: { type: 'string', description: 'ISO 639-1 language code for response' },
+        maxCitations: { type: 'number', description: 'Max sources to cite (1-20)', default: 5 },
+        expandContext: { type: 'boolean', description: 'Enable context expansion', default: true },
+        promptTemplate: {
+          type: 'string',
+          enum: [
+            'customer_support',
+            'sales_assistant',
+            'technical_support',
+            'onboarding_assistant',
+            'faq_concise',
+            'ecommerce_assistant',
+            'research_assistant',
+            'code_assistant',
+          ],
+          description: 'Predefined prompt template',
+        },
+        systemPrompt: { type: 'string', description: 'Custom system prompt (overrides template)' },
+        limit: { type: 'number', description: 'Number of context chunks (1-50)', default: 10 },
+        rerank: { type: 'boolean', description: 'Rerank results', default: true },
+        filter: {
+          type: 'object',
+          description: 'Filter for RAG search',
+          properties: {
+            fileId: { type: 'string' },
+            fileIds: { type: 'array', items: { type: 'string' } },
+            projectId: { type: 'string' },
+            projectIds: { type: 'array', items: { type: 'string' } },
+            tags: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        llmProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'LLM provider' },
+        embeddingProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'Embedding provider' },
+        maxTokens: { type: 'number', description: 'Max tokens (100-8192)' },
+        temperature: { type: 'number', description: 'LLM temperature (0-2)' },
+        includeSources: { type: 'boolean', description: 'Include sources', default: true },
+        includeMetadata: { type: 'boolean', description: 'Include detailed metadata and follow-ups', default: false },
       },
       required: ['query'],
     },
@@ -616,6 +692,46 @@ async function handleToolCall(
           maxTokens: args.maxTokens as number | undefined,
           temperature: args.temperature as number | undefined,
           includeSources: args.includeSources as boolean | undefined,
+          useLegacyChat: args.useLegacyChat as boolean | undefined,
+        });
+        break;
+
+      case 'rag_chat_v2':
+        result = await apiClient.chatV2(args.companyId as string | undefined, {
+          query: args.query as string,
+          messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+          searchMode: args.searchMode as 'smart' | 'fast' | 'deep' | undefined,
+          responseFormat: args.responseFormat as 'text' | 'markdown' | 'structured' | undefined,
+          includeReasoning: args.includeReasoning as boolean | undefined,
+          language: args.language as string | undefined,
+          maxCitations: args.maxCitations as number | undefined,
+          expandContext: args.expandContext as boolean | undefined,
+          promptTemplate: args.promptTemplate as
+            | 'customer_support'
+            | 'sales_assistant'
+            | 'technical_support'
+            | 'onboarding_assistant'
+            | 'faq_concise'
+            | 'ecommerce_assistant'
+            | 'research_assistant'
+            | 'code_assistant'
+            | undefined,
+          systemPrompt: args.systemPrompt as string | undefined,
+          limit: args.limit as number | undefined,
+          rerank: args.rerank as boolean | undefined,
+          filter: args.filter as {
+            fileId?: string;
+            fileIds?: string[];
+            projectId?: string;
+            projectIds?: string[];
+            tags?: string[];
+          } | undefined,
+          llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
+          embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
+          maxTokens: args.maxTokens as number | undefined,
+          temperature: args.temperature as number | undefined,
+          includeSources: args.includeSources as boolean | undefined,
+          includeMetadata: args.includeMetadata as boolean | undefined,
         });
         break;
 

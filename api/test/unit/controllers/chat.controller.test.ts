@@ -46,7 +46,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           limit: 5,
+          useLegacyChat: true, // Use legacy ChatService for this test
         },
       });
 
@@ -63,7 +65,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           stream: true,
+          useLegacyChat: true,
         },
       });
 
@@ -85,7 +89,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           rerank: true,
+          useLegacyChat: true,
         },
       });
 
@@ -105,10 +111,12 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'Follow up question',
+          projectId: 'test-project-id',
           messages: [
             { role: 'user', content: 'Hello' },
             { role: 'assistant', content: 'Hi there!' },
           ],
+          useLegacyChat: true,
         },
       });
 
@@ -132,7 +140,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           llmProvider: 'gemini',
+          useLegacyChat: true,
         },
       });
 
@@ -152,7 +162,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           embeddingProvider: 'gemini',
+          useLegacyChat: true,
         },
       });
 
@@ -172,7 +184,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           limit: 10,
+          useLegacyChat: true,
         },
       });
 
@@ -192,7 +206,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           includeSources: false,
+          useLegacyChat: true,
         },
       });
 
@@ -212,7 +228,8 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
-          filter: { projectId: 'project-123' },
+          projectId: 'project-123',
+          useLegacyChat: true,
         },
       });
 
@@ -221,7 +238,7 @@ describe('ChatController', () => {
       expect(ChatService.chat).toHaveBeenCalledWith(
         companyId,
         expect.objectContaining({
-          filter: expect.objectContaining({ projectId: 'project-123' }),
+          projectId: 'project-123',
         })
       );
     });
@@ -235,6 +252,8 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
+          useLegacyChat: true,
         },
       });
 
@@ -254,7 +273,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           stream: false, // Should be overridden
+          useLegacyChat: true,
         },
       });
 
@@ -274,7 +295,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           rerank: true,
+          useLegacyChat: true,
         },
       });
 
@@ -294,7 +317,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'Follow up question',
+          projectId: 'test-project-id',
           messages: [{ role: 'user', content: 'Previous question' }],
+          useLegacyChat: true,
         },
       });
 
@@ -316,7 +341,9 @@ describe('ChatController', () => {
         params: { companyId },
         body: {
           query: 'What is the meaning of life?',
+          projectId: 'test-project-id',
           llmProvider: 'gemini',
+          useLegacyChat: true,
         },
       });
 

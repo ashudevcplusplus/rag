@@ -456,7 +456,7 @@ export interface UploadResponse {
 export interface SearchQuery {
   query: string;
   limit?: number;
-  projectId?: string;
+  projectId: string; // Required for project scoping and security
   rerank?: boolean;
 }
 

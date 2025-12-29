@@ -15,6 +15,7 @@ import { upload, MAX_FILES_PER_UPLOAD } from '../middleware/upload.middleware';
 import projectRoutes from './project.routes';
 import userRoutes from './user.routes';
 import chatRoutes from './chat.routes';
+import chatV2Routes from './chat-v2.routes';
 import conversationRoutes from './conversation.routes';
 
 const router = Router();
@@ -26,6 +27,7 @@ router.use('/:companyId', companyRateLimiter as RequestHandler);
 router.use('/:companyId/projects', projectRoutes);
 router.use('/:companyId/users', userRoutes);
 router.use('/:companyId/chat', chatRoutes);
+router.use('/:companyId/chat/v2', chatV2Routes);
 router.use('/:companyId/conversations', conversationRoutes);
 
 // Company specific routes

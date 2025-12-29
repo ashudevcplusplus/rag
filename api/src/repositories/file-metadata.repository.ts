@@ -7,6 +7,7 @@ import {
 import { ProcessingStatus } from '@rag/types';
 import { FilterQuery, UpdateQuery, Types, Model } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
+import { projectRepository } from './project.repository';
 
 export class FileMetadataRepository {
   public model: Model<IFileMetadataDocument>;
@@ -419,6 +420,51 @@ export class FileMetadataRepository {
       maxTimeMs: result[0].maxTimeMs,
       totalFilesCompleted: result[0].count,
     };
+  }
+
+  /**
+   * Find files by tags across all projects
+   * Used for filtering search results by document tags
+   */
+  async findByTags(tags: string[], limit: number = 100): Promise<IFileMetadata[]> {
+    const files = await FileMetadataModel.find({
+      tags: { $in: tags },
+      deletedAt: null,
+    })
+      .limit(limit)
+      .sort({ uploadedAt: -1 })
+      .lean();
+
+    return toStringIds(files) as unknown as IFileMetadata[];
+  }
+
+  /**
+   * Search files by filename (fuzzy match) within a company
+   */
+  async searchByFilename(
+    companyId: string,
+    searchTerm: string,
+    limit: number = 10
+  ): Promise<IFileMetadata[]> {
+    // First get all projects for this company
+    const projects = await projectRepository.findByCompanyId(companyId);
+    const projectIds = projects.map((p) => new Types.ObjectId(p._id));
+
+    if (projectIds.length === 0) return [];
+
+    const files = await FileMetadataModel.find({
+      projectId: { $in: projectIds },
+      deletedAt: null,
+      $or: [
+        { originalFilename: { $regex: searchTerm, $options: 'i' } },
+        { filename: { $regex: searchTerm, $options: 'i' } },
+      ],
+    })
+      .limit(limit)
+      .sort({ uploadedAt: -1 })
+      .lean();
+
+    return toStringIds(files) as unknown as IFileMetadata[];
   }
 }
 

@@ -476,7 +476,7 @@ export interface ChatMessage {
 
 export interface ChatRequest {
   query: string;
-  projectId?: string;
+  projectId: string; // Required for project scoping and security
   history?: ChatMessage[];
   limit?: number;
 }

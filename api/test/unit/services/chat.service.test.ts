@@ -177,7 +177,7 @@ describe('ChatService', () => {
         createMockChatCompletion('Answer')
       );
 
-      await ChatService.chat(companyId, createMockChatRequest({ filter: { projectId } }));
+      await ChatService.chat(companyId, createMockChatRequest({ projectId }));
 
       expect(projectRepository.findById).toHaveBeenCalledWith(projectId);
       expect(fileMetadataRepository.findByProjectId).toHaveBeenCalledWith(projectId);
@@ -192,7 +192,7 @@ describe('ChatService', () => {
       const result = await ChatService.chat(
         companyId,
         createMockChatRequest({
-          filter: { projectId: 'non-existent' },
+          projectId: 'non-existent',
         })
       );
 
@@ -211,7 +211,7 @@ describe('ChatService', () => {
       const result = await ChatService.chat(
         companyId,
         createMockChatRequest({
-          filter: { projectId },
+          projectId,
         })
       );
 
@@ -332,6 +332,16 @@ describe('ChatService', () => {
     });
 
     it('should filter by multiple fileIds when provided', async () => {
+      const additionalFile = createMockFileMetadata(projectId, {
+        _id: 'file-2',
+        originalFilename: 'test-document-2.txt',
+      });
+      (fileMetadataRepository.findByIds as jest.Mock).mockResolvedValue([mockFile, additionalFile]);
+      (fileMetadataRepository.findByProjectId as jest.Mock).mockResolvedValue([
+        mockFile,
+        additionalFile,
+      ]);
+
       mockOpenAIInstance.chat.completions.create.mockResolvedValue(
         createMockChatCompletion('Answer')
       );
@@ -339,7 +349,7 @@ describe('ChatService', () => {
       await ChatService.chat(
         companyId,
         createMockChatRequest({
-          filter: { fileIds: ['file-1', 'file-2'] },
+          filter: { fileIds: [fileId, 'file-2'] },
         })
       );
 

@@ -83,6 +83,7 @@ export interface ChatRequest {
   temperature?: number;
   includeSources?: boolean;
   stream?: boolean;
+  useLegacyChat?: boolean;
 }
 
 /**
@@ -111,6 +112,109 @@ export interface ChatResponse {
   };
   model: string;
   provider: 'openai' | 'gemini';
+}
+
+// ===== ChatV2 Types =====
+
+/**
+ * Search mode for ChatV2
+ */
+export type SearchMode = 'smart' | 'fast' | 'deep';
+
+/**
+ * Response format for ChatV2
+ */
+export type ResponseFormat = 'text' | 'markdown' | 'structured';
+
+/**
+ * Extended prompt template types for V2
+ */
+export type PromptTemplateTypeV2 =
+  | PromptTemplateType
+  | 'research_assistant'
+  | 'code_assistant';
+
+/**
+ * ChatV2 request parameters
+ */
+export interface ChatV2Request {
+  query: string;
+  messages?: ChatMessage[];
+  promptTemplate?: PromptTemplateTypeV2;
+  systemPrompt?: string;
+
+  // V2 specific features
+  searchMode?: SearchMode;
+  responseFormat?: ResponseFormat;
+  includeReasoning?: boolean;
+  language?: string;
+  maxCitations?: number;
+  expandContext?: boolean;
+
+  // RAG settings
+  limit?: number;
+  rerank?: boolean;
+  filter?: {
+    fileId?: string;
+    fileIds?: string[];
+    projectId?: string;
+    projectIds?: string[];
+    tags?: string[];
+  };
+
+  // LLM settings
+  llmProvider?: 'openai' | 'gemini';
+  embeddingProvider?: 'openai' | 'gemini';
+  maxTokens?: number;
+  temperature?: number;
+
+  // Response settings
+  includeSources?: boolean;
+  includeMetadata?: boolean;
+  stream?: boolean;
+}
+
+/**
+ * ChatV2 source with enhanced metadata
+ */
+export interface ChatV2Source extends ChatSource {
+  highlight?: string;
+  citationNumber?: number;
+  relevanceExplanation?: string;
+}
+
+/**
+ * Query analysis from planner
+ */
+export interface QueryAnalysis {
+  intent: string;
+  searchQueries: string[];
+  keywords: string[];
+  confidence: number;
+  needsClarification: boolean;
+  clarificationQuestion?: string;
+}
+
+/**
+ * ChatV2 response structure
+ */
+export interface ChatV2Response {
+  answer: string;
+  sources: ChatV2Source[];
+  queryAnalysis?: QueryAnalysis;
+  reasoning?: string;
+  suggestedFollowUps?: string[];
+  confidence?: number;
+  responseFormat: ResponseFormat;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  model: string;
+  provider: 'openai' | 'gemini';
+  searchMode: SearchMode;
+  processingTime?: number;
 }
 
 /**

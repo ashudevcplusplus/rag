@@ -131,6 +131,8 @@ export class VectorService {
         });
 
         // Create Payload Indexes for fast filtering
+        // - fileId: Required for project-level access control
+        // - companyId: Used for defense-in-depth validation (prevents collection naming bugs)
         logger.info('Creating payload indexes', { collection: collectionName });
         try {
           await qdrant.createPayloadIndex(collectionName, {
@@ -189,7 +191,23 @@ export class VectorService {
   }
 
   /**
-   * Search for similar vectors
+   * Search for similar vectors with optional filtering
+   *
+   * Security note: Callers should include companyId in filter.must for defense-in-depth:
+   * ```
+   * filter: {
+   *   must: [
+   *     { key: 'companyId', match: { value: companyId } },
+   *     { key: 'fileId', match: { any: allowedFileIds } }
+   *   ]
+   * }
+   * ```
+   *
+   * @param collectionName - Qdrant collection name (should be company_${companyId})
+   * @param queryVector - Embedding vector to search for
+   * @param limit - Maximum number of results to return
+   * @param filter - Optional Qdrant filter (should include companyId for defense-in-depth)
+   * @returns Array of search results with scores and payloads
    */
   static async search(
     collectionName: string,
@@ -329,7 +347,16 @@ export class VectorService {
 
   /**
    * Search with hybrid reranking (Vector + Cross-Encoder)
+   *
+   * Security note: Filter should include companyId for defense-in-depth validation
+   *
+   * @param collectionName - Qdrant collection name (should be company_${companyId})
+   * @param query - Search query text
+   * @param limit - Final number of results after reranking
+   * @param filter - Optional Qdrant filter (should include companyId for defense-in-depth)
+   * @param rerankLimit - Number of results to fetch before reranking (default: 20)
    * @param provider - Optional provider override for generating query embeddings
+   * @returns Array of reranked search results
    */
   static async searchWithReranking(
     collectionName: string,
