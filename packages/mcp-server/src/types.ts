@@ -285,3 +285,39 @@ export interface AuthState {
   user: LoginResponse['user'];
   companyId: string;
 }
+
+// ===== Document Context Types =====
+
+/**
+ * Document chunk structure
+ */
+export interface DocumentChunk {
+  chunkIndex: number;
+  content: string;
+}
+
+/**
+ * Response for getting all document chunks
+ */
+export interface DocumentChunksResponse {
+  fileId: string;
+  fileName: string;
+  projectId?: string;
+  totalChunks: number;
+  chunks: DocumentChunk[];
+  fullContent: string;
+}
+
+/**
+ * Response for getting chunk context (neighboring chunks)
+ */
+export interface ChunkContextResponse {
+  fileId: string;
+  fileName: string;
+  projectId?: string;
+  targetChunkIndex: number;
+  totalChunks: number;
+  windowSize: number;
+  chunks: DocumentChunk[];
+  combinedContent: string;
+}

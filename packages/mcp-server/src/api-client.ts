@@ -13,6 +13,8 @@ import type {
   PaginationInfo,
   LoginResponse,
   AuthState,
+  DocumentChunksResponse,
+  ChunkContextResponse,
 } from './types.js';
 
 /**
@@ -713,5 +715,40 @@ export class ApiClient {
       throw new Error(`Health check failed: ${response.status}`);
     }
     return response.json() as Promise<{ status: string; timestamp: string }>;
+  }
+
+  // ===== DOCUMENT CONTEXT ENDPOINTS =====
+
+  /**
+   * Get all chunks of a document
+   * Useful for reading the full document content
+   */
+  async getDocumentChunks(
+    companyId: string | undefined,
+    fileId: string
+  ): Promise<DocumentChunksResponse> {
+    const id = this.getCompanyId(companyId);
+    return this.request<DocumentChunksResponse>(
+      'GET',
+      `/v1/companies/${id}/chat/documents/${fileId}/chunks`
+    );
+  }
+
+  /**
+   * Get neighboring chunks around a specific chunk for context
+   * Useful when an agent needs more context around a retrieved chunk
+   */
+  async getChunkContext(
+    companyId: string | undefined,
+    fileId: string,
+    chunkIndex: number,
+    windowSize: number = 2
+  ): Promise<ChunkContextResponse> {
+    const id = this.getCompanyId(companyId);
+    const params = new URLSearchParams({ windowSize: windowSize.toString() });
+    return this.request<ChunkContextResponse>(
+      'GET',
+      `/v1/companies/${id}/chat/documents/${fileId}/chunks/${chunkIndex}/context?${params.toString()}`
+    );
   }
 }
