@@ -22,7 +22,7 @@ const envSchema = z.object({
 });
 
 // Parse and validate environment variables
-const parseEnv = () => {
+const parseEnv = (): z.infer<typeof envSchema> => {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {

@@ -15,6 +15,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+COPY .npmrc ./
 
 # Copy package.json files for landing-page
 COPY apps/landing-page/package.json ./apps/landing-page/
@@ -35,7 +36,12 @@ RUN pnpm install
 COPY apps/landing-page/src/ ./apps/landing-page/src/
 COPY apps/landing-page/index.html ./apps/landing-page/
 COPY apps/landing-page/public/ ./apps/landing-page/public/
-COPY packages/ ./packages/
+
+# Copy package source files (not entire directory to preserve node_modules symlinks)
+COPY packages/types/src/ ./packages/types/src/
+COPY packages/types/tsconfig.json ./packages/types/
+COPY packages/utils/src/ ./packages/utils/src/
+COPY packages/utils/tsconfig.json ./packages/utils/
 
 WORKDIR /app/apps/landing-page
 

@@ -483,7 +483,14 @@ export function createMockConsumerChange(overrides?: {
   status?: ChangeStatus;
   companyId?: string;
   eventData?: Record<string, unknown>;
-}) {
+}): {
+  _id: Types.ObjectId;
+  eventType: ChangeType;
+  status: ChangeStatus;
+  companyId: string;
+  eventData: Record<string, unknown>;
+  createdAt: Date;
+} {
   return {
     _id: createObjectId(),
     eventType: overrides?.eventType ?? ChangeType.CONSISTENCY_CHECK,
@@ -524,7 +531,10 @@ export function createMockChatCompletion(
     completion_tokens?: number;
     total_tokens?: number;
   }
-) {
+): {
+  choices: { message: { content: string } }[];
+  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+} {
   return {
     choices: [
       {
@@ -546,7 +556,15 @@ export function createMockChatCompletion(
 /**
  * Create a mock OpenAI embedding response
  */
-export function createMockEmbeddingResponse(count: number = 1, dimensions: number = 1536) {
+export function createMockEmbeddingResponse(
+  count: number = 1,
+  dimensions: number = 1536
+): {
+  data: { embedding: number[]; index: number }[];
+  model: string;
+  object: 'list';
+  usage: { prompt_tokens: number; total_tokens: number };
+} {
   return {
     data: Array(count)
       .fill(0)
@@ -570,7 +588,10 @@ export function createMockEmbeddingResponse(count: number = 1, dimensions: numbe
 /**
  * Create a mock streaming response generator
  */
-export function createMockStreamGenerator(tokens: string[]) {
+export function createMockStreamGenerator(tokens: string[]): AsyncGenerator<{
+  choices: { delta: { content?: string } }[];
+  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+}> {
   return (async function* () {
     for (const token of tokens) {
       yield {
@@ -651,7 +672,13 @@ export const TEST_IDS = {
 /**
  * Create a complete test fixture with related entities
  */
-export function createTestFixture() {
+export function createTestFixture(): {
+  company: ICompany;
+  project: IProject;
+  file: IFileMetadata;
+  user: IUser;
+  searchResults: SearchResult[];
+} {
   const company = createMockCompany({ _id: TEST_IDS.COMPANY_ID });
   const project = createMockProject(company._id, { _id: TEST_IDS.PROJECT_ID });
   const file = createMockFileMetadata(project._id, { _id: TEST_IDS.FILE_ID });

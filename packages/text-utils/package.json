@@ -2,16 +2,8 @@
   "name": "@rag/text-utils",
   "version": "1.0.0",
   "description": "Text processing utilities for RAG system - chunking, extraction, normalization",
-  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
-  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

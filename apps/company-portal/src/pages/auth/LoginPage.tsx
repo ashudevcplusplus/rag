@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LogIn, Mail, Lock, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Button, Input, Card, CardContent } from '@rag/ui';
+import { Card, CardContent } from '@rag/ui';
 import { configureApiClient, usersApi, companyApi } from '@rag/api-client';
 import { SubscriptionTier, CompanyStatus } from '@rag/types';
 import { useAuthStore } from '../../store/auth.store';
@@ -10,7 +10,7 @@ import { useAppStore } from '../../store/app.store';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, setApiUrl, apiUrl } = useAuthStore();
+  const { login, apiUrl } = useAuthStore();
   const { addActivity } = useAppStore();
 
   const [formData, setFormData] = useState({

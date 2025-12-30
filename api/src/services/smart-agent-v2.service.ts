@@ -241,7 +241,25 @@ Rules:
         temperature: 0.3,
       });
 
-      const analysis = JSON.parse(response.choices[0]?.message?.content || '{}') as QueryAnalysis;
+      const rawAnalysis = JSON.parse(response.choices[0]?.message?.content || '{}');
+
+      // Validate required fields exist and have correct types
+      const analysis: QueryAnalysis = {
+        intent: rawAnalysis.intent || 'find_information',
+        searchQueries:
+          Array.isArray(rawAnalysis.searchQueries) && rawAnalysis.searchQueries.length > 0
+            ? rawAnalysis.searchQueries
+            : [query], // Fallback to original query if searchQueries missing/invalid
+        keywords: Array.isArray(rawAnalysis.keywords)
+          ? rawAnalysis.keywords
+          : query
+              .toLowerCase()
+              .split(' ')
+              .filter((w: string) => w.length > 3),
+        confidence: typeof rawAnalysis.confidence === 'number' ? rawAnalysis.confidence : 0.5,
+        needsClarification: Boolean(rawAnalysis.needsClarification),
+        clarificationQuestion: rawAnalysis.clarificationQuestion || undefined,
+      };
 
       // Cache for 1 hour (similar queries benefit) - only if caching enabled
       if (useCache) {
@@ -791,8 +809,13 @@ Rules:
    * Determine if LLM reranking would improve results
    *
    * Optimization: Skip expensive reranking (~500ms) when:
-   * 1. Top result is dominant (>90 score, 10+ point lead)
-   * 2. All top 3 results are high quality (avg >85)
+   * 1. Top result is dominant (high relative score, significant lead over second)
+   * 2. All top 3 results are high quality (good average score)
+   *
+   * NOTE: RRF scores are in range ~0.8-5 (after *100 normalization).
+   * - Single query: max score = 100/(60+1) ≈ 1.64
+   * - Multiple queries (3-4): max score ≈ 3-5 when item appears in all result sets
+   * Thresholds are calibrated to this range.
    *
    * Saves ~35% of reranking calls with no quality loss.
    *
@@ -807,13 +830,15 @@ Rules:
     const secondScore = sources[1].score;
     const avgTopThree = (sources[0].score + sources[1].score + sources[2].score) / 3;
 
-    // Skip reranking if top result is clearly dominant (>90) and well separated
-    if (topScore > 90 && topScore - secondScore > 10) {
+    // Skip reranking if top result is clearly dominant (>3.5 RRF score, ~2x lead over second)
+    // This indicates the top result appeared near the top across multiple query variations
+    if (topScore > 3.5 && topScore > secondScore * 2) {
       return false;
     }
 
-    // Skip reranking if top 3 average is very high (results are all good quality)
-    if (avgTopThree > 85) {
+    // Skip reranking if top 3 average is very high (results consistently ranked well)
+    // avgTopThree > 2.5 means all top results appeared in top positions across queries
+    if (avgTopThree > 2.5) {
       return false;
     }
 

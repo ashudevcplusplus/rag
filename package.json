@@ -1,25 +1,39 @@
 {
-  "name": "mvp",
+  "name": "@rag/monorepo",
   "version": "1.0.0",
   "description": "MVP - Production-Grade RAG System",
   "private": true,
   "scripts": {
     "clean": "./clean.sh",
-    "test": "cd api && npm test",
-    "build": "cd api && npm run build",
+    "test": "pnpm --filter @rag/api test",
+    "test:all": "pnpm -r test",
+    "build": "pnpm --filter @rag/api build",
+    "build:all": "pnpm -r build",
     "build:portal": "pnpm --filter @rag/company-portal build",
-    "start": "cd api && npm start",
-    "dev": "cd api && npm run dev",
+    "start": "pnpm --filter @rag/api start",
+    "dev": "pnpm --filter @rag/api dev",
     "dev:portal": "pnpm --filter @rag/company-portal dev",
     "dev:all": "docker-compose up -d && pnpm --filter @rag/company-portal dev --port 3000",
     "restart:all": "docker-compose down; pkill -f vite 2>/dev/null; lsof -ti:3000,5173,5174 2>/dev/null | xargs kill -9 2>/dev/null; docker-compose up -d --build && pnpm --filter @rag/company-portal dev --port 3000",
     "stop:all": "docker-compose down; pkill -f vite 2>/dev/null; lsof -ti:3000,5173,5174 2>/dev/null | xargs kill -9 2>/dev/null",
     "prepare": "husky",
+    "lint": "pnpm -r lint",
     "lint:portal": "pnpm --filter @rag/company-portal lint",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "format": "pnpm -r format",
+    "format:check": "pnpm -r format:check"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "@types/node": "^22.0.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.6.2",
+    "typescript": "~5.6.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "~5.6.3",
+      "zod": "^4.2.1"
+    }
   },
   "packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a"
 }

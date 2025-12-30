@@ -13,7 +13,7 @@ import type {
   PaginationInfo,
   LoginResponse,
   AuthState,
-} from './types.js';
+} from "./types.js";
 
 /**
  * HTTP client for making requests to the RAG API
@@ -25,7 +25,7 @@ export class ApiClient {
   private config: MCPServerConfig;
 
   constructor(config: MCPServerConfig) {
-    this.baseUrl = config.apiBaseUrl.replace(/\/$/, '');
+    this.baseUrl = config.apiBaseUrl.replace(/\/$/, "");
     this.config = config;
   }
 
@@ -38,16 +38,16 @@ export class ApiClient {
       this.authState = {
         token: this.config.token,
         user: {
-          _id: '',
-          email: '',
-          name: '',
-          companyId: '',
-          role: '',
+          _id: "",
+          email: "",
+          name: "",
+          companyId: "",
+          role: "",
           isActive: true,
         },
-        companyId: '',
+        companyId: "",
       };
-      
+
       // Fetch user info to get the real companyId
       await this.fetchCurrentUserInfo();
       return;
@@ -59,7 +59,7 @@ export class ApiClient {
     }
 
     throw new Error(
-      'Authentication required. Provide either RAG_USER_EMAIL and RAG_USER_PASSWORD, or RAG_TOKEN'
+      "Authentication required. Provide either RAG_USER_EMAIL and RAG_USER_PASSWORD, or RAG_TOKEN",
     );
   }
 
@@ -68,13 +68,13 @@ export class ApiClient {
    */
   private async fetchCurrentUserInfo(): Promise<void> {
     if (!this.authState?.token) {
-      throw new Error('No token available');
+      throw new Error("No token available");
     }
 
     const response = await fetch(`${this.baseUrl}/v1/auth/me`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${this.authState.token}`,
       },
     });
@@ -84,8 +84,8 @@ export class ApiClient {
       throw new Error(`Failed to fetch user info: ${errorText}`);
     }
 
-    const data = (await response.json()) as { user: AuthState['user'] };
-    
+    const data = (await response.json()) as { user: AuthState["user"] };
+
     // Update auth state with real user info
     this.authState = {
       token: this.authState.token,
@@ -99,9 +99,9 @@ export class ApiClient {
    */
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await fetch(`${this.baseUrl}/v1/auth/login`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
     });
@@ -155,17 +155,17 @@ export class ApiClient {
     if (this.authState?.companyId) {
       return this.authState.companyId;
     }
-    throw new Error('Not authenticated. Please login first.');
+    throw new Error("Not authenticated. Please login first.");
   }
 
   private async request<T>(
     method: string,
     path: string,
     body?: unknown,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
   ): Promise<T> {
     if (!this.authState?.token) {
-      throw new Error('Not authenticated. Please login first.');
+      throw new Error("Not authenticated. Please login first.");
     }
 
     const url = `${this.baseUrl}${path}`;
@@ -173,7 +173,7 @@ export class ApiClient {
     const response = await fetch(url, {
       method,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${this.authState.token}`,
         ...headers,
       },
@@ -200,15 +200,15 @@ export class ApiClient {
   /**
    * Get current user info
    */
-  getCurrentUser(): AuthState['user'] | null {
+  getCurrentUser(): AuthState["user"] | null {
     return this.authState?.user || null;
   }
 
   /**
    * Get current user from API
    */
-  async getCurrentUserFromApi(): Promise<{ user: AuthState['user'] }> {
-    return this.request<{ user: AuthState['user'] }>('GET', '/v1/auth/me');
+  async getCurrentUserFromApi(): Promise<{ user: AuthState["user"] }> {
+    return this.request<{ user: AuthState["user"] }>("GET", "/v1/auth/me");
   }
 
   // ===== CHAT ENDPOINTS =====
@@ -217,26 +217,36 @@ export class ApiClient {
    * Send a chat message and get an AI-generated response with RAG context
    * Uses Smart Agent with search modes, follow-ups, and confidence scoring
    */
-  async chatV2(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
+  async chatV2(
+    companyId: string | undefined,
+    request: ChatV2Request,
+  ): Promise<ChatV2Response> {
     const id = this.getCompanyId(companyId);
-    return this.request<ChatV2Response>('POST', `/v1/companies/${id}/chat`, request);
+    return this.request<ChatV2Response>(
+      "POST",
+      `/v1/companies/${id}/chat`,
+      request,
+    );
   }
 
   /**
    * Chat with streaming (buffered response)
    * Note: Buffers the entire stream and returns the complete response
    */
-  async chatV2Stream(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
+  async chatV2Stream(
+    companyId: string | undefined,
+    request: ChatV2Request,
+  ): Promise<ChatV2Response> {
     const id = this.getCompanyId(companyId);
     if (!this.authState?.token) {
-      throw new Error('Not authenticated. Please login first.');
+      throw new Error("Not authenticated. Please login first.");
     }
 
     const url = `${this.baseUrl}/v1/companies/${id}/chat/stream`;
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${this.authState.token}`,
       },
       body: JSON.stringify(request),
@@ -250,11 +260,11 @@ export class ApiClient {
     // Buffer the entire SSE stream
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
-    let bufferedData = '';
+    let bufferedData = "";
     let finalResponse: ChatV2Response | null = null;
 
     if (!reader) {
-      throw new Error('No response body available');
+      throw new Error("No response body available");
     }
 
     try {
@@ -263,21 +273,21 @@ export class ApiClient {
         if (done) break;
 
         bufferedData += decoder.decode(value, { stream: true });
-        const lines = bufferedData.split('\n');
-        bufferedData = lines.pop() || '';
+        const lines = bufferedData.split("\n");
+        bufferedData = lines.pop() || "";
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith("data: ")) {
             const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            
+            if (data === "[DONE]") continue;
+
             try {
               const parsed = JSON.parse(data);
               // Keep updating with the latest complete response
               if (parsed.answer || parsed.sources) {
                 finalResponse = parsed as ChatV2Response;
               }
-            } catch (e) {
+            } catch (_e) {
               // Skip malformed JSON
             }
           }
@@ -288,7 +298,7 @@ export class ApiClient {
     }
 
     if (!finalResponse) {
-      throw new Error('No valid response received from stream');
+      throw new Error("No valid response received from stream");
     }
 
     return finalResponse;
@@ -301,10 +311,14 @@ export class ApiClient {
    */
   async search(
     companyId: string | undefined,
-    request: SearchRequest
+    request: SearchRequest,
   ): Promise<{ results: SearchResult[] }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ results: SearchResult[] }>('POST', `/v1/companies/${id}/search`, request);
+    return this.request<{ results: SearchResult[] }>(
+      "POST",
+      `/v1/companies/${id}/search`,
+      request,
+    );
   }
 
   // ===== PROJECT ENDPOINTS =====
@@ -314,10 +328,14 @@ export class ApiClient {
    */
   async createProject(
     companyId: string | undefined,
-    request: CreateProjectRequest
+    request: CreateProjectRequest,
   ): Promise<{ project: Project }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ project: Project }>('POST', `/v1/companies/${id}/projects`, request);
+    return this.request<{ project: Project }>(
+      "POST",
+      `/v1/companies/${id}/projects`,
+      request,
+    );
   }
 
   /**
@@ -325,28 +343,39 @@ export class ApiClient {
    */
   async listProjects(
     companyId: string | undefined,
-    options?: { page?: number; limit?: number; status?: string; tags?: string[] }
+    options?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      tags?: string[];
+    },
   ): Promise<{ projects: Project[]; pagination: PaginationInfo }> {
     const id = this.getCompanyId(companyId);
     const params = new URLSearchParams();
-    if (options?.page) params.set('page', options.page.toString());
-    if (options?.limit) params.set('limit', options.limit.toString());
-    if (options?.status) params.set('status', options.status);
-    if (options?.tags) params.set('tags', options.tags.join(','));
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.status) params.set("status", options.status);
+    if (options?.tags) params.set("tags", options.tags.join(","));
 
     const query = params.toString();
     return this.request<{ projects: Project[]; pagination: PaginationInfo }>(
-      'GET',
-      `/v1/companies/${id}/projects${query ? `?${query}` : ''}`
+      "GET",
+      `/v1/companies/${id}/projects${query ? `?${query}` : ""}`,
     );
   }
 
   /**
    * Get a project by ID
    */
-  async getProject(companyId: string | undefined, projectId: string): Promise<{ project: Project }> {
+  async getProject(
+    companyId: string | undefined,
+    projectId: string,
+  ): Promise<{ project: Project }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ project: Project }>('GET', `/v1/companies/${id}/projects/${projectId}`);
+    return this.request<{ project: Project }>(
+      "GET",
+      `/v1/companies/${id}/projects/${projectId}`,
+    );
   }
 
   /**
@@ -355,13 +384,13 @@ export class ApiClient {
   async updateProject(
     companyId: string | undefined,
     projectId: string,
-    request: UpdateProjectRequest
+    request: UpdateProjectRequest,
   ): Promise<{ project: Project }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ project: Project }>(
-      'PATCH',
+      "PATCH",
       `/v1/companies/${id}/projects/${projectId}`,
-      request
+      request,
     );
   }
 
@@ -370,10 +399,13 @@ export class ApiClient {
    */
   async deleteProject(
     companyId: string | undefined,
-    projectId: string
+    projectId: string,
   ): Promise<{ message: string }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ message: string }>('DELETE', `/v1/companies/${id}/projects/${projectId}`);
+    return this.request<{ message: string }>(
+      "DELETE",
+      `/v1/companies/${id}/projects/${projectId}`,
+    );
   }
 
   /**
@@ -382,13 +414,13 @@ export class ApiClient {
   async archiveProject(
     companyId: string | undefined,
     projectId: string,
-    archive: boolean
+    archive: boolean,
   ): Promise<{ message: string }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ message: string }>(
-      'POST',
+      "POST",
       `/v1/companies/${id}/projects/${projectId}/archive`,
-      { archive }
+      { archive },
     );
   }
 
@@ -397,12 +429,12 @@ export class ApiClient {
    */
   async getProjectStats(
     companyId: string | undefined,
-    projectId: string
+    projectId: string,
   ): Promise<{ stats: Record<string, unknown> }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ stats: Record<string, unknown> }>(
-      'GET',
-      `/v1/companies/${id}/projects/${projectId}/stats`
+      "GET",
+      `/v1/companies/${id}/projects/${projectId}/stats`,
     );
   }
 
@@ -412,16 +444,16 @@ export class ApiClient {
   async searchProjects(
     companyId: string | undefined,
     searchTerm: string,
-    options?: { page?: number; limit?: number }
+    options?: { page?: number; limit?: number },
   ): Promise<{ projects: Project[]; pagination: PaginationInfo }> {
     const id = this.getCompanyId(companyId);
     const params = new URLSearchParams({ q: searchTerm });
-    if (options?.page) params.set('page', options.page.toString());
-    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.limit) params.set("limit", options.limit.toString());
 
     return this.request<{ projects: Project[]; pagination: PaginationInfo }>(
-      'GET',
-      `/v1/companies/${id}/projects/search?${params.toString()}`
+      "GET",
+      `/v1/companies/${id}/projects/search?${params.toString()}`,
     );
   }
 
@@ -433,17 +465,17 @@ export class ApiClient {
   async listFiles(
     companyId: string | undefined,
     projectId: string,
-    options?: { page?: number; limit?: number }
+    options?: { page?: number; limit?: number },
   ): Promise<{ files: FileMetadata[]; pagination: PaginationInfo }> {
     const id = this.getCompanyId(companyId);
     const params = new URLSearchParams();
-    if (options?.page) params.set('page', options.page.toString());
-    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.limit) params.set("limit", options.limit.toString());
 
     const query = params.toString();
     return this.request<{ files: FileMetadata[]; pagination: PaginationInfo }>(
-      'GET',
-      `/v1/companies/${id}/projects/${projectId}/files${query ? `?${query}` : ''}`
+      "GET",
+      `/v1/companies/${id}/projects/${projectId}/files${query ? `?${query}` : ""}`,
     );
   }
 
@@ -453,7 +485,7 @@ export class ApiClient {
   async getFilePreview(
     companyId: string | undefined,
     projectId: string,
-    fileId: string
+    fileId: string,
   ): Promise<{
     file: FileMetadata;
     content: string | null;
@@ -461,7 +493,10 @@ export class ApiClient {
     message?: string;
   }> {
     const id = this.getCompanyId(companyId);
-    return this.request('GET', `/v1/companies/${id}/projects/${projectId}/files/${fileId}`);
+    return this.request(
+      "GET",
+      `/v1/companies/${id}/projects/${projectId}/files/${fileId}`,
+    );
   }
 
   /**
@@ -470,12 +505,12 @@ export class ApiClient {
   async deleteFile(
     companyId: string | undefined,
     projectId: string,
-    fileId: string
+    fileId: string,
   ): Promise<{ message: string }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ message: string }>(
-      'DELETE',
-      `/v1/companies/${id}/projects/${projectId}/files/${fileId}`
+      "DELETE",
+      `/v1/companies/${id}/projects/${projectId}/files/${fileId}`,
     );
   }
 
@@ -485,12 +520,12 @@ export class ApiClient {
   async reindexFile(
     companyId: string | undefined,
     projectId: string,
-    fileId: string
+    fileId: string,
   ): Promise<{ message: string; jobId: string; fileId: string }> {
     const id = this.getCompanyId(companyId);
     return this.request(
-      'POST',
-      `/v1/companies/${id}/projects/${projectId}/files/${fileId}/reindex`
+      "POST",
+      `/v1/companies/${id}/projects/${projectId}/files/${fileId}/reindex`,
     );
   }
 
@@ -499,7 +534,7 @@ export class ApiClient {
    */
   async getIndexingStats(
     companyId: string | undefined,
-    projectId: string
+    projectId: string,
   ): Promise<{
     stats: {
       pending: number;
@@ -513,7 +548,10 @@ export class ApiClient {
     };
   }> {
     const id = this.getCompanyId(companyId);
-    return this.request('GET', `/v1/companies/${id}/projects/${projectId}/indexing/stats`);
+    return this.request(
+      "GET",
+      `/v1/companies/${id}/projects/${projectId}/indexing/stats`,
+    );
   }
 
   /**
@@ -521,7 +559,7 @@ export class ApiClient {
    */
   async bulkReindexFailed(
     companyId: string | undefined,
-    projectId: string
+    projectId: string,
   ): Promise<{
     message: string;
     queued: number;
@@ -529,7 +567,10 @@ export class ApiClient {
     errors?: { fileId: string; error: string }[];
   }> {
     const id = this.getCompanyId(companyId);
-    return this.request('POST', `/v1/companies/${id}/projects/${projectId}/indexing/retry-all`);
+    return this.request(
+      "POST",
+      `/v1/companies/${id}/projects/${projectId}/indexing/retry-all`,
+    );
   }
 
   /**
@@ -538,7 +579,7 @@ export class ApiClient {
   async downloadFile(
     companyId: string | undefined,
     projectId: string,
-    fileId: string
+    fileId: string,
   ): Promise<{ downloadUrl?: string; content?: string; message?: string }> {
     const id = this.getCompanyId(companyId);
     // This endpoint returns the file stream, so we need to handle it differently
@@ -546,7 +587,8 @@ export class ApiClient {
     const url = `${this.baseUrl}/v1/companies/${id}/projects/${projectId}/files/${fileId}/download`;
     return {
       downloadUrl: url,
-      message: 'Use the downloadUrl with Authorization header to download the file',
+      message:
+        "Use the downloadUrl with Authorization header to download the file",
     };
   }
 
@@ -557,13 +599,14 @@ export class ApiClient {
    */
   async uploadFiles(
     companyId: string | undefined,
-    projectId: string,
-    filePaths: string[]
+    _projectId: string,
+    _filePaths: string[],
   ): Promise<{ message: string; files?: unknown[] }> {
-    const id = this.getCompanyId(companyId);
+    const _id = this.getCompanyId(companyId);
     // This is a placeholder - actual file upload would require FormData and file reading
     return {
-      message: 'File upload via MCP is not fully supported. Please use the API directly with multipart/form-data.',
+      message:
+        "File upload via MCP is not fully supported. Please use the API directly with multipart/form-data.",
       files: [],
     };
   }
@@ -575,19 +618,19 @@ export class ApiClient {
    */
   async listConversations(
     companyId: string | undefined,
-    options?: { page?: number; limit?: number; projectId?: string }
+    options?: { page?: number; limit?: number; projectId?: string },
   ): Promise<{ conversations: Conversation[]; pagination: PaginationInfo }> {
     const id = this.getCompanyId(companyId);
     const params = new URLSearchParams();
-    if (options?.page) params.set('page', options.page.toString());
-    if (options?.limit) params.set('limit', options.limit.toString());
-    if (options?.projectId) params.set('projectId', options.projectId);
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.projectId) params.set("projectId", options.projectId);
 
     const query = params.toString();
-    return this.request<{ conversations: Conversation[]; pagination: PaginationInfo }>(
-      'GET',
-      `/v1/companies/${id}/conversations${query ? `?${query}` : ''}`
-    );
+    return this.request<{
+      conversations: Conversation[];
+      pagination: PaginationInfo;
+    }>("GET", `/v1/companies/${id}/conversations${query ? `?${query}` : ""}`);
   }
 
   /**
@@ -595,13 +638,13 @@ export class ApiClient {
    */
   async createConversation(
     companyId: string | undefined,
-    options?: { title?: string; projectId?: string }
+    options?: { title?: string; projectId?: string },
   ): Promise<{ conversation: Conversation }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ conversation: Conversation }>(
-      'POST',
+      "POST",
       `/v1/companies/${id}/conversations`,
-      options
+      options,
     );
   }
 
@@ -610,12 +653,12 @@ export class ApiClient {
    */
   async getConversation(
     companyId: string | undefined,
-    conversationId: string
+    conversationId: string,
   ): Promise<{ conversation: Conversation }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ conversation: Conversation }>(
-      'GET',
-      `/v1/companies/${id}/conversations/${conversationId}`
+      "GET",
+      `/v1/companies/${id}/conversations/${conversationId}`,
     );
   }
 
@@ -625,13 +668,13 @@ export class ApiClient {
   async updateConversation(
     companyId: string | undefined,
     conversationId: string,
-    title: string
+    title: string,
   ): Promise<{ conversation: Conversation }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ conversation: Conversation }>(
-      'PATCH',
+      "PATCH",
       `/v1/companies/${id}/conversations/${conversationId}`,
-      { title }
+      { title },
     );
   }
 
@@ -640,12 +683,12 @@ export class ApiClient {
    */
   async deleteConversation(
     companyId: string | undefined,
-    conversationId: string
+    conversationId: string,
   ): Promise<{ message: string }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ message: string }>(
-      'DELETE',
-      `/v1/companies/${id}/conversations/${conversationId}`
+      "DELETE",
+      `/v1/companies/${id}/conversations/${conversationId}`,
     );
   }
 
@@ -655,13 +698,17 @@ export class ApiClient {
   async addMessage(
     companyId: string | undefined,
     conversationId: string,
-    message: { role: 'user' | 'assistant'; content: string; sources?: unknown[] }
+    message: {
+      role: "user" | "assistant";
+      content: string;
+      sources?: unknown[];
+    },
   ): Promise<{ message: unknown }> {
     const id = this.getCompanyId(companyId);
     return this.request(
-      'POST',
+      "POST",
       `/v1/companies/${id}/conversations/${conversationId}/messages`,
-      message
+      message,
     );
   }
 
@@ -670,12 +717,12 @@ export class ApiClient {
    */
   async clearMessages(
     companyId: string | undefined,
-    conversationId: string
+    conversationId: string,
   ): Promise<{ message: string }> {
     const id = this.getCompanyId(companyId);
     return this.request<{ message: string }>(
-      'DELETE',
-      `/v1/companies/${id}/conversations/${conversationId}/messages`
+      "DELETE",
+      `/v1/companies/${id}/conversations/${conversationId}/messages`,
     );
   }
 
@@ -686,13 +733,13 @@ export class ApiClient {
     companyId: string | undefined,
     conversationId: string,
     messageId: string,
-    updates: { content?: string; sources?: unknown[] }
+    updates: { content?: string; sources?: unknown[] },
   ): Promise<{ message: unknown }> {
     const id = this.getCompanyId(companyId);
     return this.request(
-      'PATCH',
+      "PATCH",
       `/v1/companies/${id}/conversations/${conversationId}/messages/${messageId}`,
-      updates
+      updates,
     );
   }
 
@@ -703,26 +750,32 @@ export class ApiClient {
    */
   async listUsers(
     companyId: string | undefined,
-    options?: { page?: number; limit?: number }
+    options?: { page?: number; limit?: number },
   ): Promise<{ users: User[]; pagination: PaginationInfo }> {
     const id = this.getCompanyId(companyId);
     const params = new URLSearchParams();
-    if (options?.page) params.set('page', options.page.toString());
-    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.limit) params.set("limit", options.limit.toString());
 
     const query = params.toString();
     return this.request<{ users: User[]; pagination: PaginationInfo }>(
-      'GET',
-      `/v1/companies/${id}/users${query ? `?${query}` : ''}`
+      "GET",
+      `/v1/companies/${id}/users${query ? `?${query}` : ""}`,
     );
   }
 
   /**
    * Get a user by ID
    */
-  async getUser(companyId: string | undefined, userId: string): Promise<{ user: User }> {
+  async getUser(
+    companyId: string | undefined,
+    userId: string,
+  ): Promise<{ user: User }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ user: User }>('GET', `/v1/companies/${id}/users/${userId}`);
+    return this.request<{ user: User }>(
+      "GET",
+      `/v1/companies/${id}/users/${userId}`,
+    );
   }
 
   /**
@@ -730,10 +783,20 @@ export class ApiClient {
    */
   async createUser(
     companyId: string | undefined,
-    userData: { email: string; firstName: string; lastName: string; password: string; role?: string }
+    userData: {
+      email: string;
+      firstName: string;
+      lastName: string;
+      password: string;
+      role?: string;
+    },
   ): Promise<{ user: User }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ user: User }>('POST', `/v1/companies/${id}/users`, userData);
+    return this.request<{ user: User }>(
+      "POST",
+      `/v1/companies/${id}/users`,
+      userData,
+    );
   }
 
   /**
@@ -742,18 +805,33 @@ export class ApiClient {
   async updateUser(
     companyId: string | undefined,
     userId: string,
-    userData: { email?: string; firstName?: string; lastName?: string; role?: string }
+    userData: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      role?: string;
+    },
   ): Promise<{ user: User }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ user: User }>('PATCH', `/v1/companies/${id}/users/${userId}`, userData);
+    return this.request<{ user: User }>(
+      "PATCH",
+      `/v1/companies/${id}/users/${userId}`,
+      userData,
+    );
   }
 
   /**
    * Delete a user
    */
-  async deleteUser(companyId: string | undefined, userId: string): Promise<{ message: string }> {
+  async deleteUser(
+    companyId: string | undefined,
+    userId: string,
+  ): Promise<{ message: string }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ message: string }>('DELETE', `/v1/companies/${id}/users/${userId}`);
+    return this.request<{ message: string }>(
+      "DELETE",
+      `/v1/companies/${id}/users/${userId}`,
+    );
   }
 
   /**
@@ -762,12 +840,16 @@ export class ApiClient {
   async setUserActive(
     companyId: string | undefined,
     userId: string,
-    isActive: boolean
+    isActive: boolean,
   ): Promise<{ user: User }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ user: User }>('POST', `/v1/companies/${id}/users/${userId}/active`, {
-      isActive,
-    });
+    return this.request<{ user: User }>(
+      "POST",
+      `/v1/companies/${id}/users/${userId}/active`,
+      {
+        isActive,
+      },
+    );
   }
 
   // ===== COMPANY ENDPOINTS =====
@@ -775,17 +857,27 @@ export class ApiClient {
   /**
    * Get company details
    */
-  async getCompany(companyId: string | undefined): Promise<{ company: Record<string, unknown> }> {
+  async getCompany(
+    companyId: string | undefined,
+  ): Promise<{ company: Record<string, unknown> }> {
     const id = this.getCompanyId(companyId);
-    return this.request<{ company: Record<string, unknown> }>('GET', `/v1/companies/${id}`);
+    return this.request<{ company: Record<string, unknown> }>(
+      "GET",
+      `/v1/companies/${id}`,
+    );
   }
 
   /**
    * Get company statistics
    */
-  async getCompanyStats(companyId: string | undefined): Promise<Record<string, unknown>> {
+  async getCompanyStats(
+    companyId: string | undefined,
+  ): Promise<Record<string, unknown>> {
     const id = this.getCompanyId(companyId);
-    return this.request<Record<string, unknown>>('GET', `/v1/companies/${id}/stats`);
+    return this.request<Record<string, unknown>>(
+      "GET",
+      `/v1/companies/${id}/stats`,
+    );
   }
 
   /**
@@ -793,35 +885,48 @@ export class ApiClient {
    */
   async getCompanyVectors(
     companyId: string | undefined,
-    options?: { page?: number; limit?: number }
-  ): Promise<{ embeddings: unknown[]; total: number; page: number; totalPages: number }> {
+    options?: { page?: number; limit?: number },
+  ): Promise<{
+    embeddings: unknown[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
     const id = this.getCompanyId(companyId);
     const params = new URLSearchParams();
-    if (options?.page) params.set('page', options.page.toString());
-    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.limit) params.set("limit", options.limit.toString());
 
     const query = params.toString();
-    return this.request('GET', `/v1/companies/${id}/vectors${query ? `?${query}` : ''}`);
+    return this.request(
+      "GET",
+      `/v1/companies/${id}/vectors${query ? `?${query}` : ""}`,
+    );
   }
 
   /**
    * Trigger consistency check
    */
-  async triggerConsistencyCheck(
-    companyId?: string
-  ): Promise<{ message: string; jobId: string; companyId: string; statusUrl: string }> {
+  async triggerConsistencyCheck(companyId?: string): Promise<{
+    message: string;
+    jobId: string;
+    companyId: string;
+    statusUrl: string;
+  }> {
     const id = companyId || this.getCompanyId(companyId);
     const path = `/v1/companies/${id}/consistency-check`;
-    return this.request('POST', path);
+    return this.request("POST", path);
   }
 
   /**
    * Clear cache
    */
-  async clearCache(companyId?: string): Promise<{ message: string; keysDeleted: number }> {
+  async clearCache(
+    companyId?: string,
+  ): Promise<{ message: string; keysDeleted: number }> {
     const id = companyId || this.getCompanyId(companyId);
     const path = `/v1/companies/${id}/cache`;
-    return this.request('DELETE', path);
+    return this.request("DELETE", path);
   }
 
   // ===== JOB ENDPOINTS =====
@@ -829,19 +934,27 @@ export class ApiClient {
   /**
    * Get job status
    */
-  async getJobStatus(
-    jobId: string
-  ): Promise<{ id: string; state: string; progress: number; result?: unknown; reason?: string }> {
-    return this.request('GET', `/v1/jobs/${jobId}`);
+  async getJobStatus(jobId: string): Promise<{
+    id: string;
+    state: string;
+    progress: number;
+    result?: unknown;
+    reason?: string;
+  }> {
+    return this.request("GET", `/v1/jobs/${jobId}`);
   }
 
   /**
    * Get consistency check job status
    */
-  async getConsistencyCheckJobStatus(
-    jobId: string
-  ): Promise<{ id: string; state: string; progress: number; result?: unknown; reason?: string }> {
-    return this.request('GET', `/v1/jobs/consistency/${jobId}`);
+  async getConsistencyCheckJobStatus(jobId: string): Promise<{
+    id: string;
+    state: string;
+    progress: number;
+    result?: unknown;
+    reason?: string;
+  }> {
+    return this.request("GET", `/v1/jobs/consistency/${jobId}`);
   }
 
   // ===== HEALTH ENDPOINTS =====

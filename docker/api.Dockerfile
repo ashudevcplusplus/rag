@@ -16,6 +16,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+COPY .npmrc ./
 
 # Copy package.json files for all workspace packages
 COPY api/package.json ./api/
@@ -31,7 +32,18 @@ RUN pnpm install --ignore-scripts
 
 # Copy source files
 COPY api/src/ ./api/src/
-COPY packages/ ./packages/
+
+# Copy package source files (not entire directory to preserve node_modules symlinks)
+COPY packages/text-utils/src/ ./packages/text-utils/src/
+COPY packages/text-utils/tsconfig.json ./packages/text-utils/
+COPY packages/types/src/ ./packages/types/src/
+COPY packages/types/tsconfig.json ./packages/types/
+COPY packages/utils/src/ ./packages/utils/src/
+COPY packages/utils/tsconfig.json ./packages/utils/
+COPY packages/api-client/src/ ./packages/api-client/src/
+COPY packages/api-client/tsconfig.json ./packages/api-client/
+COPY packages/ui/src/ ./packages/ui/src/
+COPY packages/ui/tsconfig.json ./packages/ui/
 
 # Build text-utils package (required - exports from ./dist/index.js)
 WORKDIR /app/packages/text-utils

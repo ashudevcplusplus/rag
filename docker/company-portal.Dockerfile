@@ -15,6 +15,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml ./
 COPY pnpm-lock.yaml ./
 COPY package.json ./
+COPY .npmrc ./
 
 # Copy package.json files for company-portal and its dependencies
 COPY apps/company-portal/package.json ./apps/company-portal/
@@ -37,7 +38,16 @@ RUN pnpm install
 COPY apps/company-portal/src/ ./apps/company-portal/src/
 COPY apps/company-portal/index.html ./apps/company-portal/
 COPY apps/company-portal/public/ ./apps/company-portal/public/
-COPY packages/ ./packages/
+
+# Copy package source files (not entire directory to preserve node_modules symlinks)
+COPY packages/types/src/ ./packages/types/src/
+COPY packages/types/tsconfig.json ./packages/types/
+COPY packages/utils/src/ ./packages/utils/src/
+COPY packages/utils/tsconfig.json ./packages/utils/
+COPY packages/api-client/src/ ./packages/api-client/src/
+COPY packages/api-client/tsconfig.json ./packages/api-client/
+COPY packages/ui/src/ ./packages/ui/src/
+COPY packages/ui/tsconfig.json ./packages/ui/
 
 WORKDIR /app/apps/company-portal
 

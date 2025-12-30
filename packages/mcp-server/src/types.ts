@@ -41,7 +41,7 @@ export interface LoginResponse {
 /**
  * Chat message role
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = "user" | "assistant" | "system";
 
 /**
  * Chat message structure
@@ -55,12 +55,12 @@ export interface ChatMessage {
  * Prompt template types
  */
 export type PromptTemplateType =
-  | 'customer_support'
-  | 'sales_assistant'
-  | 'technical_support'
-  | 'onboarding_assistant'
-  | 'faq_concise'
-  | 'ecommerce_assistant';
+  | "customer_support"
+  | "sales_assistant"
+  | "technical_support"
+  | "onboarding_assistant"
+  | "faq_concise"
+  | "ecommerce_assistant";
 
 /**
  * Chat request parameters
@@ -77,8 +77,8 @@ export interface ChatRequest {
     fileId?: string;
     fileIds?: string[];
   };
-  llmProvider?: 'openai' | 'gemini';
-  embeddingProvider?: 'openai' | 'gemini';
+  llmProvider?: "openai" | "gemini";
+  embeddingProvider?: "openai" | "gemini";
   maxTokens?: number;
   temperature?: number;
   includeSources?: boolean;
@@ -110,7 +110,7 @@ export interface ChatResponse {
     totalTokens: number;
   };
   model: string;
-  provider: 'openai' | 'gemini';
+  provider: "openai" | "gemini";
 }
 
 // ===== ChatV2 Types =====
@@ -118,20 +118,20 @@ export interface ChatResponse {
 /**
  * Search mode for ChatV2
  */
-export type SearchMode = 'smart' | 'fast' | 'deep';
+export type SearchMode = "smart" | "fast" | "deep";
 
 /**
  * Response format for ChatV2
  */
-export type ResponseFormat = 'text' | 'markdown' | 'structured';
+export type ResponseFormat = "text" | "markdown" | "structured";
 
 /**
  * Extended prompt template types for V2
  */
 export type PromptTemplateTypeV2 =
   | PromptTemplateType
-  | 'research_assistant'
-  | 'code_assistant';
+  | "research_assistant"
+  | "code_assistant";
 
 /**
  * ChatV2 request parameters
@@ -161,8 +161,8 @@ export interface ChatV2Request {
   };
 
   // LLM settings
-  llmProvider?: 'openai' | 'gemini';
-  embeddingProvider?: 'openai' | 'gemini';
+  llmProvider?: "openai" | "gemini";
+  embeddingProvider?: "openai" | "gemini";
   maxTokens?: number;
   temperature?: number;
 
@@ -210,7 +210,7 @@ export interface ChatV2Response {
     totalTokens: number;
   };
   model: string;
-  provider: 'openai' | 'gemini';
+  provider: "openai" | "gemini";
   searchMode: SearchMode;
   processingTime?: number;
 }
@@ -223,7 +223,7 @@ export interface SearchRequest {
   limit?: number;
   filter?: Record<string, unknown>;
   rerank?: boolean;
-  embeddingProvider?: 'openai' | 'gemini';
+  embeddingProvider?: "openai" | "gemini";
 }
 
 /**
@@ -245,7 +245,7 @@ export interface SearchResult {
 }
 
 // Import enums from shared types package for use in this file
-import { Visibility, ProjectStatus, UserRole } from '@rag/types';
+import { Visibility, ProjectStatus, UserRole } from "@rag/types";
 
 // Re-export for external use
 export { Visibility, ProjectStatus, UserRole };
@@ -314,7 +314,7 @@ export interface FileMetadata {
   filename: string;
   mimetype: string;
   size: number;
-  processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  processingStatus: "pending" | "processing" | "completed" | "failed";
   chunkCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -338,7 +338,7 @@ export interface Conversation {
  */
 export interface ConversationMessage {
   _id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   sources?: ChatSource[];
   createdAt: string;
@@ -384,6 +384,6 @@ export interface ApiResponse<T> {
  */
 export interface AuthState {
   token: string;
-  user: LoginResponse['user'];
+  user: LoginResponse["user"];
   companyId: string;
 }
