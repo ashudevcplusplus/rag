@@ -1,7 +1,5 @@
 import type {
   MCPServerConfig,
-  ChatRequest,
-  ChatResponse,
   ChatV2Request,
   ChatV2Response,
   SearchRequest,
@@ -217,94 +215,15 @@ export class ApiClient {
 
   /**
    * Send a chat message and get an AI-generated response with RAG context
-   */
-  async chat(companyId: string | undefined, request: ChatRequest): Promise<ChatResponse> {
-    const id = this.getCompanyId(companyId);
-    return this.request<ChatResponse>('POST', `/v1/companies/${id}/chat`, request);
-  }
-
-  /**
-   * ChatV2 - Enhanced chat with search modes, follow-ups, and confidence scoring
+   * Uses Smart Agent with search modes, follow-ups, and confidence scoring
    */
   async chatV2(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
     const id = this.getCompanyId(companyId);
-    return this.request<ChatV2Response>('POST', `/v1/companies/${id}/chat/v2`, request);
+    return this.request<ChatV2Response>('POST', `/v1/companies/${id}/chat`, request);
   }
 
   /**
    * Chat with streaming (buffered response)
-   * Note: Buffers the entire stream and returns the complete response
-   */
-  async chatStream(companyId: string | undefined, request: ChatRequest): Promise<ChatResponse> {
-    const id = this.getCompanyId(companyId);
-    if (!this.authState?.token) {
-      throw new Error('Not authenticated. Please login first.');
-    }
-
-    const url = `${this.baseUrl}/v1/companies/${id}/chat/stream`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.authState.token}`,
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API Error (${response.status}): ${errorText}`);
-    }
-
-    // Buffer the entire SSE stream
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let bufferedData = '';
-    let finalResponse: ChatResponse | null = null;
-
-    if (!reader) {
-      throw new Error('No response body available');
-    }
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        bufferedData += decoder.decode(value, { stream: true });
-        const lines = bufferedData.split('\n');
-        bufferedData = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            
-            try {
-              const parsed = JSON.parse(data);
-              // Keep updating with the latest complete response
-              if (parsed.answer || parsed.sources) {
-                finalResponse = parsed as ChatResponse;
-              }
-            } catch (e) {
-              // Skip malformed JSON
-            }
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-
-    if (!finalResponse) {
-      throw new Error('No valid response received from stream');
-    }
-
-    return finalResponse;
-  }
-
-  /**
-   * ChatV2 with streaming (buffered response)
    * Note: Buffers the entire stream and returns the complete response
    */
   async chatV2Stream(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
@@ -313,7 +232,7 @@ export class ApiClient {
       throw new Error('Not authenticated. Please login first.');
     }
 
-    const url = `${this.baseUrl}/v1/companies/${id}/chat/v2/stream`;
+    const url = `${this.baseUrl}/v1/companies/${id}/chat/stream`;
     const response = await fetch(url, {
       method: 'POST',
       headers: {

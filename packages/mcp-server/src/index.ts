@@ -57,61 +57,7 @@ const tools: Tool[] = [
   {
     name: 'rag_chat',
     description:
-      'Send a message to the Smart Agent RAG-powered chat endpoint. Uses intelligent query planning, multi-query search, and context expansion for better answers. Users don\'t need to know file names - just ask questions naturally. Supports conversation history, system prompts, and various configuration options.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
-        projectId: { type: 'string', description: 'Project ID (required) - all chat operations must be scoped to a project' },
-        query: { type: 'string', description: 'The question or message to send' },
-        messages: {
-          type: 'array',
-          description: 'Conversation history for multi-turn chat',
-          items: {
-            type: 'object',
-            properties: {
-              role: { type: 'string', enum: ['user', 'assistant', 'system'] },
-              content: { type: 'string' },
-            },
-            required: ['role', 'content'],
-          },
-        },
-        promptTemplate: {
-          type: 'string',
-          enum: [
-            'customer_support',
-            'sales_assistant',
-            'technical_support',
-            'onboarding_assistant',
-            'faq_concise',
-            'ecommerce_assistant',
-          ],
-          description: 'Predefined prompt template to use',
-        },
-        systemPrompt: { type: 'string', description: 'Custom system prompt (overrides template)' },
-        limit: { type: 'number', description: 'Number of context chunks to retrieve (1-50)', default: 5 },
-        rerank: { type: 'boolean', description: 'Whether to rerank results', default: true },
-        filter: {
-          type: 'object',
-          description: 'Additional filters for RAG search (fileId or fileIds)',
-          properties: {
-            fileId: { type: 'string' },
-            fileIds: { type: 'array', items: { type: 'string' } },
-          },
-        },
-        llmProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'LLM provider' },
-        embeddingProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'Embedding provider' },
-        maxTokens: { type: 'number', description: 'Max tokens for response (100-4096)' },
-        temperature: { type: 'number', description: 'LLM temperature (0-2)' },
-        includeSources: { type: 'boolean', description: 'Include source documents', default: true },
-      },
-      required: ['projectId', 'query'],
-    },
-  },
-  {
-    name: 'rag_chat_v2',
-    description:
-      'ChatV2 - Enhanced RAG-powered chat with multiple search modes, confidence scoring, and suggested follow-ups. Features: smart/fast/deep search modes, response format options, query analysis, and processing time metrics.',
+      'Send a message to the Smart Agent RAG-powered chat endpoint. Uses intelligent query planning, multi-query search, and context expansion for better answers. Features: smart/fast/deep search modes, response format options, query analysis, confidence scoring, and suggested follow-ups.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -186,60 +132,6 @@ const tools: Tool[] = [
     name: 'rag_chat_stream',
     description:
       'Chat with streaming response (buffered). Streams the response from the API and returns the complete result. Note: Due to MCP limitations, the entire stream is buffered and returned once complete rather than streamed incrementally.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
-        projectId: { type: 'string', description: 'Project ID (required) - all chat operations must be scoped to a project' },
-        query: { type: 'string', description: 'The question or message to send' },
-        messages: {
-          type: 'array',
-          description: 'Conversation history for multi-turn chat',
-          items: {
-            type: 'object',
-            properties: {
-              role: { type: 'string', enum: ['user', 'assistant', 'system'] },
-              content: { type: 'string' },
-            },
-            required: ['role', 'content'],
-          },
-        },
-        promptTemplate: {
-          type: 'string',
-          enum: [
-            'customer_support',
-            'sales_assistant',
-            'technical_support',
-            'onboarding_assistant',
-            'faq_concise',
-            'ecommerce_assistant',
-          ],
-          description: 'Predefined prompt template to use',
-        },
-        systemPrompt: { type: 'string', description: 'Custom system prompt (overrides template)' },
-        limit: { type: 'number', description: 'Number of context chunks to retrieve (1-50)', default: 5 },
-        rerank: { type: 'boolean', description: 'Whether to rerank results', default: true },
-        filter: {
-          type: 'object',
-          description: 'Additional filters for RAG search (fileId or fileIds)',
-          properties: {
-            fileId: { type: 'string' },
-            fileIds: { type: 'array', items: { type: 'string' } },
-          },
-        },
-        llmProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'LLM provider' },
-        embeddingProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'Embedding provider' },
-        maxTokens: { type: 'number', description: 'Max tokens for response (100-4096)' },
-        temperature: { type: 'number', description: 'LLM temperature (0-2)' },
-        includeSources: { type: 'boolean', description: 'Include source documents', default: true },
-      },
-      required: ['projectId', 'query'],
-    },
-  },
-  {
-    name: 'rag_chat_v2_stream',
-    description:
-      'ChatV2 with streaming response (buffered). Streams the enhanced chat response and returns the complete result. Note: Due to MCP limitations, the entire stream is buffered and returned once complete rather than streamed incrementally.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -862,31 +754,6 @@ async function handleToolCall(
 
       // Chat & Search
       case 'rag_chat':
-        result = await apiClient.chat(args.companyId as string | undefined, {
-          projectId: args.projectId as string,
-          query: args.query as string,
-          messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
-          promptTemplate: args.promptTemplate as
-            | 'customer_support'
-            | 'sales_assistant'
-            | 'technical_support'
-            | 'onboarding_assistant'
-            | 'faq_concise'
-            | 'ecommerce_assistant'
-            | undefined,
-          systemPrompt: args.systemPrompt as string | undefined,
-          limit: args.limit as number | undefined,
-          rerank: args.rerank as boolean | undefined,
-          filter: args.filter as { fileId?: string; fileIds?: string[] } | undefined,
-          llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
-          embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
-          maxTokens: args.maxTokens as number | undefined,
-          temperature: args.temperature as number | undefined,
-          includeSources: args.includeSources as boolean | undefined,
-        });
-        break;
-
-      case 'rag_chat_v2':
         result = await apiClient.chatV2(args.companyId as string | undefined, {
           projectId: args.projectId as string,
           query: args.query as string,
@@ -935,31 +802,6 @@ async function handleToolCall(
         break;
 
       case 'rag_chat_stream':
-        result = await apiClient.chatStream(args.companyId as string | undefined, {
-          projectId: args.projectId as string,
-          query: args.query as string,
-          messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
-          promptTemplate: args.promptTemplate as
-            | 'customer_support'
-            | 'sales_assistant'
-            | 'technical_support'
-            | 'onboarding_assistant'
-            | 'faq_concise'
-            | 'ecommerce_assistant'
-            | undefined,
-          systemPrompt: args.systemPrompt as string | undefined,
-          limit: args.limit as number | undefined,
-          rerank: args.rerank as boolean | undefined,
-          filter: args.filter as { fileId?: string; fileIds?: string[] } | undefined,
-          llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
-          embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
-          maxTokens: args.maxTokens as number | undefined,
-          temperature: args.temperature as number | undefined,
-          includeSources: args.includeSources as boolean | undefined,
-        });
-        break;
-
-      case 'rag_chat_v2_stream':
         result = await apiClient.chatV2Stream(args.companyId as string | undefined, {
           projectId: args.projectId as string,
           query: args.query as string,

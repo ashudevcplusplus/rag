@@ -5,11 +5,11 @@ import { searchLimiter } from '../middleware/rate-limiter.middleware';
 const router = Router({ mergeParams: true });
 
 /**
- * POST /v1/companies/:companyId/chat/v2
+ * POST /v1/companies/:companyId/chat
  *
- * ChatV2 - Enhanced RAG-powered chat endpoint with advanced features.
+ * RAG-powered chat endpoint with Smart Agent features.
  *
- * New Features over V1:
+ * Features:
  * - Multiple search modes for different use cases
  * - Response format options
  * - Query analysis and reasoning
@@ -82,14 +82,14 @@ const router = Router({ mergeParams: true });
  * Example Usage:
  * ```javascript
  * // Smart mode (default) - balanced performance
- * POST /v1/companies/:companyId/chat/v2
+ * POST /v1/companies/:companyId/chat
  * {
  *   "query": "What is the refund policy?",
  *   "projectId": "proj_123abc"
  * }
  *
  * // Fast mode - lowest latency
- * POST /v1/companies/:companyId/chat/v2
+ * POST /v1/companies/:companyId/chat
  * {
  *   "query": "Quick question?",
  *   "projectId": "proj_123abc",
@@ -97,7 +97,7 @@ const router = Router({ mergeParams: true });
  * }
  *
  * // Deep mode - highest quality for complex questions
- * POST /v1/companies/:companyId/chat/v2
+ * POST /v1/companies/:companyId/chat
  * {
  *   "query": "Compare all security features across products",
  *   "projectId": "proj_123abc",
@@ -110,15 +110,15 @@ const router = Router({ mergeParams: true });
 router.post('/', searchLimiter, chatV2);
 
 /**
- * POST /v1/companies/:companyId/chat/v2/stream
+ * POST /v1/companies/:companyId/chat/stream
  *
- * Dedicated streaming endpoint for ChatV2.
+ * Dedicated streaming endpoint for chat.
  * Always returns SSE stream regardless of the `stream` parameter.
  *
  * Request body:
  * - query: string (required) - The user's question
  * - projectId: string (required) - Project ID to search within
- * - (other options same as /chat/v2)
+ * - (other options same as /chat)
  *
  * SSE Events:
  * - analysis: Query analysis results
@@ -131,7 +131,7 @@ router.post('/', searchLimiter, chatV2);
  *
  * Example client usage:
  * ```javascript
- * const response = await fetch('/v1/companies/:companyId/chat/v2/stream', {
+ * const response = await fetch('/v1/companies/:companyId/chat/stream', {
  *   method: 'POST',
  *   headers: { 'Content-Type': 'application/json' },
  *   body: JSON.stringify({

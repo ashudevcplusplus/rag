@@ -33,7 +33,7 @@ jest.mock('../../../src/routes/user.routes', () => {
   return { __esModule: true, default: r };
 });
 
-jest.mock('../../../src/routes/chat.routes', () => {
+jest.mock('../../../src/routes/chat-v2.routes', () => {
   const r = Router({ mergeParams: true });
   r.post('/', (_req, res) => res.json({ subroute: 'chat' }));
   return { __esModule: true, default: r };
