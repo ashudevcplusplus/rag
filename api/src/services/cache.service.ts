@@ -110,6 +110,32 @@ export class CacheService {
   }
 
   /**
+   * Delete a specific cache key
+   *
+   * Used for cache invalidation when data changes:
+   * - File upload: invalidate `project-files:{projectId}`
+   * - File deletion: invalidate `project-files:{projectId}`
+   * - Query cache: auto-expires after 1 hour
+   *
+   * @param key - Cache key to delete
+   *
+   * @example
+   * ```typescript
+   * // Invalidate project files cache after upload
+   * await CacheService.del(`project-files:${projectId}`);
+   * ```
+   */
+  static async del(key: string): Promise<void> {
+    try {
+      await redis.del(key);
+      logger.debug('Cache deleted', { key });
+    } catch (error) {
+      logger.warn('Cache delete failed', { key, error });
+      // Don't throw - cache operations are non-critical
+    }
+  }
+
+  /**
    * Invalidate all cache for a specific company (use after new uploads)
    */
   static async invalidateCompany(companyId: string): Promise<void> {

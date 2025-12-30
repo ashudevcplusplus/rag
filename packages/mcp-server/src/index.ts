@@ -44,6 +44,14 @@ const tools: Tool[] = [
       properties: {},
     },
   },
+  {
+    name: 'auth_me',
+    description: 'Get current authenticated user information from the API.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
 
   // ===== CHAT & SEARCH TOOLS =====
   {
@@ -54,6 +62,7 @@ const tools: Tool[] = [
       type: 'object',
       properties: {
         companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        projectId: { type: 'string', description: 'Project ID (required) - all chat operations must be scoped to a project' },
         query: { type: 'string', description: 'The question or message to send' },
         messages: {
           type: 'array',
@@ -84,11 +93,10 @@ const tools: Tool[] = [
         rerank: { type: 'boolean', description: 'Whether to rerank results', default: true },
         filter: {
           type: 'object',
-          description: 'Filter for RAG search',
+          description: 'Additional filters for RAG search (fileId or fileIds)',
           properties: {
             fileId: { type: 'string' },
             fileIds: { type: 'array', items: { type: 'string' } },
-            projectId: { type: 'string' },
           },
         },
         llmProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'LLM provider' },
@@ -98,7 +106,7 @@ const tools: Tool[] = [
         includeSources: { type: 'boolean', description: 'Include source documents', default: true },
         useLegacyChat: { type: 'boolean', description: 'Use legacy chat service instead of Smart Agent (default: false, uses Smart Agent)', default: false },
       },
-      required: ['query'],
+      required: ['projectId', 'query'],
     },
   },
   {
@@ -109,6 +117,7 @@ const tools: Tool[] = [
       type: 'object',
       properties: {
         companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        projectId: { type: 'string', description: 'Project ID (required) - all chat operations must be scoped to a project' },
         query: { type: 'string', description: 'The question or message to send' },
         messages: {
           type: 'array',
@@ -157,12 +166,10 @@ const tools: Tool[] = [
         rerank: { type: 'boolean', description: 'Rerank results', default: true },
         filter: {
           type: 'object',
-          description: 'Filter for RAG search',
+          description: 'Additional filters for RAG search (fileId, fileIds, or tags)',
           properties: {
             fileId: { type: 'string' },
             fileIds: { type: 'array', items: { type: 'string' } },
-            projectId: { type: 'string' },
-            projectIds: { type: 'array', items: { type: 'string' } },
             tags: { type: 'array', items: { type: 'string' } },
           },
         },
@@ -173,7 +180,135 @@ const tools: Tool[] = [
         includeSources: { type: 'boolean', description: 'Include sources', default: true },
         includeMetadata: { type: 'boolean', description: 'Include detailed metadata and follow-ups', default: false },
       },
-      required: ['query'],
+      required: ['projectId', 'query'],
+    },
+  },
+  {
+    name: 'rag_chat_stream',
+    description:
+      'Chat with streaming response (buffered). Streams the response from the API and returns the complete result. Note: Due to MCP limitations, the entire stream is buffered and returned once complete rather than streamed incrementally.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        projectId: { type: 'string', description: 'Project ID (required) - all chat operations must be scoped to a project' },
+        query: { type: 'string', description: 'The question or message to send' },
+        messages: {
+          type: 'array',
+          description: 'Conversation history for multi-turn chat',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string', enum: ['user', 'assistant', 'system'] },
+              content: { type: 'string' },
+            },
+            required: ['role', 'content'],
+          },
+        },
+        promptTemplate: {
+          type: 'string',
+          enum: [
+            'customer_support',
+            'sales_assistant',
+            'technical_support',
+            'onboarding_assistant',
+            'faq_concise',
+            'ecommerce_assistant',
+          ],
+          description: 'Predefined prompt template to use',
+        },
+        systemPrompt: { type: 'string', description: 'Custom system prompt (overrides template)' },
+        limit: { type: 'number', description: 'Number of context chunks to retrieve (1-50)', default: 5 },
+        rerank: { type: 'boolean', description: 'Whether to rerank results', default: true },
+        filter: {
+          type: 'object',
+          description: 'Additional filters for RAG search (fileId or fileIds)',
+          properties: {
+            fileId: { type: 'string' },
+            fileIds: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        llmProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'LLM provider' },
+        embeddingProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'Embedding provider' },
+        maxTokens: { type: 'number', description: 'Max tokens for response (100-4096)' },
+        temperature: { type: 'number', description: 'LLM temperature (0-2)' },
+        includeSources: { type: 'boolean', description: 'Include source documents', default: true },
+      },
+      required: ['projectId', 'query'],
+    },
+  },
+  {
+    name: 'rag_chat_v2_stream',
+    description:
+      'ChatV2 with streaming response (buffered). Streams the enhanced chat response and returns the complete result. Note: Due to MCP limitations, the entire stream is buffered and returned once complete rather than streamed incrementally.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID (uses authenticated user\'s company if not provided)' },
+        projectId: { type: 'string', description: 'Project ID (required) - all chat operations must be scoped to a project' },
+        query: { type: 'string', description: 'The question or message to send' },
+        messages: {
+          type: 'array',
+          description: 'Conversation history for multi-turn chat',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string', enum: ['user', 'assistant', 'system'] },
+              content: { type: 'string' },
+            },
+            required: ['role', 'content'],
+          },
+        },
+        searchMode: {
+          type: 'string',
+          enum: ['smart', 'fast', 'deep'],
+          description: 'Search mode: smart (balanced, default), fast (lowest latency), deep (highest quality)',
+          default: 'smart',
+        },
+        responseFormat: {
+          type: 'string',
+          enum: ['text', 'markdown', 'structured'],
+          description: 'Response format',
+          default: 'markdown',
+        },
+        includeReasoning: { type: 'boolean', description: 'Include thinking/reasoning process', default: false },
+        language: { type: 'string', description: 'ISO 639-1 language code for response' },
+        maxCitations: { type: 'number', description: 'Max sources to cite (1-20)', default: 5 },
+        expandContext: { type: 'boolean', description: 'Enable context expansion', default: true },
+        promptTemplate: {
+          type: 'string',
+          enum: [
+            'customer_support',
+            'sales_assistant',
+            'technical_support',
+            'onboarding_assistant',
+            'faq_concise',
+            'ecommerce_assistant',
+            'research_assistant',
+            'code_assistant',
+          ],
+          description: 'Predefined prompt template',
+        },
+        systemPrompt: { type: 'string', description: 'Custom system prompt (overrides template)' },
+        limit: { type: 'number', description: 'Number of context chunks (1-50)', default: 10 },
+        rerank: { type: 'boolean', description: 'Rerank results', default: true },
+        filter: {
+          type: 'object',
+          description: 'Additional filters for RAG search (fileId, fileIds, or tags)',
+          properties: {
+            fileId: { type: 'string' },
+            fileIds: { type: 'array', items: { type: 'string' } },
+            tags: { type: 'array', items: { type: 'string' } },
+          },
+        },
+        llmProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'LLM provider' },
+        embeddingProvider: { type: 'string', enum: ['openai', 'gemini'], description: 'Embedding provider' },
+        maxTokens: { type: 'number', description: 'Max tokens (100-8192)' },
+        temperature: { type: 'number', description: 'LLM temperature (0-2)' },
+        includeSources: { type: 'boolean', description: 'Include sources', default: true },
+        includeMetadata: { type: 'boolean', description: 'Include detailed metadata and follow-ups', default: false },
+      },
+      required: ['projectId', 'query'],
     },
   },
   {
@@ -365,6 +500,32 @@ const tools: Tool[] = [
     },
   },
   {
+    name: 'file_download',
+    description: 'Download a file from a project. Returns download URL or file content.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID' },
+        projectId: { type: 'string', description: 'Project ID' },
+        fileId: { type: 'string', description: 'File ID to download' },
+      },
+      required: ['projectId', 'fileId'],
+    },
+  },
+  {
+    name: 'file_upload',
+    description: 'Upload files to a project. Note: File upload requires multipart/form-data which may not be fully supported in all MCP clients. Use the API directly for reliable file uploads.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID' },
+        projectId: { type: 'string', description: 'Project ID to upload files to' },
+        filePaths: { type: 'array', items: { type: 'string' }, description: 'Array of local file paths to upload' },
+      },
+      required: ['projectId', 'filePaths'],
+    },
+  },
+  {
     name: 'indexing_stats',
     description: 'Get indexing statistics for a project.',
     inputSchema: {
@@ -477,6 +638,21 @@ const tools: Tool[] = [
         conversationId: { type: 'string', description: 'Conversation ID' },
       },
       required: ['conversationId'],
+    },
+  },
+  {
+    name: 'conversation_update_message',
+    description: 'Update a specific message in a conversation (useful for streaming updates).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        companyId: { type: 'string', description: 'Company ID' },
+        conversationId: { type: 'string', description: 'Conversation ID' },
+        messageId: { type: 'string', description: 'Message ID to update' },
+        content: { type: 'string', description: 'Updated message content' },
+        sources: { type: 'array', description: 'Updated sources for assistant messages' },
+      },
+      required: ['conversationId', 'messageId'],
     },
   },
 
@@ -630,6 +806,17 @@ const tools: Tool[] = [
     },
   },
   {
+    name: 'job_consistency_status',
+    description: 'Get the status of a consistency check background job.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        jobId: { type: 'string', description: 'Consistency check job ID' },
+      },
+      required: ['jobId'],
+    },
+  },
+  {
     name: 'health_check',
     description: 'Check if the API is healthy and responding.',
     inputSchema: {
@@ -670,9 +857,14 @@ async function handleToolCall(
           : { authenticated: false, message: 'Not logged in. Use auth_login to authenticate.' };
         break;
 
+      case 'auth_me':
+        result = await apiClient.getCurrentUserFromApi();
+        break;
+
       // Chat & Search
       case 'rag_chat':
         result = await apiClient.chat(args.companyId as string | undefined, {
+          projectId: args.projectId as string,
           query: args.query as string,
           messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
           promptTemplate: args.promptTemplate as
@@ -686,7 +878,7 @@ async function handleToolCall(
           systemPrompt: args.systemPrompt as string | undefined,
           limit: args.limit as number | undefined,
           rerank: args.rerank as boolean | undefined,
-          filter: args.filter as { fileId?: string; fileIds?: string[]; projectId?: string } | undefined,
+          filter: args.filter as { fileId?: string; fileIds?: string[] } | undefined,
           llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
           embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
           maxTokens: args.maxTokens as number | undefined,
@@ -698,6 +890,7 @@ async function handleToolCall(
 
       case 'rag_chat_v2':
         result = await apiClient.chatV2(args.companyId as string | undefined, {
+          projectId: args.projectId as string,
           query: args.query as string,
           messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
           searchMode: args.searchMode as 'smart' | 'fast' | 'deep' | undefined,
@@ -722,8 +915,6 @@ async function handleToolCall(
           filter: args.filter as {
             fileId?: string;
             fileIds?: string[];
-            projectId?: string;
-            projectIds?: string[];
             tags?: string[];
           } | undefined,
           llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
@@ -742,6 +933,69 @@ async function handleToolCall(
           filter: args.filter as Record<string, unknown> | undefined,
           rerank: args.rerank as boolean | undefined,
           embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
+        });
+        break;
+
+      case 'rag_chat_stream':
+        result = await apiClient.chatStream(args.companyId as string | undefined, {
+          projectId: args.projectId as string,
+          query: args.query as string,
+          messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+          promptTemplate: args.promptTemplate as
+            | 'customer_support'
+            | 'sales_assistant'
+            | 'technical_support'
+            | 'onboarding_assistant'
+            | 'faq_concise'
+            | 'ecommerce_assistant'
+            | undefined,
+          systemPrompt: args.systemPrompt as string | undefined,
+          limit: args.limit as number | undefined,
+          rerank: args.rerank as boolean | undefined,
+          filter: args.filter as { fileId?: string; fileIds?: string[] } | undefined,
+          llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
+          embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
+          maxTokens: args.maxTokens as number | undefined,
+          temperature: args.temperature as number | undefined,
+          includeSources: args.includeSources as boolean | undefined,
+        });
+        break;
+
+      case 'rag_chat_v2_stream':
+        result = await apiClient.chatV2Stream(args.companyId as string | undefined, {
+          projectId: args.projectId as string,
+          query: args.query as string,
+          messages: args.messages as Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+          searchMode: args.searchMode as 'smart' | 'fast' | 'deep' | undefined,
+          responseFormat: args.responseFormat as 'text' | 'markdown' | 'structured' | undefined,
+          includeReasoning: args.includeReasoning as boolean | undefined,
+          language: args.language as string | undefined,
+          maxCitations: args.maxCitations as number | undefined,
+          expandContext: args.expandContext as boolean | undefined,
+          promptTemplate: args.promptTemplate as
+            | 'customer_support'
+            | 'sales_assistant'
+            | 'technical_support'
+            | 'onboarding_assistant'
+            | 'faq_concise'
+            | 'ecommerce_assistant'
+            | 'research_assistant'
+            | 'code_assistant'
+            | undefined,
+          systemPrompt: args.systemPrompt as string | undefined,
+          limit: args.limit as number | undefined,
+          rerank: args.rerank as boolean | undefined,
+          filter: args.filter as {
+            fileId?: string;
+            fileIds?: string[];
+            tags?: string[];
+          } | undefined,
+          llmProvider: args.llmProvider as 'openai' | 'gemini' | undefined,
+          embeddingProvider: args.embeddingProvider as 'openai' | 'gemini' | undefined,
+          maxTokens: args.maxTokens as number | undefined,
+          temperature: args.temperature as number | undefined,
+          includeSources: args.includeSources as boolean | undefined,
+          includeMetadata: args.includeMetadata as boolean | undefined,
         });
         break;
 
@@ -852,6 +1106,22 @@ async function handleToolCall(
         result = await apiClient.bulkReindexFailed(args.companyId as string | undefined, args.projectId as string);
         break;
 
+      case 'file_download':
+        result = await apiClient.downloadFile(
+          args.companyId as string | undefined,
+          args.projectId as string,
+          args.fileId as string
+        );
+        break;
+
+      case 'file_upload':
+        result = await apiClient.uploadFiles(
+          args.companyId as string | undefined,
+          args.projectId as string,
+          args.filePaths as string[]
+        );
+        break;
+
       // Conversations
       case 'conversation_list':
         result = await apiClient.listConversations(args.companyId as string | undefined, {
@@ -906,6 +1176,18 @@ async function handleToolCall(
         result = await apiClient.clearMessages(
           args.companyId as string | undefined,
           args.conversationId as string
+        );
+        break;
+
+      case 'conversation_update_message':
+        result = await apiClient.updateMessage(
+          args.companyId as string | undefined,
+          args.conversationId as string,
+          args.messageId as string,
+          {
+            content: args.content as string | undefined,
+            sources: args.sources as unknown[] | undefined,
+          }
         );
         break;
 
@@ -983,6 +1265,10 @@ async function handleToolCall(
 
       case 'job_status':
         result = await apiClient.getJobStatus(args.jobId as string);
+        break;
+
+      case 'job_consistency_status':
+        result = await apiClient.getConsistencyCheckJobStatus(args.jobId as string);
         break;
 
       case 'health_check':

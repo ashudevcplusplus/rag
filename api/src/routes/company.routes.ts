@@ -26,8 +26,9 @@ router.use('/:companyId', companyRateLimiter as RequestHandler);
 // Mount sub-routes
 router.use('/:companyId/projects', projectRoutes);
 router.use('/:companyId/users', userRoutes);
+// IMPORTANT: Mount more specific routes first to avoid conflicts
+router.use('/:companyId/chat/v2', chatV2Routes); // Must come before /chat
 router.use('/:companyId/chat', chatRoutes);
-router.use('/:companyId/chat/v2', chatV2Routes);
 router.use('/:companyId/conversations', conversationRoutes);
 
 // Company specific routes

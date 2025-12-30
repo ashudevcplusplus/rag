@@ -68,8 +68,8 @@ export const validateFileAccess = asyncHandler(
       return;
     }
 
-    // Verify file exists and belongs to project
-    const file = await fileMetadataRepository.findById(fileId);
+    // Verify file exists and belongs to project (with tenant isolation)
+    const file = await fileMetadataRepository.findById(fileId, companyId);
     if (!file || file.projectId !== projectId) {
       sendNotFoundResponse(res, 'File');
       return;

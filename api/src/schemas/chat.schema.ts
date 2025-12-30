@@ -39,6 +39,9 @@ export const chatRequestSchema = z.object({
   // Project ID is REQUIRED - all chat operations must be scoped to a project
   projectId: z.string().min(1, 'projectId is required'),
 
+  // Optional conversation ID for context caching (enables smart context reuse)
+  conversationId: z.string().optional(),
+
   // Optional conversation history for multi-turn chat
   messages: z.array(ChatMessageSchema).optional(),
 
@@ -110,7 +113,7 @@ export interface ChatResponse {
 /**
  * SSE streaming event types
  */
-export type StreamEventType = 'sources' | 'token' | 'done' | 'error';
+export type StreamEventType = 'sources' | 'token' | 'done' | 'error' | 'cache_hit';
 
 /**
  * SSE streaming event structure
@@ -133,4 +136,5 @@ export type StreamEventData =
       model: string;
       provider: 'openai' | 'gemini';
     }
-  | { message: string }; // type: 'error'
+  | { message: string } // type: 'error'
+  | { reason: string }; // type: 'cache_hit'

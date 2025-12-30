@@ -206,6 +206,13 @@ export class ApiClient {
     return this.authState?.user || null;
   }
 
+  /**
+   * Get current user from API
+   */
+  async getCurrentUserFromApi(): Promise<{ user: AuthState['user'] }> {
+    return this.request<{ user: AuthState['user'] }>('GET', '/v1/auth/me');
+  }
+
   // ===== CHAT ENDPOINTS =====
 
   /**
@@ -222,6 +229,150 @@ export class ApiClient {
   async chatV2(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
     const id = this.getCompanyId(companyId);
     return this.request<ChatV2Response>('POST', `/v1/companies/${id}/chat/v2`, request);
+  }
+
+  /**
+   * Chat with streaming (buffered response)
+   * Note: Buffers the entire stream and returns the complete response
+   */
+  async chatStream(companyId: string | undefined, request: ChatRequest): Promise<ChatResponse> {
+    const id = this.getCompanyId(companyId);
+    if (!this.authState?.token) {
+      throw new Error('Not authenticated. Please login first.');
+    }
+
+    const url = `${this.baseUrl}/v1/companies/${id}/chat/stream`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.authState.token}`,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error (${response.status}): ${errorText}`);
+    }
+
+    // Buffer the entire SSE stream
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let bufferedData = '';
+    let finalResponse: ChatResponse | null = null;
+
+    if (!reader) {
+      throw new Error('No response body available');
+    }
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        bufferedData += decoder.decode(value, { stream: true });
+        const lines = bufferedData.split('\n');
+        bufferedData = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              // Keep updating with the latest complete response
+              if (parsed.answer || parsed.sources) {
+                finalResponse = parsed as ChatResponse;
+              }
+            } catch (e) {
+              // Skip malformed JSON
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (!finalResponse) {
+      throw new Error('No valid response received from stream');
+    }
+
+    return finalResponse;
+  }
+
+  /**
+   * ChatV2 with streaming (buffered response)
+   * Note: Buffers the entire stream and returns the complete response
+   */
+  async chatV2Stream(companyId: string | undefined, request: ChatV2Request): Promise<ChatV2Response> {
+    const id = this.getCompanyId(companyId);
+    if (!this.authState?.token) {
+      throw new Error('Not authenticated. Please login first.');
+    }
+
+    const url = `${this.baseUrl}/v1/companies/${id}/chat/v2/stream`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.authState.token}`,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error (${response.status}): ${errorText}`);
+    }
+
+    // Buffer the entire SSE stream
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let bufferedData = '';
+    let finalResponse: ChatV2Response | null = null;
+
+    if (!reader) {
+      throw new Error('No response body available');
+    }
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        bufferedData += decoder.decode(value, { stream: true });
+        const lines = bufferedData.split('\n');
+        bufferedData = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              // Keep updating with the latest complete response
+              if (parsed.answer || parsed.sources) {
+                finalResponse = parsed as ChatV2Response;
+              }
+            } catch (e) {
+              // Skip malformed JSON
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (!finalResponse) {
+      throw new Error('No valid response received from stream');
+    }
+
+    return finalResponse;
   }
 
   // ===== SEARCH ENDPOINTS =====
@@ -462,6 +613,42 @@ export class ApiClient {
     return this.request('POST', `/v1/companies/${id}/projects/${projectId}/indexing/retry-all`);
   }
 
+  /**
+   * Download a file
+   */
+  async downloadFile(
+    companyId: string | undefined,
+    projectId: string,
+    fileId: string
+  ): Promise<{ downloadUrl?: string; content?: string; message?: string }> {
+    const id = this.getCompanyId(companyId);
+    // This endpoint returns the file stream, so we need to handle it differently
+    // For now, we'll return the URL or metadata
+    const url = `${this.baseUrl}/v1/companies/${id}/projects/${projectId}/files/${fileId}/download`;
+    return {
+      downloadUrl: url,
+      message: 'Use the downloadUrl with Authorization header to download the file',
+    };
+  }
+
+  /**
+   * Upload files to a project
+   * Note: This is a simplified implementation. Full multipart/form-data upload
+   * would require additional dependencies and file reading capabilities.
+   */
+  async uploadFiles(
+    companyId: string | undefined,
+    projectId: string,
+    filePaths: string[]
+  ): Promise<{ message: string; files?: unknown[] }> {
+    const id = this.getCompanyId(companyId);
+    // This is a placeholder - actual file upload would require FormData and file reading
+    return {
+      message: 'File upload via MCP is not fully supported. Please use the API directly with multipart/form-data.',
+      files: [],
+    };
+  }
+
   // ===== CONVERSATION ENDPOINTS =====
 
   /**
@@ -570,6 +757,23 @@ export class ApiClient {
     return this.request<{ message: string }>(
       'DELETE',
       `/v1/companies/${id}/conversations/${conversationId}/messages`
+    );
+  }
+
+  /**
+   * Update a specific message in a conversation
+   */
+  async updateMessage(
+    companyId: string | undefined,
+    conversationId: string,
+    messageId: string,
+    updates: { content?: string; sources?: unknown[] }
+  ): Promise<{ message: unknown }> {
+    const id = this.getCompanyId(companyId);
+    return this.request(
+      'PATCH',
+      `/v1/companies/${id}/conversations/${conversationId}/messages/${messageId}`,
+      updates
     );
   }
 
@@ -710,6 +914,15 @@ export class ApiClient {
     jobId: string
   ): Promise<{ id: string; state: string; progress: number; result?: unknown; reason?: string }> {
     return this.request('GET', `/v1/jobs/${jobId}`);
+  }
+
+  /**
+   * Get consistency check job status
+   */
+  async getConsistencyCheckJobStatus(
+    jobId: string
+  ): Promise<{ id: string; state: string; progress: number; result?: unknown; reason?: string }> {
+    return this.request('GET', `/v1/jobs/consistency/${jobId}`);
   }
 
   // ===== HEALTH ENDPOINTS =====

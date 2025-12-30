@@ -67,6 +67,7 @@ export type PromptTemplateType =
  */
 export interface ChatRequest {
   query: string;
+  projectId: string; // Required - all chat operations must be scoped to a project
   messages?: ChatMessage[];
   promptTemplate?: PromptTemplateType;
   systemPrompt?: string;
@@ -75,7 +76,6 @@ export interface ChatRequest {
   filter?: {
     fileId?: string;
     fileIds?: string[];
-    projectId?: string;
   };
   llmProvider?: 'openai' | 'gemini';
   embeddingProvider?: 'openai' | 'gemini';
@@ -139,6 +139,7 @@ export type PromptTemplateTypeV2 =
  */
 export interface ChatV2Request {
   query: string;
+  projectId: string; // Required - all chat operations must be scoped to a project
   messages?: ChatMessage[];
   promptTemplate?: PromptTemplateTypeV2;
   systemPrompt?: string;
@@ -157,8 +158,6 @@ export interface ChatV2Request {
   filter?: {
     fileId?: string;
     fileIds?: string[];
-    projectId?: string;
-    projectIds?: string[];
     tags?: string[];
   };
 

@@ -31,6 +31,29 @@ export const ConversationMessageSchema = z.object({
 export type ConversationMessage = z.infer<typeof ConversationMessageSchema>;
 
 /**
+ * Cached context for a conversation
+ */
+export const CachedContextSchema = z.object({
+  sources: z.array(
+    z.object({
+      fileId: z.string(),
+      fileName: z.string().optional(),
+      projectId: z.string().optional(),
+      projectName: z.string().optional(),
+      chunkIndex: z.number(),
+      content: z.string(),
+      score: z.number(),
+    })
+  ),
+  query: z.string(), // Original query that generated this context
+  contextString: z.string(), // Formatted context string for LLM
+  retrievedAt: z.coerce.date(), // When this context was retrieved
+  expiresAt: z.coerce.date(), // When this context should be refreshed
+  fileIds: z.array(z.string()), // File IDs included in this context for tracking
+});
+export type CachedContext = z.infer<typeof CachedContextSchema>;
+
+/**
  * Conversation interface
  */
 export interface IConversation {
@@ -46,6 +69,10 @@ export interface IConversation {
   // Metadata
   messageCount: number;
   lastMessageAt: Date;
+
+  // Context Caching (for optimization)
+  cachedContext?: CachedContext; // Reusable context for follow-up queries
+  lastQueryEmbedding?: number[]; // Last query embedding for similarity checks
 
   // Audit
   createdAt: Date;

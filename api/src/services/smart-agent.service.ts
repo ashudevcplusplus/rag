@@ -67,7 +67,7 @@ export class SmartAgentService {
         .join('\n') || '';
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: CONFIG.OPENAI_QUERY_ANALYSIS_MODEL,
       messages: [
         {
           role: 'system',
@@ -247,7 +247,7 @@ Consider conversation history for context (what is "it", "that", etc.)`,
     const docList = docsToRank.map((d, i) => `[${i}] ${d.content.slice(0, 200)}`).join('\n\n');
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: CONFIG.OPENAI_RERANK_MODEL,
       messages: [
         {
           role: 'system',
@@ -419,7 +419,7 @@ Consider conversation history for context (what is "it", "that", etc.)`,
       .join('\n');
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: CONFIG.OPENAI_CONTEXT_ANALYSIS_MODEL,
       messages: [
         {
           role: 'system',
@@ -467,12 +467,13 @@ Consider conversation history for context (what is "it", "that", etc.)`,
    */
   private static async expandContextBySectionAware(
     existingSources: ChatSource[],
-    dominantFileId: string
+    dominantFileId: string,
+    companyId: string
   ): Promise<ChatSource[]> {
     const embedding = await embeddingRepository.findByFileId(dominantFileId);
     if (!embedding?.contents) return existingSources;
 
-    const file = await fileMetadataRepository.findById(dominantFileId);
+    const file = await fileMetadataRepository.findById(dominantFileId, companyId);
     if (!file) return existingSources;
 
     // Get existing chunk indexes
@@ -544,13 +545,14 @@ Consider conversation history for context (what is "it", "that", etc.)`,
   private static async expandContextFromFile(
     existingSources: ChatSource[],
     dominantFileId: string,
+    companyId: string,
     maxAdditionalChunks: number = 5
   ): Promise<ChatSource[]> {
     // Get all chunks from the dominant file
     const embedding = await embeddingRepository.findByFileId(dominantFileId);
     if (!embedding || !embedding.contents) return existingSources;
 
-    const file = await fileMetadataRepository.findById(dominantFileId);
+    const file = await fileMetadataRepository.findById(dominantFileId, companyId);
     if (!file) return existingSources;
 
     // Find which chunks we already have
@@ -712,7 +714,7 @@ ${numberedContext}
         answer:
           "Hello! I'm here to help you find information in your documents. What would you like to know?",
         sources: [],
-        model: 'gpt-4o-mini',
+        model: CONFIG.OPENAI_CHAT_MODEL,
         provider: 'openai',
       };
     }
@@ -723,7 +725,7 @@ ${numberedContext}
           plan.clarificationQuestion ||
           "Could you please provide more details about what you're looking for?",
         sources: [],
-        model: 'gpt-4o-mini',
+        model: CONFIG.OPENAI_CHAT_MODEL,
         provider: 'openai',
       };
     }
@@ -779,9 +781,13 @@ ${numberedContext}
     if (analysis.shouldFetchMoreFromFile && analysis.dominantFileId && !chunksAreContiguous) {
       // Try section-aware expansion first, fallback to adjacent
       try {
-        sources = await this.expandContextBySectionAware(sources, analysis.dominantFileId);
+        sources = await this.expandContextBySectionAware(
+          sources,
+          analysis.dominantFileId,
+          companyId
+        );
       } catch {
-        sources = await this.expandContextFromFile(sources, analysis.dominantFileId);
+        sources = await this.expandContextFromFile(sources, analysis.dominantFileId, companyId);
       }
       logger.info('Context expanded', { newSourceCount: sources.length });
     }

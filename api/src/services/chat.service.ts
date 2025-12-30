@@ -3,6 +3,8 @@ import { GoogleGenerativeAI, Content } from '@google/generative-ai';
 import { Response } from 'express';
 import { CONFIG } from '../config';
 import { VectorService, EmbeddingProvider } from './vector.service';
+import { ConversationContextService } from './conversation-context.service';
+import { conversationRepository } from '../repositories/conversation.repository';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { projectRepository } from '../repositories/project.repository';
 import {
@@ -68,25 +70,30 @@ export class ChatService {
       provider,
       limit: request.limit,
       rerank: request.rerank,
+      conversationId: request.conversationId,
     });
 
-    // 1. Retrieve relevant chunks using RAG
-    const sources = await this.retrieveContext(companyId, request);
+    // 1. Retrieve relevant chunks using RAG (with intelligent caching)
+    const contextResult = await this.retrieveContext(companyId, request);
 
     logger.debug('RAG context retrieved', {
       companyId,
-      sourcesCount: sources.length,
+      sourcesCount: contextResult.sources.length,
+      usedCache: contextResult.usedCache,
+      cacheDecision: contextResult.cacheDecision,
       duration: Date.now() - startTime,
     });
 
-    // 2. Build the context string from sources
-    const context = this.buildContextString(sources);
-
-    // 3. Build the messages for the LLM
+    // 2. Build the messages for the LLM (context already built in retrieveContext)
     const systemPrompt = this.resolveSystemPrompt(request);
-    const messages = this.buildMessages(systemPrompt, context, request.query, request.messages);
+    const messages = this.buildMessages(
+      systemPrompt,
+      contextResult.contextString,
+      request.query,
+      request.messages
+    );
 
-    // 4. Call the appropriate LLM
+    // 3. Call the appropriate LLM
     let response: ChatResponse;
 
     if (provider === 'gemini') {
@@ -95,9 +102,9 @@ export class ChatService {
       response = await this.callOpenAI(messages, request);
     }
 
-    // 5. Attach sources if requested
+    // 4. Attach sources if requested
     if (request.includeSources) {
-      response.sources = sources;
+      response.sources = contextResult.sources;
     } else {
       response.sources = [];
     }
@@ -105,7 +112,8 @@ export class ChatService {
     logger.info('Chat request completed', {
       companyId,
       provider,
-      sourcesCount: sources.length,
+      sourcesCount: contextResult.sources.length,
+      usedCache: contextResult.usedCache,
       answerLength: response.answer.length,
       totalDuration: Date.now() - startTime,
       usage: response.usage,
@@ -128,6 +136,7 @@ export class ChatService {
       provider,
       limit: request.limit,
       rerank: request.rerank,
+      conversationId: request.conversationId,
     });
 
     // Setup SSE headers
@@ -138,26 +147,40 @@ export class ChatService {
     res.flushHeaders();
 
     try {
-      // 1. Retrieve relevant chunks using RAG
-      const sources = await this.retrieveContext(companyId, request);
+      // 1. Retrieve relevant chunks using RAG (with intelligent caching)
+      const contextResult = await this.retrieveContext(companyId, request);
 
       logger.debug('RAG context retrieved for streaming', {
         companyId,
-        sourcesCount: sources.length,
+        sourcesCount: contextResult.sources.length,
+        usedCache: contextResult.usedCache,
+        cacheDecision: contextResult.cacheDecision,
         duration: Date.now() - startTime,
       });
 
-      // 2. Send sources event first if requested
-      if (request.includeSources && sources.length > 0) {
-        this.sendSSE(res, { type: 'sources', data: { sources } });
+      // 2. Send cache info event
+      if (contextResult.usedCache) {
+        this.sendSSE(res, {
+          type: 'cache_hit',
+          data: { reason: contextResult.cacheDecision || 'Using cached context' },
+        });
       }
 
-      // 3. Build the context and messages
-      const context = this.buildContextString(sources);
-      const systemPrompt = this.resolveSystemPrompt(request);
-      const messages = this.buildMessages(systemPrompt, context, request.query, request.messages);
+      // 3. Send sources event first if requested
+      if (request.includeSources && contextResult.sources.length > 0) {
+        this.sendSSE(res, { type: 'sources', data: { sources: contextResult.sources } });
+      }
 
-      // 4. Stream from the appropriate LLM
+      // 4. Build the messages for LLM
+      const systemPrompt = this.resolveSystemPrompt(request);
+      const messages = this.buildMessages(
+        systemPrompt,
+        contextResult.contextString,
+        request.query,
+        request.messages
+      );
+
+      // 5. Stream from the appropriate LLM
       if (provider === 'gemini') {
         await this.streamGemini(messages, request, res);
       } else {
@@ -167,7 +190,8 @@ export class ChatService {
       logger.info('Streaming chat request completed', {
         companyId,
         provider,
-        sourcesCount: sources.length,
+        sourcesCount: contextResult.sources.length,
+        usedCache: contextResult.usedCache,
         totalDuration: Date.now() - startTime,
       });
     } catch (error) {
@@ -323,7 +347,13 @@ export class ChatService {
   }
 
   /**
-   * Retrieve relevant context using RAG with multi-layer security
+   * Retrieve relevant context using RAG with multi-layer security and intelligent caching
+   *
+   * Optimizations:
+   * 1. Check conversation cache first (if conversationId provided)
+   * 2. Classify query to determine if fresh context needed
+   * 3. Reuse cached context for clarifications and follow-ups
+   * 4. Fetch fresh context only when necessary
    *
    * Security layers:
    * 1. Collection scoping: company_${companyId}
@@ -331,15 +361,22 @@ export class ChatService {
    * 3. Qdrant filter: companyId + fileId (defense-in-depth)
    *
    * @param companyId - Authenticated company ID
-   * @param request - Chat request with required projectId
-   * @returns Array of relevant document chunks with metadata
+   * @param request - Chat request with required projectId and optional conversationId
+   * @returns Object containing sources, context string, and cache usage info
    * @private
    */
   private static async retrieveContext(
     companyId: string,
     request: ChatRequest
-  ): Promise<ChatSource[]> {
+  ): Promise<{
+    sources: ChatSource[];
+    contextString: string;
+    usedCache: boolean;
+    cacheDecision?: string;
+    queryEmbedding?: number[];
+  }> {
     const collection = `company_${companyId}`;
+    const embeddingProvider = request.embeddingProvider as EmbeddingProvider | undefined;
 
     // projectId is required - verify it belongs to this company
     const project = await projectRepository.findById(request.projectId);
@@ -348,7 +385,7 @@ export class ChatService {
         projectId: request.projectId,
         companyId,
       });
-      return [];
+      return { sources: [], contextString: '', usedCache: false };
     }
 
     if (String(project.companyId) !== companyId) {
@@ -357,7 +394,7 @@ export class ChatService {
         projectCompanyId: project.companyId,
         requestedCompanyId: companyId,
       });
-      return []; // Return empty instead of throwing to avoid leaking info
+      return { sources: [], contextString: '', usedCache: false };
     }
 
     // Get all files from the project
@@ -366,10 +403,65 @@ export class ChatService {
 
     if (allowedFileIds.length === 0) {
       logger.debug('No files found for project', { projectId: request.projectId });
-      return [];
+      return { sources: [], contextString: '', usedCache: false };
     }
 
-    logger.debug('Filtering by project files', {
+    // OPTIMIZATION 1: Check if we can use cached context (if conversationId provided)
+    if (request.conversationId) {
+      try {
+        const conversation = await conversationRepository.findByIdWithCache(
+          request.conversationId,
+          companyId
+        );
+
+        if (conversation) {
+          // Check if we should use cached context
+          const conversationHistory = (request.messages || []).map((m) => ({
+            role: m.role,
+            content: m.content,
+          }));
+
+          const cacheDecision = await ConversationContextService.shouldUseCache(
+            request.query,
+            conversation.cachedContext,
+            conversation.lastQueryEmbedding,
+            conversationHistory,
+            embeddingProvider
+          );
+
+          logger.info('Context cache decision', {
+            conversationId: request.conversationId,
+            useCache: cacheDecision.useCache,
+            reason: cacheDecision.reason,
+            similarityScore: cacheDecision.similarityScore,
+          });
+
+          // OPTIMIZATION 2: Reuse cached context if decision says so
+          if (cacheDecision.useCache && conversation.cachedContext) {
+            logger.info('Using cached context - skipping vector search', {
+              conversationId: request.conversationId,
+              cachedQuery: conversation.cachedContext.query,
+              currentQuery: request.query,
+            });
+
+            return {
+              sources: conversation.cachedContext.sources,
+              contextString: conversation.cachedContext.contextString,
+              usedCache: true,
+              cacheDecision: cacheDecision.reason,
+            };
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to check cached context, proceeding with fresh search', {
+          conversationId: request.conversationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    // If we reach here, we need to fetch fresh context from vector DB
+    logger.debug('Fetching fresh context from vector DB', {
       projectId: request.projectId,
       fileCount: allowedFileIds.length,
     });
@@ -383,7 +475,7 @@ export class ChatService {
             fileId: request.filter.fileId,
             projectId: request.projectId,
           });
-          return [];
+          return { sources: [], contextString: '', usedCache: false };
         }
         allowedFileIds = [request.filter.fileId];
       }
@@ -396,7 +488,7 @@ export class ChatService {
           logger.debug('No intersection between fileIds and project files', {
             projectId: request.projectId,
           });
-          return [];
+          return { sources: [], contextString: '', usedCache: false };
         }
       }
     }
@@ -416,9 +508,9 @@ export class ChatService {
       ],
     };
 
-    // Perform search
+    // Perform search and get query embedding
     let results: SearchResult[];
-    const embeddingProvider = request.embeddingProvider as EmbeddingProvider | undefined;
+    let queryEmbedding: number[] | undefined;
 
     if (request.rerank) {
       results = await VectorService.searchWithReranking(
@@ -429,29 +521,68 @@ export class ChatService {
         Math.max(20, request.limit * 2), // Fetch more for reranking
         embeddingProvider
       );
-    } else {
-      const [queryVector] = await VectorService.getEmbeddings(
+      // Also get embedding for caching
+      [queryEmbedding] = await VectorService.getEmbeddings(
         [request.query],
         'query',
         embeddingProvider
       );
-      results = await VectorService.search(collection, queryVector, request.limit, qdrantFilter);
+    } else {
+      [queryEmbedding] = await VectorService.getEmbeddings(
+        [request.query],
+        'query',
+        embeddingProvider
+      );
+      results = await VectorService.search(collection, queryEmbedding, request.limit, qdrantFilter);
     }
 
     if (results.length === 0) {
-      return [];
+      return { sources: [], contextString: '', usedCache: false, queryEmbedding };
     }
 
     // Enrich with metadata
     const sources = await this.enrichSources(results);
 
-    // Sort chunks for coherent context:
-    // 1. Group by file
-    // 2. Within each file, sort by chunk index
-    // 3. Order files by highest scoring chunk
+    // Sort chunks for coherent context
     const enrichedSources = this.arrangeChunks(sources);
 
-    return enrichedSources;
+    // Build context string
+    const contextString = this.buildContextString(enrichedSources);
+
+    // OPTIMIZATION 3: Save context to cache for future use
+    if (request.conversationId && queryEmbedding) {
+      try {
+        const cachedContext = ConversationContextService.createCachedContext(
+          enrichedSources,
+          request.query,
+          contextString
+        );
+
+        await conversationRepository.updateCachedContext(
+          request.conversationId,
+          companyId,
+          cachedContext,
+          queryEmbedding
+        );
+
+        logger.debug('Saved context to conversation cache', {
+          conversationId: request.conversationId,
+          sourcesCount: enrichedSources.length,
+        });
+      } catch (error) {
+        logger.warn('Failed to save context cache', {
+          conversationId: request.conversationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return {
+      sources: enrichedSources,
+      contextString,
+      usedCache: false,
+      queryEmbedding,
+    };
   }
 
   /**

@@ -64,6 +64,9 @@ export const chatV2RequestSchema = z.object({
   // Project ID is REQUIRED - all chat operations must be scoped to a project
   projectId: z.string().min(1, 'projectId is required'),
 
+  // Optional conversation ID for context caching (enables smart context reuse)
+  conversationId: z.string().optional(),
+
   // Optional conversation history for multi-turn chat
   messages: z.array(ChatMessageSchemaV2).optional(),
 
@@ -114,6 +117,12 @@ export const chatV2RequestSchema = z.object({
   includeSources: z.boolean().optional().default(true),
   includeMetadata: z.boolean().optional().default(false), // NEW: Include detailed metadata
   stream: z.boolean().optional().default(false),
+
+  // === Performance Optimization Toggles ===
+  // Allow fine-grained control over optimizations per-request
+  useQueryCache: z.boolean().optional().default(true), // Cache query analysis
+  useProjectCache: z.boolean().optional().default(true), // Cache project file IDs
+  useSmartRerank: z.boolean().optional().default(true), // Smart reranking threshold
 });
 
 export type ChatV2Request = z.infer<typeof chatV2RequestSchema>;
