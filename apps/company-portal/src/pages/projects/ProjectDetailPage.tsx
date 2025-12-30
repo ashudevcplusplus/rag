@@ -49,6 +49,7 @@ export function ProjectDetailPage() {
   const [selectedFile, setSelectedFile] = useState<FileMetadata | null>(null);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<FilePreviewResponse | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [copiedChunk, setCopiedChunk] = useState<number | null>(null);
 
@@ -107,23 +108,6 @@ export function ProjectDetailPage() {
   const handleDeleteFile = () => {
     if (selectedFile) {
       deleteFileMutation.mutate(selectedFile._id);
-    }
-  };
-
-  const handlePreviewFile = async (file: FileMetadata) => {
-    setSelectedFile(file);
-    setIsPreviewModalOpen(true);
-    setIsLoadingPreview(true);
-    setPreviewData(null);
-
-    try {
-      const data = await filesApi.getPreview(companyId!, projectId!, file._id);
-      setPreviewData(data);
-    } catch (error) {
-      console.error('Failed to load file preview:', error);
-      toast.error('Failed to load file preview');
-    } finally {
-      setIsLoadingPreview(false);
     }
   };
 

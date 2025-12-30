@@ -47,13 +47,13 @@ jobs:
         run: pnpm --filter @rag/text-utils build
 
       - name: Run linter
-        run: pnpm --filter mvp-api lint
+        run: pnpm --filter @rag/api lint
 
       - name: Check code formatting
-        run: pnpm --filter mvp-api format:check
+        run: pnpm --filter @rag/api format:check
 
       - name: Run unit tests with coverage
-        run: pnpm --filter mvp-api test:coverage:ci
+        run: pnpm --filter @rag/api test:coverage:ci
         env:
           NODE_ENV: test
 
@@ -117,7 +117,7 @@ jobs:
         run: pnpm --filter @rag/text-utils build
 
       - name: Build TypeScript
-        run: pnpm --filter mvp-api build
+        run: pnpm --filter @rag/api build
 
   # ============================================
   # Packages: Lint & Test
@@ -362,7 +362,7 @@ jobs:
           echo "All services ready!"
 
       - name: Run integration tests
-        run: pnpm --filter mvp-api test:integration
+        run: pnpm --filter @rag/api test:integration
         env:
           NODE_ENV: test
           MONGODB_URI: mongodb://admin:admin123@localhost:27017/rag_test?authSource=admin

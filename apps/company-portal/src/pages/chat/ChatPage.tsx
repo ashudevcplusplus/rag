@@ -201,8 +201,9 @@ function MarkdownContent({
       }
     };
 
-    containerRef.current.addEventListener('click', handleClick);
-    return () => containerRef.current?.removeEventListener('click', handleClick);
+    const container = containerRef.current;
+    container.addEventListener('click', handleClick);
+    return () => container?.removeEventListener('click', handleClick);
   }, [onCitationClick]);
 
   return (
@@ -556,6 +557,7 @@ export function ChatPage() {
           setIsLoadingConversation(false);
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeConversationId, companyId]);
 
   // Scroll to bottom when messages change
@@ -671,6 +673,7 @@ export function ChatPage() {
     setTimeout(() => {
       handleSubmit();
     }, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading]);
 
   const handleSubmit = useCallback(

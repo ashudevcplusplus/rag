@@ -8,11 +8,9 @@ import {
   Copy,
   Check,
   Loader2,
-  Calendar,
   HardDrive,
   Database,
   Clock,
-  ExternalLink,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -24,8 +22,8 @@ import {
   StatusBadge,
   Badge,
 } from '@rag/ui';
-import { projectsApi, filesApi, type FilePreviewResponse } from '@rag/api-client';
-import { formatBytes, formatRelativeTime, removeChunkOverlap } from '@rag/utils';
+import { projectsApi, filesApi } from '@rag/api-client';
+import { formatBytes, removeChunkOverlap } from '@rag/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { FilePreviewRenderer } from '../../components/FilePreviewRenderer';
 import { getApiConfig } from '@rag/api-client';
@@ -151,7 +149,7 @@ export function FilePreviewPage() {
     let errorMessage = 'Unknown error';
     let statusCode: number | undefined;
     if (error) {
-      if (typeof error === 'object') {
+      if (typeof error === 'object' && error !== null) {
         // ApiError structure: { error: string, message?: string, statusCode: number }
         const apiError = error as { error?: string; message?: string; statusCode?: number };
         errorMessage = apiError.message || apiError.error || 'Unknown error';
@@ -161,8 +159,6 @@ export function FilePreviewPage() {
         if (apiError.statusCode) {
           console.error(`File preview failed with status ${apiError.statusCode}:`, errorMessage);
         }
-      } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = String((error as { message: unknown }).message);
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
