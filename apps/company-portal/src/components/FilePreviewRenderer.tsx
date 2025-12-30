@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, FileText, Image as ImageIcon, FileCode, File } from 'lucide-react';
+import { Loader2, FileText, FileCode, File } from 'lucide-react';
 import { getApiConfig } from '@rag/api-client';
 
 interface FilePreviewRendererProps {
@@ -15,9 +15,13 @@ export function FilePreviewRenderer({ fileUrl, mimeType, filename }: FilePreview
 
   // Fetch file as blob with authentication
   useEffect(() => {
+    const abortController = new AbortController();
+    let isMounted = true;
+
     const fetchFile = async () => {
       try {
         setLoading(true);
+        setError(null);
         const config = getApiConfig();
         const headers: Record<string, string> = {};
         
@@ -27,27 +31,41 @@ export function FilePreviewRenderer({ fileUrl, mimeType, filename }: FilePreview
           headers['x-api-key'] = config.apiKey;
         }
 
-        const response = await fetch(fileUrl, { headers });
+        const response = await fetch(fileUrl, { 
+          headers,
+          signal: abortController.signal 
+        });
         
         if (!response.ok) {
           throw new Error(`Failed to load file: ${response.statusText}`);
         }
 
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setBlobUrl(url);
-        setLoading(false);
+        
+        // Only update state if component is still mounted and request wasn't aborted
+        if (isMounted) {
+          const url = URL.createObjectURL(blob);
+          setBlobUrl(url);
+          setLoading(false);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load file preview');
-        setLoading(false);
+        // Ignore abort errors
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load file preview');
+          setLoading(false);
+        }
       }
     };
 
     fetchFile();
 
-    // Cleanup blob URL on unmount or when fileUrl changes
+    // Cleanup: abort fetch and mark as unmounted
     return () => {
-      // Cleanup will happen when blobUrl changes in the next effect
+      isMounted = false;
+      abortController.abort();
     };
   }, [fileUrl]);
 
@@ -72,17 +90,7 @@ export function FilePreviewRenderer({ fileUrl, mimeType, filename }: FilePreview
   // Determine file category
   const fileCategory = mimeType.split('/')[0];
 
-  if (loading || !blobUrl) {
-    return (
-      <div className="flex items-center justify-center min-h-[600px] bg-surface-50 rounded-lg border border-surface-200">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-          <p className="text-sm text-surface-600">Loading file...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Check error first to avoid showing infinite loading spinner on failure
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-[600px] bg-surface-50 rounded-lg border border-surface-200">
@@ -92,6 +100,17 @@ export function FilePreviewRenderer({ fileUrl, mimeType, filename }: FilePreview
           <p className="text-sm text-surface-500 mt-2">
             Please try downloading the file instead.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !blobUrl) {
+    return (
+      <div className="flex items-center justify-center min-h-[600px] bg-surface-50 rounded-lg border border-surface-200">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <p className="text-sm text-surface-600">Loading file...</p>
         </div>
       </div>
     );

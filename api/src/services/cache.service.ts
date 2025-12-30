@@ -6,6 +6,32 @@ import { logger } from '../utils/logger';
 // API key cache TTL: 5 minutes (should match auth.middleware.ts)
 const API_KEY_CACHE_TTL = 300;
 
+// Cache metrics for monitoring hit/miss rates
+interface CacheMetrics {
+  hits: number;
+  misses: number;
+  errors: number;
+  lastReset: Date;
+}
+
+// Per-category metrics tracking
+const metricsStore: Map<string, CacheMetrics> = new Map();
+
+/**
+ * Get or create metrics for a category
+ */
+function getMetrics(category: string): CacheMetrics {
+  if (!metricsStore.has(category)) {
+    metricsStore.set(category, {
+      hits: 0,
+      misses: 0,
+      errors: 0,
+      lastReset: new Date(),
+    });
+  }
+  return metricsStore.get(category)!;
+}
+
 /**
  * Generate a cache key for an API key (hashed for security)
  * This must match the logic in auth.middleware.ts
@@ -80,20 +106,148 @@ export class CacheService {
 
   /**
    * Get cached results (returns null if miss)
+   *
+   * @param key - Cache key to retrieve
+   * @param category - Optional category for metrics tracking (e.g., 'query-analysis', 'project-files')
    */
-  static async get(key: string): Promise<unknown | null> {
+  static async get(key: string, category?: string): Promise<unknown | null> {
+    const metricsCategory = category || this.extractCategory(key);
+
     try {
       const data = await redis.get(key);
       if (data) {
-        logger.debug('Cache hit', { key });
+        logger.debug('Cache hit', { key, category: metricsCategory });
+        this.recordHit(metricsCategory);
         return JSON.parse(data);
       }
-      logger.debug('Cache miss', { key });
+      logger.debug('Cache miss', { key, category: metricsCategory });
+      this.recordMiss(metricsCategory);
       return null;
     } catch (error) {
       logger.error('Cache get error', { key, error });
+      this.recordError(metricsCategory);
       return null; // Fail gracefully
     }
+  }
+
+  /**
+   * Extract category from cache key for metrics
+   */
+  private static extractCategory(key: string): string {
+    // Keys like "query-analysis:abc123" or "project-files:proj123"
+    const colonIndex = key.indexOf(':');
+    if (colonIndex > 0) {
+      return key.substring(0, colonIndex);
+    }
+    return 'general';
+  }
+
+  /**
+   * Record a cache hit for metrics
+   */
+  private static recordHit(category: string): void {
+    getMetrics(category).hits++;
+  }
+
+  /**
+   * Record a cache miss for metrics
+   */
+  private static recordMiss(category: string): void {
+    getMetrics(category).misses++;
+  }
+
+  /**
+   * Record a cache error for metrics
+   */
+  private static recordError(category: string): void {
+    getMetrics(category).errors++;
+  }
+
+  /**
+   * Get cache metrics for a specific category
+   *
+   * @param category - Category to get metrics for
+   * @returns Metrics including hits, misses, hit rate, and error count
+   *
+   * @example
+   * ```typescript
+   * const metrics = CacheService.getCacheMetrics('query-analysis');
+   * console.log(`Hit rate: ${metrics.hitRate}%`);
+   * ```
+   */
+  static getCacheMetrics(category: string): {
+    hits: number;
+    misses: number;
+    errors: number;
+    total: number;
+    hitRate: number;
+    lastReset: Date;
+  } {
+    const metrics = getMetrics(category);
+    const total = metrics.hits + metrics.misses;
+    const hitRate = total > 0 ? Math.round((metrics.hits / total) * 100 * 100) / 100 : 0;
+
+    return {
+      ...metrics,
+      total,
+      hitRate,
+    };
+  }
+
+  /**
+   * Get cache metrics for all categories
+   *
+   * @returns Map of category to metrics
+   */
+  static getAllCacheMetrics(): Map<
+    string,
+    {
+      hits: number;
+      misses: number;
+      errors: number;
+      total: number;
+      hitRate: number;
+      lastReset: Date;
+    }
+  > {
+    const result = new Map();
+    for (const [category] of metricsStore) {
+      result.set(category, this.getCacheMetrics(category));
+    }
+    return result;
+  }
+
+  /**
+   * Reset metrics for a category or all categories
+   *
+   * @param category - Optional category to reset (resets all if not provided)
+   */
+  static resetCacheMetrics(category?: string): void {
+    if (category) {
+      metricsStore.delete(category);
+      logger.info('Cache metrics reset', { category });
+    } else {
+      metricsStore.clear();
+      logger.info('All cache metrics reset');
+    }
+  }
+
+  /**
+   * Log cache metrics summary (for periodic reporting)
+   */
+  static logMetricsSummary(): void {
+    const allMetrics = this.getAllCacheMetrics();
+    const summary: Record<string, { hits: number; misses: number; hitRate: number }> = {};
+
+    for (const [category, metrics] of allMetrics) {
+      summary[category] = {
+        hits: metrics.hits,
+        misses: metrics.misses,
+        hitRate: metrics.hitRate,
+      };
+    }
+
+    logger.info('Cache metrics summary', { metrics: summary });
   }
 
   /**

@@ -74,13 +74,13 @@ export const chatV2 = asyncHandler(async (req: Request, res: Response): Promise<
 
 /**
  * Handle streaming responses for V2
- * Uses SmartAgentV2Service with simulated streaming
+ * Uses true OpenAI streaming for real-time token delivery
  */
 async function handleStreamingV2(
   companyId: string,
   request: ReturnType<typeof chatV2RequestSchema.parse>,
   res: Response,
-  startTime: number
+  _startTime: number
 ): Promise<void> {
   // Set SSE headers
   res.setHeader('Content-Type', 'text/event-stream');
@@ -96,41 +96,18 @@ async function handleStreamingV2(
   };
 
   try {
-    // Use SmartAgentV2Service
-    const result = await SmartAgentV2Service.chat(companyId, {
-      ...request,
-      stream: false,
-    });
-
-    // Send query analysis if available
-    if (result.queryAnalysis) {
-      sendEvent('analysis', { analysis: result.queryAnalysis });
-    }
-
-    // Send sources
-    sendEvent('sources', { sources: result.sources });
-
-    // Send answer in word chunks (simulated streaming)
-    const words = result.answer.split(' ');
-    for (let i = 0; i < words.length; i++) {
-      const token = i === words.length - 1 ? words[i] : words[i] + ' ';
-      sendEvent('token', { token });
-    }
-
-    // Send follow-ups if available
-    if (result.suggestedFollowUps && result.suggestedFollowUps.length > 0) {
-      sendEvent('followups', { followups: result.suggestedFollowUps });
-    }
-
-    // Send done event
-    sendEvent('done', {
-      usage: result.usage,
-      model: result.model,
-      provider: result.provider,
-      confidence: result.confidence,
-      searchMode: result.searchMode,
-      processingTime: Date.now() - startTime,
-    });
+    // Use true OpenAI streaming via SmartAgentV2Service.chatStream
+    await SmartAgentV2Service.chatStream(
+      companyId,
+      {
+        ...request,
+        includeMetadata: request.includeMetadata ?? true, // Enable metadata for streaming
+      },
+      (event) => {
+        // Forward each event to the client
+        sendEvent(event.type, event.data);
+      }
+    );
 
     res.end();
   } catch (error) {

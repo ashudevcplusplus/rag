@@ -151,18 +151,21 @@ export function FilePreviewPage() {
     let errorMessage = 'Unknown error';
     let statusCode: number | undefined;
     if (error) {
-      if (typeof error === 'object') {
-        // ApiError structure: { error: string, message?: string, statusCode: number }
+      if (typeof error === 'object' && error !== null) {
+        // Check for ApiError structure first: { error: string, message?: string, statusCode: number }
         const apiError = error as { error?: string; message?: string; statusCode?: number };
-        errorMessage = apiError.message || apiError.error || 'Unknown error';
-        statusCode = apiError.statusCode;
-        
-        // Add status code context for debugging
-        if (apiError.statusCode) {
-          console.error(`File preview failed with status ${apiError.statusCode}:`, errorMessage);
+        if (apiError.message || apiError.error || apiError.statusCode) {
+          errorMessage = apiError.message || apiError.error || 'Unknown error';
+          statusCode = apiError.statusCode;
+          
+          // Add status code context for debugging
+          if (apiError.statusCode) {
+            console.error(`File preview failed with status ${apiError.statusCode}:`, errorMessage);
+          }
+        } else if ('message' in error) {
+          // Generic Error object
+          errorMessage = String((error as { message: unknown }).message);
         }
-      } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = String((error as { message: unknown }).message);
       } else if (typeof error === 'string') {
         errorMessage = error;
       }

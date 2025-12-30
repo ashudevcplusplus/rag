@@ -16,7 +16,16 @@ import {
 import { ChatSource } from '../schemas/chat.schema';
 import { SearchResult, QdrantFilter } from '../types/vector.types';
 import { logger } from '../utils/logger';
+import { withTimeout, TimeoutError } from '../utils/request.util';
 import { CacheService } from './cache.service';
+
+// LLM timeout configuration (in milliseconds)
+const LLM_TIMEOUT = {
+  QUERY_ANALYSIS: 10000, // 10 seconds for quick analysis
+  CHAT_RESPONSE: 60000, // 60 seconds for main answer generation
+  RERANK: 15000, // 15 seconds for reranking
+  FOLLOWUP: 10000, // 10 seconds for follow-up generation
+};
 
 // ============================================
 // SMART AGENT V2 SERVICE - Completely Independent
@@ -194,9 +203,8 @@ export class SmartAgentV2Service {
     // Try cache first (if enabled)
     if (useCache) {
       try {
-        const cached = await CacheService.get(cacheKey);
+        const cached = await CacheService.get(cacheKey, 'query-analysis');
         if (cached) {
-          logger.debug('Query analysis cache hit', { query: query.slice(0, 50) });
           return cached as QueryAnalysis;
         }
       } catch (error) {
@@ -207,12 +215,14 @@ export class SmartAgentV2Service {
     const client = this.getClient();
 
     try {
-      const response = await client.chat.completions.create({
-        model: CONFIG.OPENAI_QUERY_ANALYSIS_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: `Analyze the user question and create a search strategy.
+      // Wrap LLM call with timeout to prevent hanging requests
+      const response = await withTimeout(
+        client.chat.completions.create({
+          model: CONFIG.OPENAI_QUERY_ANALYSIS_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: `Analyze the user question and create a search strategy.
 
 Output JSON:
 {
@@ -230,18 +240,39 @@ Rules:
 - Most questions should have intent="find_information" - be helpful, not restrictive
 - "greeting" = hello, thanks, hi, etc.
 - DO NOT ask for clarification if the question mentions a topic (e.g., "refund policy" is clear enough)`,
-          },
-          {
-            role: 'user',
-            content: `${historyContext ? `Context:\n${historyContext}\n\n` : ''}Question: "${query}"`,
-          },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 300,
-        temperature: 0.3,
-      });
+            },
+            {
+              role: 'user',
+              content: `${historyContext ? `Context:\n${historyContext}\n\n` : ''}Question: "${query}"`,
+            },
+          ],
+          response_format: { type: 'json_object' },
+          max_tokens: 300,
+          temperature: 0.3,
+        }),
+        LLM_TIMEOUT.QUERY_ANALYSIS,
+        'Query analysis timed out'
+      );
 
-      const analysis = JSON.parse(response.choices[0]?.message?.content || '{}') as QueryAnalysis;
+      const rawAnalysis = JSON.parse(response.choices[0]?.message?.content || '{}');
+
+      // Validate required fields exist to prevent downstream errors
+      const analysis: QueryAnalysis = {
+        intent: rawAnalysis.intent || 'find_information',
+        searchQueries:
+          Array.isArray(rawAnalysis.searchQueries) && rawAnalysis.searchQueries.length > 0
+            ? rawAnalysis.searchQueries
+            : [query], // Fallback to original query if missing
+        keywords: Array.isArray(rawAnalysis.keywords)
+          ? rawAnalysis.keywords
+          : query
+              .toLowerCase()
+              .split(' ')
+              .filter((w: string) => w.length > 3),
+        confidence: typeof rawAnalysis.confidence === 'number' ? rawAnalysis.confidence : 0.5,
+        needsClarification: rawAnalysis.needsClarification === true,
+        clarificationQuestion: rawAnalysis.clarificationQuestion || undefined,
+      };
 
       // Cache for 1 hour (similar queries benefit) - only if caching enabled
       if (useCache) {
@@ -254,7 +285,15 @@ Rules:
 
       return analysis;
     } catch (error) {
-      logger.warn('Query analysis failed, using fallback', { query, error });
+      // Log differently for timeout vs other errors
+      if (error instanceof TimeoutError) {
+        logger.warn('Query analysis timed out, using fallback', {
+          query: query.slice(0, 50),
+          timeout: LLM_TIMEOUT.QUERY_ANALYSIS,
+        });
+      } else {
+        logger.warn('Query analysis failed, using fallback', { query: query.slice(0, 50), error });
+      }
       return {
         intent: 'find_information',
         searchQueries: [query],
@@ -659,7 +698,7 @@ Rules:
     // Try cache first (if enabled)
     if (useProjectCache) {
       try {
-        const cached = await CacheService.get(cacheKey);
+        const cached = await CacheService.get(cacheKey, 'project-files');
         if (cached && Array.isArray(cached)) {
           projectFileIdsArray = cached as string[];
         }
@@ -791,8 +830,13 @@ Rules:
    * Determine if LLM reranking would improve results
    *
    * Optimization: Skip expensive reranking (~500ms) when:
-   * 1. Top result is dominant (>90 score, 10+ point lead)
-   * 2. All top 3 results are high quality (avg >85)
+   * 1. Top result is dominant and well separated from others
+   * 2. All top 3 results are high quality relative to RRF scoring
+   *
+   * RRF score range explanation:
+   * - With k=60, single query rank 1: 1/(60+1+1) * 100 = ~1.61
+   * - With 3-4 queries, max combined score: ~5-7
+   * - Typical good results: 3-5 range
    *
    * Saves ~35% of reranking calls with no quality loss.
    *
@@ -807,13 +851,14 @@ Rules:
     const secondScore = sources[1].score;
     const avgTopThree = (sources[0].score + sources[1].score + sources[2].score) / 3;
 
-    // Skip reranking if top result is clearly dominant (>90) and well separated
-    if (topScore > 90 && topScore - secondScore > 10) {
+    // Skip reranking if top result is clearly dominant (>5 RRF score) and well separated
+    // RRF scores after *100 typically range from ~1.6 to ~7 depending on query count
+    if (topScore > 5 && topScore - secondScore > 0.5) {
       return false;
     }
 
-    // Skip reranking if top 3 average is very high (results are all good quality)
-    if (avgTopThree > 85) {
+    // Skip reranking if top 3 average is very high (results consistently appear across queries)
+    if (avgTopThree > 4) {
       return false;
     }
 
@@ -887,21 +932,48 @@ Rules:
     const docList = docsToRank.map((d, i) => `[${i}] ${d.content.slice(0, 200)}`).join('\n\n');
 
     try {
-      const response = await client.chat.completions.create({
-        model: CONFIG.OPENAI_RERANK_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content: `Score each passage's relevance to the query (0-100). Return JSON: {"scores": [{"i": 0, "s": 85}, ...]}`,
-          },
-          { role: 'user', content: `Query: "${query}"\n\n${docList}` },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 200,
-        temperature: 0,
-      });
+      // Wrap reranking with timeout
+      const response = await withTimeout(
+        client.chat.completions.create({
+          model: CONFIG.OPENAI_RERANK_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: `Score each passage's relevance to the query (0-100). Return JSON: {"scores": [{"i": 0, "s": 85}, ...]}`,
+            },
+            { role: 'user', content: `Query: "${query}"\n\n${docList}` },
+          ],
+          response_format: { type: 'json_object' },
+          max_tokens: 200,
+          temperature: 0,
+        }),
+        LLM_TIMEOUT.RERANK,
+        'Reranking timed out'
+      );
 
-      const { scores } = JSON.parse(response.choices[0]?.message?.content || '{}');
+      const content = response.choices[0]?.message?.content || '{}';
+      let parsedResponse: { scores?: Array<{ i: number; s: number }> };
+
+      try {
+        parsedResponse = JSON.parse(content);
+      } catch (parseError) {
+        logger.warn('Reranking response parse failed, using original order', {
+          query: query.slice(0, 50),
+          content: content.slice(0, 200),
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+        });
+        return sources.slice(0, topK);
+      }
+
+      const { scores } = parsedResponse;
+
+      if (!Array.isArray(scores)) {
+        logger.warn('Reranking response missing scores array, using original order', {
+          query: query.slice(0, 50),
+          responseKeys: Object.keys(parsedResponse),
+        });
+        return sources.slice(0, topK);
+      }
 
       return docsToRank
         .map((doc, idx) => ({
@@ -911,7 +983,20 @@ Rules:
         .sort((a, b) => b.score - a.score)
         .slice(0, topK);
     } catch (error) {
-      logger.warn('Reranking failed, using original order', { query, error });
+      if (error instanceof TimeoutError) {
+        logger.warn('Reranking timed out, using original order', {
+          query: query.slice(0, 50),
+          timeout: LLM_TIMEOUT.RERANK,
+          docsCount: docsToRank.length,
+        });
+      } else {
+        logger.warn('Reranking failed, using original order', {
+          query: query.slice(0, 50),
+          docsCount: docsToRank.length,
+          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+        });
+      }
       return sources.slice(0, topK);
     }
   }
@@ -1000,12 +1085,14 @@ Rules:
       .map((s, i) => `[${i + 1}] From "${s.fileName}":\n${s.content}`)
       .join('\n\n---\n\n');
 
-    const response = await client.chat.completions.create({
-      model: CONFIG.OPENAI_CHAT_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: `You are a helpful assistant. Answer based ONLY on the provided sources.
+    // Wrap main chat response with timeout (longer timeout for complex answers)
+    const response = await withTimeout(
+      client.chat.completions.create({
+        model: CONFIG.OPENAI_CHAT_MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant. Answer based ONLY on the provided sources.
 
 IMPORTANT: Cite sources using [1], [2], etc. for every fact.
 
@@ -1016,16 +1103,19 @@ ${numberedContext}
 1. Every claim must have a citation [n]
 2. If you can't find information, say "I couldn't find this in the documents"
 3. Don't make up information`,
-        },
-        ...(request.messages || []).map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
-        { role: 'user', content: query },
-      ],
-      max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
-      temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
-    });
+          },
+          ...(request.messages || []).map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+          { role: 'user', content: query },
+        ],
+        max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
+        temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
+      }),
+      LLM_TIMEOUT.CHAT_RESPONSE,
+      'Chat response generation timed out'
+    );
 
     return {
       answer: response.choices[0]?.message?.content || '',
@@ -1046,28 +1136,40 @@ ${numberedContext}
     try {
       const client = this.getClient();
 
-      const response = await client.chat.completions.create({
-        model: CONFIG.OPENAI_FOLLOWUP_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'Generate 3 natural follow-up questions. Return JSON: {"followups": ["q1", "q2", "q3"]}',
-          },
-          {
-            role: 'user',
-            content: `Query: "${query}"\n\nAnswer: "${answer.slice(0, 500)}"`,
-          },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 150,
-        temperature: 0.7,
-      });
+      // Wrap follow-up generation with timeout
+      const response = await withTimeout(
+        client.chat.completions.create({
+          model: CONFIG.OPENAI_FOLLOWUP_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Generate 3 natural follow-up questions. Return JSON: {"followups": ["q1", "q2", "q3"]}',
+            },
+            {
+              role: 'user',
+              content: `Query: "${query}"\n\nAnswer: "${answer.slice(0, 500)}"`,
+            },
+          ],
+          response_format: { type: 'json_object' },
+          max_tokens: 150,
+          temperature: 0.7,
+        }),
+        LLM_TIMEOUT.FOLLOWUP,
+        'Follow-up generation timed out'
+      );
 
       const parsed = JSON.parse(response.choices[0]?.message?.content || '{}');
       return parsed.followups || [];
     } catch (error) {
-      logger.warn('Follow-up generation failed', { query, error });
+      if (error instanceof TimeoutError) {
+        logger.warn('Follow-up generation timed out', {
+          query: query.slice(0, 50),
+          timeout: LLM_TIMEOUT.FOLLOWUP,
+        });
+      } else {
+        logger.warn('Follow-up generation failed', { query: query.slice(0, 50), error });
+      }
       return [];
     }
   }
@@ -1133,5 +1235,267 @@ ${numberedContext}
       searchMode,
       processingTime: Date.now() - startTime,
     };
+  }
+
+  // ========================================
+  // STREAMING API
+  // ========================================
+
+  /**
+   * Stream event types for SSE
+   */
+  static readonly StreamEventType = {
+    ANALYSIS: 'analysis',
+    SOURCES: 'sources',
+    TOKEN: 'token',
+    FOLLOWUPS: 'followups',
+    DONE: 'done',
+    ERROR: 'error',
+  } as const;
+
+  /**
+   * Process a chat request with true OpenAI streaming
+   *
+   * Uses OpenAI's streaming API to send tokens as they are generated,
+   * providing real-time response to the client.
+   *
+   * @param companyId - Company ID for tenant isolation
+   * @param request - Chat request with query, projectId, and options
+   * @param onEvent - Callback function for each stream event
+   *
+   * @example
+   * ```typescript
+   * await SmartAgentV2Service.chatStream(companyId, request, (event) => {
+   *   if (event.type === 'token') {
+   *     res.write(`data: ${JSON.stringify(event.data)}\n\n`);
+   *   }
+   * });
+   * ```
+   */
+  static async chatStream(
+    companyId: string,
+    request: ChatV2Request,
+    onEvent: (event: { type: string; data: unknown }) => void
+  ): Promise<void> {
+    const startTime = Date.now();
+    const searchMode = request.searchMode || 'smart';
+
+    logger.info('SmartAgentV2 streaming started', {
+      companyId,
+      query: request.query,
+      searchMode,
+    });
+
+    try {
+      // Step 1: Query analysis (parallel with conversation lookup)
+      const useQueryCache = request.useQueryCache ?? true;
+      const [analysis, conversationData] = await Promise.all([
+        this.analyzeQuery(request.query, request.messages, useQueryCache),
+        request.conversationId
+          ? this.getConversationWithCache(request.conversationId, companyId)
+          : Promise.resolve(null),
+      ]);
+
+      // Send analysis event
+      if (request.includeMetadata) {
+        onEvent({ type: this.StreamEventType.ANALYSIS, data: { analysis } });
+      }
+
+      // Handle special intents
+      if (analysis.intent === 'greeting') {
+        onEvent({
+          type: this.StreamEventType.TOKEN,
+          data: {
+            token:
+              "Hello! I'm here to help you find information in your documents. What would you like to know?",
+          },
+        });
+        onEvent({
+          type: this.StreamEventType.DONE,
+          data: {
+            model: CONFIG.OPENAI_CHAT_MODEL,
+            provider: 'openai',
+            searchMode,
+            processingTime: Date.now() - startTime,
+          },
+        });
+        return;
+      }
+
+      if (analysis.needsClarification) {
+        const clarification =
+          analysis.clarificationQuestion ||
+          "Could you please provide more details about what you're looking for?";
+        onEvent({ type: this.StreamEventType.TOKEN, data: { token: clarification } });
+        onEvent({
+          type: this.StreamEventType.DONE,
+          data: {
+            model: CONFIG.OPENAI_CHAT_MODEL,
+            provider: 'openai',
+            searchMode,
+            processingTime: Date.now() - startTime,
+          },
+        });
+        return;
+      }
+
+      // Step 2: Retrieve context
+      const contextResult = await this.retrieveContextWithCaching(
+        companyId,
+        request,
+        analysis,
+        searchMode,
+        conversationData
+      );
+
+      // Send sources event
+      onEvent({
+        type: this.StreamEventType.SOURCES,
+        data: { sources: contextResult.sources.slice(0, request.maxCitations || 5) },
+      });
+
+      if (contextResult.sources.length === 0) {
+        onEvent({
+          type: this.StreamEventType.TOKEN,
+          data: {
+            token:
+              "I couldn't find any relevant information in the documents. Could you try rephrasing your question?",
+          },
+        });
+        onEvent({
+          type: this.StreamEventType.DONE,
+          data: {
+            model: CONFIG.OPENAI_CHAT_MODEL,
+            provider: 'openai',
+            confidence: 0,
+            searchMode,
+            processingTime: Date.now() - startTime,
+          },
+        });
+        return;
+      }
+
+      // Step 3: Generate answer with true streaming
+      const client = this.getClient();
+      const numberedContext = contextResult.sources
+        .map((s, i) => `[${i + 1}] From "${s.fileName}":\n${s.content}`)
+        .join('\n\n---\n\n');
+
+      // Wrap stream creation with timeout for LLM calls
+      const stream = await withTimeout(
+        client.chat.completions.create({
+          model: CONFIG.OPENAI_CHAT_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a helpful assistant. Answer based ONLY on the provided sources.
+
+IMPORTANT: Cite sources using [1], [2], etc. for every fact.
+
+## Sources:
+${numberedContext}
+
+## Rules:
+1. Every claim must have a citation [n]
+2. If you can't find information, say "I couldn't find this in the documents"
+3. Don't make up information`,
+            },
+            ...(request.messages || []).map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+            { role: 'user', content: request.query },
+          ],
+          max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
+          temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
+          stream: true,
+        }),
+        LLM_TIMEOUT.CHAT_RESPONSE,
+        'OpenAI streaming timed out'
+      );
+
+      let fullAnswer = '';
+      let usage:
+        | { promptTokens: number; completionTokens: number; totalTokens: number }
+        | undefined;
+
+      // Stream tokens as they arrive
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          fullAnswer += content;
+          onEvent({ type: this.StreamEventType.TOKEN, data: { token: content } });
+        }
+
+        // Capture usage from final chunk
+        if (chunk.usage) {
+          usage = {
+            promptTokens: chunk.usage.prompt_tokens,
+            completionTokens: chunk.usage.completion_tokens,
+            totalTokens: chunk.usage.total_tokens,
+          };
+        }
+      }
+
+      // Step 4: Calculate confidence
+      const confidence = this.calculateConfidence(contextResult.sources);
+
+      // Step 5: Generate follow-ups (non-blocking, don't wait)
+      if (request.includeMetadata && confidence > 0.6 && searchMode !== 'fast') {
+        this.generateFollowUps(request.query, fullAnswer)
+          .then((followups) => {
+            if (followups.length > 0) {
+              onEvent({ type: this.StreamEventType.FOLLOWUPS, data: { followups } });
+            }
+          })
+          .catch((err) => {
+            logger.warn('Follow-up generation failed during streaming', { error: err });
+          });
+      }
+
+      // Send done event
+      onEvent({
+        type: this.StreamEventType.DONE,
+        data: {
+          usage,
+          model: CONFIG.OPENAI_CHAT_MODEL,
+          provider: 'openai',
+          confidence,
+          searchMode,
+          processingTime: Date.now() - startTime,
+        },
+      });
+
+      logger.info('SmartAgentV2 streaming completed', {
+        companyId,
+        searchMode,
+        sourcesCount: contextResult.sources.length,
+        answerLength: fullAnswer.length,
+        processingTime: Date.now() - startTime,
+      });
+    } catch (error) {
+      // Distinguish timeout failures from other errors
+      if (error instanceof TimeoutError) {
+        logger.warn('SmartAgentV2 streaming timeout', {
+          companyId,
+          timeout: LLM_TIMEOUT.CHAT_RESPONSE,
+          error: error.message,
+        });
+        onEvent({
+          type: this.StreamEventType.ERROR,
+          data: {
+            message: 'Streaming timed out',
+            error: 'timeout',
+            timeout: LLM_TIMEOUT.CHAT_RESPONSE,
+          },
+        });
+      } else {
+        logger.error('SmartAgentV2 streaming error', { companyId, error });
+        onEvent({
+          type: this.StreamEventType.ERROR,
+          data: { message: error instanceof Error ? error.message : 'Streaming failed' },
+        });
+      }
+    }
   }
 }

@@ -38,9 +38,20 @@ export function createWorker<TData, TResult>(
 ): Worker<TData, TResult> {
   const { concurrency = 1, logPrefix = queueName, metadata = {} } = options;
 
+  // Configure timeouts based on queue type
+  // Indexing jobs can take a long time (large files, batch processing)
+  // Other jobs are typically faster
+  const isIndexingQueue = queueName === 'indexing-queue';
+  const lockDuration = isIndexingQueue ? 600000 : 30000; // 10 minutes for indexing, 30s for others
+  const maxStalledCount = isIndexingQueue ? 3 : 1; // Allow more retries for indexing
+  const stalledInterval = isIndexingQueue ? 120000 : 30000; // Check every 2 minutes for indexing, 30s for others
+
   const worker = new Worker<TData, TResult>(queueName, processor, {
     connection: { host: CONFIG.REDIS_HOST, port: CONFIG.REDIS_PORT },
     concurrency,
+    lockDuration, // How long a job is locked while processing
+    maxStalledCount, // How many times a job can be retried after stalling
+    stalledInterval, // How often to check for stalled jobs
   });
 
   // Attach standardized event handlers
