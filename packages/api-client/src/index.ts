@@ -540,9 +540,6 @@ export interface ChatV2Request {
   // Response settings
   includeSources?: boolean;
   stream?: boolean;
-  
-  // Use legacy chat service (default: false, uses Smart Agent)
-  useLegacyChat?: boolean;
 }
 
 /**

@@ -131,7 +131,17 @@ function escapeHtml(text: string): string {
 }
 
 // Markdown renderer - only used for completed messages
-function MarkdownContent({ content, animate = false }: { content: string; animate?: boolean }) {
+function MarkdownContent({ 
+  content, 
+  animate = false,
+  onCitationClick 
+}: { 
+  content: string; 
+  animate?: boolean;
+  onCitationClick?: (index: number) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const renderMarkdown = useMemo(() => {
     let html = content;
     
@@ -168,14 +178,36 @@ function MarkdownContent({ content, animate = false }: { content: string; animat
     // Links
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:text-primary-700 underline">$1</a>');
     
+    // Citations [1], [2], etc. - make them clickable buttons
+    html = html.replace(/\[(\d+)\]/g, '<button data-citation="$1" class="citation-link inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1 text-xs font-semibold text-primary-700 bg-primary-100 hover:bg-primary-200 rounded-md cursor-pointer transition-colors mx-0.5 align-baseline">[$1]</button>');
+    
     // Line breaks
     html = html.replace(/\n/g, '<br>');
     
     return html;
   }, [content]);
 
+  // Handle citation clicks
+  useEffect(() => {
+    if (!containerRef.current || !onCitationClick) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('citation-link')) {
+        const citationNum = target.getAttribute('data-citation');
+        if (citationNum) {
+          onCitationClick(parseInt(citationNum, 10) - 1); // Convert to 0-based index
+        }
+      }
+    };
+
+    containerRef.current.addEventListener('click', handleClick);
+    return () => containerRef.current?.removeEventListener('click', handleClick);
+  }, [onCitationClick]);
+
   return (
     <div 
+      ref={containerRef}
       className={`prose prose-sm max-w-none leading-relaxed ${animate ? 'animate-fade-in' : ''}`}
       dangerouslySetInnerHTML={{ __html: renderMarkdown }}
     />
@@ -299,12 +331,31 @@ function TypingIndicator() {
 }
 
 // Source card component
-function SourceCard({ source, index }: { source: MessageSource; index: number }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+function SourceCard({ 
+  source, 
+  index,
+  isHighlighted = false
+}: { 
+  source: MessageSource; 
+  index: number;
+  isHighlighted?: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(isHighlighted);
+  
+  // Auto-expand when highlighted
+  useEffect(() => {
+    if (isHighlighted) {
+      setIsExpanded(true);
+    }
+  }, [isHighlighted]);
   
   return (
     <div
-      className="group p-4 bg-gradient-to-br from-surface-50 to-white rounded-xl border border-surface-200 hover:border-primary-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
+      className={`group p-4 bg-gradient-to-br from-surface-50 to-white rounded-xl border transition-all duration-300 cursor-pointer ${
+        isHighlighted 
+          ? 'border-primary-400 ring-2 ring-primary-200 shadow-lg animate-pulse-soft' 
+          : 'border-surface-200 hover:border-primary-200 hover:shadow-lg'
+      }`}
       style={{ animationDelay: `${index * 50}ms` }}
       onClick={() => setIsExpanded(!isExpanded)}
     >
@@ -373,7 +424,9 @@ export function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [showSources, setShowSources] = useState<string | null>(null);
+  const [highlightedSource, setHighlightedSource] = useState<{ messageId: string; sourceIndex: number } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const sourceRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
@@ -1268,7 +1321,25 @@ export function ChatPage() {
                                 }}
                               />
                             ) : (
-                              <MarkdownContent content={message.content} animate />
+                              <MarkdownContent 
+                                content={message.content} 
+                                animate 
+                                onCitationClick={(sourceIndex) => {
+                                  // Expand sources if not already shown
+                                  setShowSources(message.id);
+                                  // Highlight the clicked source
+                                  setHighlightedSource({ messageId: message.id, sourceIndex });
+                                  // Scroll to source after a short delay to allow expansion
+                                  setTimeout(() => {
+                                    const sourceEl = sourceRefs.current.get(`${message.id}-${sourceIndex}`);
+                                    if (sourceEl) {
+                                      sourceEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }
+                                  }, 100);
+                                  // Clear highlight after 3 seconds
+                                  setTimeout(() => setHighlightedSource(null), 3000);
+                                }}
+                              />
                             )
                           ) : (
                             <div className="whitespace-pre-wrap break-words">
@@ -1303,9 +1374,24 @@ export function ChatPage() {
 
                           {showSources === message.id && (
                             <div className="mt-4 space-y-3 animate-fade-up">
-                              {message.sources.map((source, i) => (
-                                <SourceCard key={i} source={source} index={i} />
-                              ))}
+                              {message.sources.map((source, i) => {
+                                const refKey = `${message.id}-${i}`;
+                                return (
+                                  <div 
+                                    key={i}
+                                    ref={(el) => {
+                                      if (el) sourceRefs.current.set(refKey, el);
+                                      else sourceRefs.current.delete(refKey);
+                                    }}
+                                  >
+                                    <SourceCard 
+                                      source={source} 
+                                      index={i}
+                                      isHighlighted={highlightedSource?.messageId === message.id && highlightedSource?.sourceIndex === i}
+                                    />
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>

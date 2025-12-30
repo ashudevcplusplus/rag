@@ -83,7 +83,6 @@ export interface ChatRequest {
   temperature?: number;
   includeSources?: boolean;
   stream?: boolean;
-  useLegacyChat?: boolean;
 }
 
 /**

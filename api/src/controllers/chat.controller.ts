@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { ChatService } from '../services/chat.service';
 import { SmartAgentService } from '../services/smart-agent.service';
 import { chatRequestSchema } from '../schemas/chat.schema';
 import { companyIdSchema } from '../validators/upload.validator';
@@ -9,11 +8,14 @@ import { AnalyticsEventType, EventSource } from '@rag/types';
 import { asyncHandler } from '../middleware/error.middleware';
 
 /**
- * Chat endpoint - RAG-powered Q&A
+ * Chat endpoint - RAG-powered Q&A with Smart Agent
  * POST /v1/companies/:companyId/chat
  *
- * Retrieves relevant context from the vector store,
- * arranges chunks coherently, and sends to LLM for answer generation.
+ * Uses SmartAgentService for intelligent retrieval with:
+ * - Multi-query search and RRF fusion
+ * - Smart reranking
+ * - Context expansion
+ * - Coherent answer generation
  */
 export const chat = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const startTime = Date.now();
@@ -36,11 +38,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
     stream: chatRequest.stream,
   });
 
-  // Use Smart Agent Service (agentic RAG) by default
-  // Set useLegacyChat=true in request to use old ChatService
-  const useLegacyChat = (req.body as { useLegacyChat?: boolean }).useLegacyChat === true;
-
-  // If streaming is requested, use the streaming endpoint
+  // If streaming is requested, use Smart Agent streaming
   if (chatRequest.stream) {
     // Publish analytics event for streaming
     void publishAnalytics({
@@ -57,22 +55,18 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
       },
     });
 
-    // Handle streaming - this will set headers and stream response
-    // Note: Smart Agent streaming not yet implemented, using legacy for now
-    await ChatService.chatStream(companyId, chatRequest, res);
+    // Handle streaming with Smart Agent
+    await SmartAgentService.chatStream(companyId, chatRequest, res);
     return;
   }
 
-  // Process non-streaming chat request
-  // Use Smart Agent Service for better retrieval and answer quality
-  const response = useLegacyChat
-    ? await ChatService.chat(companyId, chatRequest)
-    : await SmartAgentService.chat(companyId, chatRequest);
+  // Process non-streaming chat request with Smart Agent
+  const response = await SmartAgentService.chat(companyId, chatRequest);
 
   // Publish analytics event
   void publishAnalytics({
     source: EventSource.CHAT_CONTROLLER_CHAT,
-    eventType: AnalyticsEventType.SEARCH, // Reuse search event type for chat
+    eventType: AnalyticsEventType.SEARCH,
     companyId,
     metadata: {
       type: 'chat',
@@ -96,7 +90,7 @@ export const chat = asyncHandler(async (req: Request, res: Response): Promise<vo
  * POST /v1/companies/:companyId/chat/stream
  *
  * Same as /chat but always streams the response via Server-Sent Events.
- * Useful when you want to explicitly use the streaming endpoint.
+ * Uses SmartAgentService for intelligent retrieval.
  *
  * SSE Events:
  * - sources: Sent first with retrieved context chunks
@@ -137,6 +131,6 @@ export const chatStream = asyncHandler(async (req: Request, res: Response): Prom
     },
   });
 
-  // Handle streaming
-  await ChatService.chatStream(companyId, chatRequest, res);
+  // Handle streaming with Smart Agent
+  await SmartAgentService.chatStream(companyId, chatRequest, res);
 });

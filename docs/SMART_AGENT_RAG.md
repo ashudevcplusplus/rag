@@ -108,20 +108,12 @@ User Query
 
 ## Usage
 
-### Default (Smart Agent)
-```bash
-POST /v1/companies/:companyId/chat
-{
-  "query": "tell me about the refund policy"
-}
-```
-
-### Legacy Chat Service
+### Smart Agent Chat
 ```bash
 POST /v1/companies/:companyId/chat
 {
   "query": "tell me about the refund policy",
-  "useLegacyChat": true
+  "projectId": "your-project-id"
 }
 ```
 
@@ -175,11 +167,10 @@ The system uses these models (all OpenAI):
 
 ## Future Enhancements
 
-1. **Streaming support** for Smart Agent
-2. **Multi-hop reasoning** for complex questions
-3. **Document change tracking** for version-aware answers
-4. **User-specific permissions** filtering
-5. **Multi-agent debate** (search agent vs verifier agent)
+1. **Multi-hop reasoning** for complex questions
+2. **Document change tracking** for version-aware answers
+3. **User-specific permissions** filtering
+4. **Multi-agent debate** (search agent vs verifier agent)
 
 ## Testing
 
@@ -188,11 +179,11 @@ To test the Smart Agent:
 # Simple query
 curl -X POST http://localhost:8000/v1/companies/{companyId}/chat \
   -H "Content-Type: application/json" \
-  -d '{"query": "What is the refund policy?"}'
+  -d '{"query": "What is the refund policy?", "projectId": "your-project-id"}'
 
-# Compare with legacy
+# Streaming query
 curl -X POST http://localhost:8000/v1/companies/{companyId}/chat \
   -H "Content-Type: application/json" \
-  -d '{"query": "What is the refund policy?", "useLegacyChat": true}'
+  -d '{"query": "What is the refund policy?", "projectId": "your-project-id", "stream": true}'
 ```
 

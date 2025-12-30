@@ -1,9 +1,10 @@
 import OpenAI from 'openai';
+import { Response } from 'express';
 import { CONFIG } from '../config';
 import { VectorService, EmbeddingProvider } from './vector.service';
 import { fileMetadataRepository } from '../repositories/file-metadata.repository';
 import { embeddingRepository } from '../repositories/embedding.repository';
-import { ChatRequest, ChatResponse, ChatSource } from '../schemas/chat.schema';
+import { ChatRequest, ChatResponse, ChatSource, StreamEvent } from '../schemas/chat.schema';
 import { logger } from '../utils/logger';
 import { SearchResult } from '../types/vector.types';
 
@@ -845,5 +846,211 @@ ${numberedContext}
         score: r.score,
       };
     });
+  }
+
+  // ========================================
+  // STREAMING ENTRY POINT
+  // ========================================
+
+  /**
+   * Process streaming chat request with Smart Agent RAG
+   * Uses intelligent multi-query retrieval then streams the response
+   */
+  static async chatStream(companyId: string, request: ChatRequest, res: Response): Promise<void> {
+    const startTime = Date.now();
+
+    logger.info('Smart agent streaming started', {
+      companyId,
+      query: request.query,
+      conversationId: request.conversationId,
+    });
+
+    // Setup SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      // 1️⃣ PLAN: Understand the query
+      const plan = await this.planQuery(request.query, request.messages);
+
+      // Handle special intents
+      if (plan.intent === 'greeting') {
+        this.sendSSE(res, {
+          type: 'token',
+          data: {
+            token:
+              "Hello! I'm here to help you find information in your documents. What would you like to know?",
+          },
+        });
+        this.sendSSE(res, {
+          type: 'done',
+          data: { model: CONFIG.OPENAI_CHAT_MODEL, provider: 'openai' },
+        });
+        res.end();
+        return;
+      }
+
+      if (plan.needsClarification) {
+        this.sendSSE(res, {
+          type: 'token',
+          data: {
+            token:
+              plan.clarificationQuestion ||
+              "Could you please provide more details about what you're looking for?",
+          },
+        });
+        this.sendSSE(res, {
+          type: 'done',
+          data: { model: CONFIG.OPENAI_CHAT_MODEL, provider: 'openai' },
+        });
+        res.end();
+        return;
+      }
+
+      // 2️⃣ SEARCH: Execute multi-query search
+      let sources = await this.executeSearch(companyId, plan, request);
+
+      if (sources.length === 0) {
+        this.sendSSE(res, {
+          type: 'token',
+          data: {
+            token:
+              "I couldn't find any relevant information in the documents. Could you try rephrasing your question or ask about a different topic?",
+          },
+        });
+        this.sendSSE(res, {
+          type: 'done',
+          data: { model: CONFIG.OPENAI_CHAT_MODEL, provider: 'openai' },
+        });
+        res.end();
+        return;
+      }
+
+      // Send sources event
+      if (request.includeSources && sources.length > 0) {
+        this.sendSSE(res, { type: 'sources', data: { sources } });
+      }
+
+      // 3️⃣ ANALYZE & EXPAND if needed
+      const topScore = sources[0]?.score || 0;
+      const avgScore =
+        sources.slice(0, 5).reduce((a, b) => a + b.score, 0) / Math.min(5, sources.length);
+      const chunksAreContiguous = this.areChunksContiguous(sources.slice(0, 5));
+
+      const shouldSkipAnalysis =
+        plan.confidence > 0.85 && sources.length >= 5 && topScore > 75 && avgScore > 60;
+
+      let analysis: SearchAnalysis;
+      if (shouldSkipAnalysis) {
+        analysis = this.quickAnalysis(sources);
+      } else {
+        analysis = await this.analyzeSearchResults(request.query, sources, plan);
+      }
+
+      // Expand context if needed
+      if (analysis.shouldFetchMoreFromFile && analysis.dominantFileId && !chunksAreContiguous) {
+        try {
+          sources = await this.expandContextBySectionAware(
+            sources,
+            analysis.dominantFileId,
+            companyId
+          );
+        } catch {
+          sources = await this.expandContextFromFile(sources, analysis.dominantFileId, companyId);
+        }
+      }
+
+      // 4️⃣ GENERATE: Stream the answer
+      const contextString = sources
+        .map((s, i) => `[${i + 1}] From "${s.fileName}":\n${s.content}`)
+        .join('\n\n---\n\n');
+
+      const basePrompt =
+        request.systemPrompt ||
+        'You are a helpful AI assistant. Answer questions based only on the provided context. If the answer is not in the context, say so.';
+      const fullSystemPrompt = `${basePrompt}
+
+## Available Context:
+${contextString}
+
+## Important:
+- Cite sources using [1], [2], etc.
+- Only use information from the provided context
+- If information isn't available, say so`;
+
+      const client = this.getClient();
+      const stream = await client.chat.completions.create({
+        model: CONFIG.OPENAI_CHAT_MODEL,
+        messages: [
+          { role: 'system', content: fullSystemPrompt },
+          ...(request.messages || []).map((m) => ({
+            role: m.role as 'user' | 'assistant' | 'system',
+            content: m.content,
+          })),
+          { role: 'user', content: request.query },
+        ],
+        max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
+        temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
+        stream: true,
+        stream_options: { include_usage: true },
+      });
+
+      let usage:
+        | { promptTokens: number; completionTokens: number; totalTokens: number }
+        | undefined;
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        if (delta?.content) {
+          this.sendSSE(res, { type: 'token', data: { token: delta.content } });
+        }
+        if (chunk.usage) {
+          usage = {
+            promptTokens: chunk.usage.prompt_tokens,
+            completionTokens: chunk.usage.completion_tokens,
+            totalTokens: chunk.usage.total_tokens,
+          };
+        }
+      }
+
+      // Send done event
+      this.sendSSE(res, {
+        type: 'done',
+        data: {
+          usage,
+          model: CONFIG.OPENAI_CHAT_MODEL,
+          provider: 'openai',
+        },
+      });
+
+      logger.info('Smart agent streaming completed', {
+        companyId,
+        sourcesCount: sources.length,
+        duration: Date.now() - startTime,
+      });
+    } catch (error) {
+      logger.error('Smart agent streaming failed', {
+        companyId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      this.sendSSE(res, {
+        type: 'error',
+        data: { message: error instanceof Error ? error.message : 'Chat request failed' },
+      });
+    } finally {
+      res.end();
+    }
+  }
+
+  /**
+   * Send SSE event to client
+   */
+  private static sendSSE(res: Response, event: StreamEvent): void {
+    res.write(`event: ${event.type}\n`);
+    res.write(`data: ${JSON.stringify(event.data)}\n\n`);
   }
 }

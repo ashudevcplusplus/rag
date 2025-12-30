@@ -104,7 +104,6 @@ const tools: Tool[] = [
         maxTokens: { type: 'number', description: 'Max tokens for response (100-4096)' },
         temperature: { type: 'number', description: 'LLM temperature (0-2)' },
         includeSources: { type: 'boolean', description: 'Include source documents', default: true },
-        useLegacyChat: { type: 'boolean', description: 'Use legacy chat service instead of Smart Agent (default: false, uses Smart Agent)', default: false },
       },
       required: ['projectId', 'query'],
     },
@@ -884,7 +883,6 @@ async function handleToolCall(
           maxTokens: args.maxTokens as number | undefined,
           temperature: args.temperature as number | undefined,
           includeSources: args.includeSources as boolean | undefined,
-          useLegacyChat: args.useLegacyChat as boolean | undefined,
         });
         break;
 
