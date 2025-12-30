@@ -88,6 +88,9 @@ async function handleStreamingV2(
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
 
+  // Flush headers immediately to prevent proxy buffering
+  res.flushHeaders();
+
   const sendEvent = (event: string, data: unknown): void => {
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
@@ -109,8 +112,9 @@ async function handleStreamingV2(
 
     // Send answer in word chunks (simulated streaming)
     const words = result.answer.split(' ');
-    for (const word of words) {
-      sendEvent('token', { token: word + ' ' });
+    for (let i = 0; i < words.length; i++) {
+      const token = i === words.length - 1 ? words[i] : words[i] + ' ';
+      sendEvent('token', { token });
     }
 
     // Send follow-ups if available

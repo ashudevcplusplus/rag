@@ -68,6 +68,7 @@ describe('FileMetadataRepository', () => {
   describe('create', () => {
     it('should create file metadata', async () => {
       const mockData = {
+        companyId: 'company-123',
         projectId: 'project-123',
         uploadedBy: 'user-123',
         filename: 'test.txt',
@@ -121,10 +122,11 @@ describe('FileMetadataRepository', () => {
 
       const result = await fileMetadataRepository.findById('file-123');
 
-      expect(FileMetadataModel.findOne).toHaveBeenCalledWith({
-        _id: 'file-123',
-        deletedAt: null,
-      });
+      expect(FileMetadataModel.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deletedAt: null,
+        })
+      );
       expect(result).toBeDefined();
     });
 

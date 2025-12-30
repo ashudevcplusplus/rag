@@ -185,9 +185,10 @@ export class SmartAgentV2Service {
         .map((m) => `${m.role}: ${m.content}`)
         .join('\n') || '';
 
+    // Use JSON stringify to prevent cache key collisions
     const cacheKey = `query-analysis:${crypto
       .createHash('md5')
-      .update(query + historyContext)
+      .update(JSON.stringify({ query, history: historyContext }))
       .digest('hex')}`;
 
     // Try cache first (if enabled)
@@ -636,6 +637,20 @@ Rules:
     request: ChatV2Request,
     companyId: string
   ): Promise<QdrantFilter | undefined> {
+    // Import projectRepository at runtime to avoid circular dependencies
+    const { projectRepository } = await import('../repositories/project.repository');
+
+    // SECURITY: Validate project ownership before proceeding
+    const project = await projectRepository.findById(request.projectId);
+    if (!project || project.companyId !== companyId) {
+      logger.warn('Project ownership validation failed', {
+        projectId: request.projectId,
+        companyId,
+        projectCompanyId: project?.companyId,
+      });
+      throw new Error('Project not found or access denied');
+    }
+
     // OPTIMIZATION: Cache project file IDs for 5 minutes
     const useProjectCache = request.useProjectCache ?? true;
     const cacheKey = `project-files:${request.projectId}`;
@@ -931,6 +946,7 @@ Rules:
     const embedding = await embeddingRepository.findByFileId(dominantFileId);
     if (!embedding?.contents) return sources;
 
+    // Get file with tenant isolation
     const file = await fileMetadataRepository.findById(dominantFileId, companyId);
     if (!file) return sources;
 

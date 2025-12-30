@@ -6,6 +6,7 @@ import { companyRepository } from '../../src/repositories/company.repository';
 import { ProcessingStatus, UploadStatus, SubscriptionTier, UserRole, Visibility } from '@rag/types';
 
 describe('File Metadata Repository Integration Tests', () => {
+  const testCompanyId = '507f1f77bcf86cd799439011';
   let testProjectId: string;
   let testUserId: string;
   let testFileId: string;
@@ -89,6 +90,7 @@ describe('File Metadata Repository Integration Tests', () => {
   describe('File Metadata CRUD Operations', () => {
     it('should create file metadata', async () => {
       const fileMetadata = await fileMetadataRepository.create({
+        companyId: testCompanyId,
         projectId: testProjectId,
         uploadedBy: testUserId,
         filename: 'test-file-123.txt',
@@ -206,6 +208,7 @@ describe('File Metadata Repository Integration Tests', () => {
     it('should find pending files', async () => {
       // Create a pending file
       const pendingFile = await fileMetadataRepository.create({
+        companyId: testCompanyId,
         projectId: testProjectId,
         uploadedBy: testUserId,
         filename: 'pending-file.txt',
@@ -226,6 +229,7 @@ describe('File Metadata Repository Integration Tests', () => {
     it('should find retryable failed files', async () => {
       // Create a failed file
       const failedFile = await fileMetadataRepository.create({
+        companyId: testCompanyId,
         projectId: testProjectId,
         uploadedBy: testUserId,
         filename: 'failed-file.txt',
@@ -299,6 +303,7 @@ describe('File Metadata Repository Integration Tests', () => {
     it('should update last accessed timestamp', async () => {
       // Create new file for this test
       const file = await fileMetadataRepository.create({
+        companyId: testCompanyId,
         projectId: testProjectId,
         uploadedBy: testUserId,
         filename: 'access-test.txt',

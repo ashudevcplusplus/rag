@@ -156,6 +156,7 @@ export class FileService {
 
     // Store file metadata in database (include embedding config for reindexing consistency)
     const fileMetadata = await fileMetadataRepository.create({
+      companyId,
       projectId,
       uploadedBy,
       filename: file.filename,

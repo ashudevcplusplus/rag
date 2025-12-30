@@ -4,8 +4,10 @@ import fs from 'fs';
 import { Request } from 'express';
 import { logger } from '../utils/logger';
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../../data/uploads');
+// Use environment variable or calculate from project root
+// In Docker: /app/data/uploads
+// In development: <project-root>/data/uploads
+const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), '../data/uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
   logger.info('Upload directory created', { path: uploadDir });

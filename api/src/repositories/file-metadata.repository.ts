@@ -34,9 +34,12 @@ export class FileMetadataRepository {
    * @param companyId - Optional company ID for tenant isolation validation
    */
   async findById(id: string, companyId?: string): Promise<IFileMetadata | null> {
-    const query: Record<string, unknown> = { _id: id, deletedAt: null };
+    const query: FilterQuery<IFileMetadataDocument> = {
+      _id: new Types.ObjectId(id),
+      deletedAt: null,
+    };
     if (companyId) {
-      query.companyId = companyId;
+      query.companyId = new Types.ObjectId(companyId);
     }
     const file = await FileMetadataModel.findOne(query).lean();
     if (!file) return null;
@@ -469,7 +472,7 @@ export class FileMetadataRepository {
     limit: number = 100
   ): Promise<IFileMetadata[]> {
     const files = await FileMetadataModel.find({
-      companyId, // Tenant isolation
+      companyId: new Types.ObjectId(companyId), // Tenant isolation
       tags: { $in: tags },
       deletedAt: null,
     })

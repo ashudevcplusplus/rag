@@ -85,6 +85,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=8000
+      - UPLOAD_DIR=/app/data/uploads
       - QDRANT_URL=http://qdrant:6333
       - REDIS_HOST=redis
       - REDIS_PORT=6379

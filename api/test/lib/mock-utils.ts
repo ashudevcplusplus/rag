@@ -336,6 +336,7 @@ export function createMockFileMetadata(
   const id = generateObjectId();
   return {
     _id: id,
+    companyId: overrides?.companyId || 'company-123',
     projectId,
     uploadedBy: 'user-123',
     filename: `file-${id.substring(0, 8)}`,

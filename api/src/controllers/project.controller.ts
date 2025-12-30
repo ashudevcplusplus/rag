@@ -276,40 +276,62 @@ export const searchProjects = asyncHandler(async (req: Request, res: Response): 
 export const getFilePreview = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { validatedFile: file } = req as ValidatedFileRequest;
 
-  // Get file content from embeddings
-  const embedding = await embeddingRepository.findByFileId(file._id);
+  try {
+    // Get file content from embeddings
+    const embedding = await embeddingRepository.findByFileId(file._id);
 
-  if (!embedding || !embedding.contents || embedding.contents.length === 0) {
-    // File exists but no content yet (still processing)
+    if (!embedding || !embedding.contents || embedding.contents.length === 0) {
+      // File exists but no content yet (still processing or failed)
+      logger.debug('File preview: no embedding found', {
+        fileId: file._id,
+        processingStatus: file.processingStatus,
+        chunkCount: file.chunkCount,
+      });
+
+      res.json({
+        file: {
+          _id: file._id,
+          originalFilename: file.originalFilename,
+          mimeType: file.mimetype,
+          size: file.size,
+          chunkCount: file.chunkCount || 0,
+          processingStatus: file.processingStatus,
+        },
+        content: null,
+        chunks: [],
+        message:
+          file.processingStatus === ProcessingStatus.FAILED
+            ? 'File processing failed. Please try reindexing the file.'
+            : 'File content not available yet. Processing may still be in progress.',
+      });
+      return;
+    }
+
+    // Return file metadata and content
+    logger.debug('File preview: returning content', {
+      fileId: file._id,
+      chunkCount: embedding.chunkCount,
+    });
+
     res.json({
       file: {
         _id: file._id,
         originalFilename: file.originalFilename,
         mimeType: file.mimetype,
         size: file.size,
-        chunkCount: file.chunkCount || 0,
+        chunkCount: embedding.chunkCount,
         processingStatus: file.processingStatus,
       },
-      content: null,
-      chunks: [],
-      message: 'File content not available yet. Processing may still be in progress.',
+      content: embedding.contents.join('\n\n'),
+      chunks: embedding.contents,
     });
-    return;
+  } catch (error) {
+    logger.error('File preview error', {
+      fileId: file._id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error; // Let asyncHandler handle it
   }
-
-  // Return file metadata and content
-  res.json({
-    file: {
-      _id: file._id,
-      originalFilename: file.originalFilename,
-      mimeType: file.mimetype,
-      size: file.size,
-      chunkCount: embedding.chunkCount,
-      processingStatus: file.processingStatus,
-    },
-    content: embedding.contents.join('\n\n'),
-    chunks: embedding.contents,
-  });
 });
 
 /**
@@ -354,7 +376,12 @@ export const downloadFile = asyncHandler(async (req: Request, res: Response): Pr
   const fs = await import('fs/promises');
   try {
     await fs.access(file.filepath);
-  } catch {
+  } catch (error) {
+    logger.warn('File not found on disk for download', {
+      fileId,
+      filepath: file.filepath,
+      error: error instanceof Error ? error.message : String(error),
+    });
     sendNotFoundResponse(res, 'File content');
     return;
   }

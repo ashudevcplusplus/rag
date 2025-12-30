@@ -10,18 +10,12 @@ import {
 import { VectorService, EmbeddingProvider } from '../../services/vector.service';
 import { IndexingJobData, JobResult } from '../../types/job.types';
 import { VectorPoint } from '../../types/vector.types';
-import {
-  ProcessingStatus,
-  ChunkSizePreset,
-  getChunkConfig,
-  FileCleanupReason,
-  EventSource,
-} from '@rag/types';
+import { ProcessingStatus, ChunkSizePreset, getChunkConfig, EventSource } from '@rag/types';
 import { logger } from '../../utils/logger';
 import { fileMetadataRepository } from '../../repositories/file-metadata.repository';
 import { projectRepository } from '../../repositories/project.repository';
 import { embeddingRepository } from '../../repositories/embedding.repository';
-import { publishStorageUpdate, publishFileCleanup } from '../../utils/async-events.util';
+import { publishStorageUpdate } from '../../utils/async-events.util';
 import { getErrorMessage } from '../../types/error.types';
 import { CONFIG } from '../../config';
 
@@ -271,12 +265,9 @@ export async function processIndexingJob(job: Job<IndexingJobData, JobResult>): 
       });
     }
 
-    // One-line event publishing for file cleanup
-    void publishFileCleanup({
-      source: EventSource.INDEXING_PROCESSOR,
-      filePath,
-      reason: FileCleanupReason.CLEANUP,
-    });
+    // NOTE: We intentionally keep the original file after indexing
+    // to allow file preview/download functionality in the portal.
+    // Files are only deleted when explicitly removed via the delete file API.
 
     logger.info('Job completed successfully', {
       jobId: job.id,
