@@ -36,6 +36,12 @@ export const chatRequestSchema = z.object({
   // The user's question/prompt
   query: z.string().min(1).max(8000).trim(),
 
+  // Project ID is REQUIRED - all chat operations must be scoped to a project
+  projectId: z.string().min(1, 'projectId is required'),
+
+  // Optional conversation ID for context caching (enables smart context reuse)
+  conversationId: z.string().optional(),
+
   // Optional conversation history for multi-turn chat
   messages: z.array(ChatMessageSchema).optional(),
 
@@ -49,12 +55,11 @@ export const chatRequestSchema = z.object({
   limit: z.number().int().min(1).max(50).optional().default(5),
   rerank: z.boolean().optional().default(true),
 
-  // Filter options for RAG search
+  // Additional filter options for RAG search (projectId is already required above)
   filter: z
     .object({
       fileId: z.string().optional(),
       fileIds: z.array(z.string()).optional(),
-      projectId: z.string().optional(),
     })
     .optional(),
 
@@ -108,7 +113,7 @@ export interface ChatResponse {
 /**
  * SSE streaming event types
  */
-export type StreamEventType = 'sources' | 'token' | 'done' | 'error';
+export type StreamEventType = 'sources' | 'token' | 'done' | 'error' | 'cache_hit';
 
 /**
  * SSE streaming event structure
@@ -131,4 +136,5 @@ export type StreamEventData =
       model: string;
       provider: 'openai' | 'gemini';
     }
-  | { message: string }; // type: 'error'
+  | { message: string } // type: 'error'
+  | { reason: string }; // type: 'cache_hit'

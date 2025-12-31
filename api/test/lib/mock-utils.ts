@@ -336,6 +336,7 @@ export function createMockFileMetadata(
   const id = generateObjectId();
   return {
     _id: id,
+    companyId: overrides?.companyId || 'company-123',
     projectId,
     uploadedBy: 'user-123',
     filename: `file-${id.substring(0, 8)}`,
@@ -405,6 +406,7 @@ export function createMockUploadFile(overrides?: Partial<MockFile>): MockFile {
 export function createMockChatRequest(overrides?: Partial<ChatRequest>): ChatRequest {
   return {
     query: 'What is the meaning of life?',
+    projectId: generateObjectId(), // projectId is now required
     limit: 5,
     includeSources: true,
     rerank: false,

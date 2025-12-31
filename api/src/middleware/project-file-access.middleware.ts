@@ -5,6 +5,7 @@ import { fileMetadataRepository } from '../repositories/file-metadata.repository
 import { sendNotFoundResponse, sendBadRequestResponse } from '../utils/response.util';
 import { getCompanyId } from '../utils/request.util';
 import { asyncHandler } from './error.middleware';
+import { logger } from '../utils/logger';
 import { IProject } from '../schemas/project.schema';
 import { IFileMetadata } from '../schemas/file-metadata.schema';
 
@@ -68,9 +69,29 @@ export const validateFileAccess = asyncHandler(
       return;
     }
 
-    // Verify file exists and belongs to project
-    const file = await fileMetadataRepository.findById(fileId);
-    if (!file || file.projectId !== projectId) {
+    // Verify file exists and belongs to project and company
+    // Tenant isolation is ensured by validating both project and company
+    const file = await fileMetadataRepository.findById(fileId, companyId);
+    if (!file) {
+      logger.warn('File not found for preview', {
+        fileId,
+        projectId,
+        companyId,
+      });
+      sendNotFoundResponse(res, 'File');
+      return;
+    }
+
+    // Convert both to strings for comparison (handles ObjectId vs string)
+    const fileProjectId = String(file.projectId);
+    const requestProjectId = String(projectId);
+    if (fileProjectId !== requestProjectId) {
+      logger.warn('File project mismatch', {
+        fileId,
+        fileProjectId,
+        requestProjectId,
+        companyId,
+      });
       sendNotFoundResponse(res, 'File');
       return;
     }

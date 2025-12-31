@@ -73,6 +73,10 @@ export class DeletionService {
 
       await ProjectModel.findByIdAndUpdate(file.projectId, { $inc: statsUpdate });
 
+      // OPTIMIZATION: Invalidate project files cache specifically
+      const projectFilesCacheKey = `project-files:${file.projectId.toString()}`;
+      await CacheService.del(projectFilesCacheKey);
+
       // Trigger cache cleanup and consistency check
       if (project.companyId) {
         await this.triggerPostDeletionCleanup(project.companyId.toString(), { fileId }, 'file');
@@ -134,6 +138,10 @@ export class DeletionService {
       { $set: { deletedAt: new Date(), status: 'DELETED' } },
       { new: true }
     );
+
+    // OPTIMIZATION: Invalidate project files cache specifically
+    const projectFilesCacheKey = `project-files:${projectId}`;
+    await CacheService.del(projectFilesCacheKey);
 
     // Trigger cache cleanup and consistency check
     if (result && project.companyId) {

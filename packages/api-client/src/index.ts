@@ -474,13 +474,6 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface ChatRequest {
-  query: string;
-  projectId?: string;
-  history?: ChatMessage[];
-  limit?: number;
-}
-
 export interface ChatResponse {
   response: string;
   sources: Array<{
@@ -492,20 +485,107 @@ export interface ChatResponse {
   }>;
 }
 
-export const chatApi = {
-  async chat(companyId: string, request: ChatRequest): Promise<ChatResponse> {
-    return requestFn(`/v1/companies/${companyId}/chat`, {
-      method: 'POST',
-      body: request,
-      timeout: 120000, // 2 minutes for chat
-    });
-  },
+/**
+ * Prompt template types for chat
+ */
+export type PromptTemplateType =
+  | 'customer_support'
+  | 'sales_assistant'
+  | 'technical_support'
+  | 'onboarding_assistant'
+  | 'faq_concise'
+  | 'ecommerce_assistant';
 
-  streamChat(
+/**
+ * Search mode for ChatV2
+ * - smart: Balanced mode with query planning and reranking (default)
+ * - fast: Low latency mode with direct search
+ * - deep: High quality mode with multi-query fusion and context expansion
+ */
+export type ChatSearchMode = 'smart' | 'fast' | 'deep';
+
+/**
+ * ChatV2 Request with advanced options
+ */
+export interface ChatV2Request {
+  query: string;
+  projectId: string; // Required for project scoping and security
+  
+  // Conversation history
+  messages?: ChatMessage[];
+  
+  // Search mode
+  searchMode?: ChatSearchMode;
+  
+  // System prompt options
+  promptTemplate?: PromptTemplateType;
+  systemPrompt?: string; // Overrides template if provided
+  
+  // RAG settings
+  limit?: number;
+  rerank?: boolean;
+  
+  // File filters
+  filter?: {
+    fileId?: string;
+    fileIds?: string[];
+  };
+  
+  // LLM settings
+  llmProvider?: 'openai' | 'gemini';
+  embeddingProvider?: 'openai' | 'gemini';
+  maxTokens?: number;
+  temperature?: number;
+  
+  // Response settings
+  includeSources?: boolean;
+  stream?: boolean;
+}
+
+/**
+ * Source in chat response
+ */
+export interface ChatSource {
+  fileId: string;
+  fileName?: string;
+  projectId?: string;
+  projectName?: string;
+  chunkIndex: number;
+  content: string;
+  score: number;
+}
+
+/**
+ * ChatV2 Response with enhanced metadata
+ */
+export interface ChatV2Response {
+  answer: string;
+  sources: ChatSource[];
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  model: string;
+  provider: 'openai' | 'gemini';
+}
+
+export const chatApi = {
+  /**
+   * Stream Chat - Enhanced streaming chat with Smart Agent RAG
+   * 
+   * Features:
+   * - Search modes: 'fast' | 'smart' | 'deep'
+   * - Prompt templates: customer_support, sales_assistant, technical_support, etc.
+   * - Query planning, multi-query search, reranking, and context expansion
+   * - Real-time SSE streaming
+   */
+  streamV2(
     companyId: string,
-    request: ChatRequest,
+    request: ChatV2Request,
     onChunk: (chunk: string) => void,
-    onComplete: (sources: ChatResponse['sources']) => void,
+    onSources: (sources: ChatSource[]) => void,
+    onComplete: (metadata: { model: string; provider: string; usage?: ChatV2Response['usage'] }) => void,
     onError: (error: Error) => void
   ): AbortController {
     const controller = new AbortController();
@@ -523,7 +603,10 @@ export const chatApi = {
     fetch(`${config.baseUrl}/v1/companies/${companyId}/chat/stream`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        ...request,
+        stream: true,
+      }),
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -539,7 +622,11 @@ export const chatApi = {
 
         const decoder = new TextDecoder();
         let buffer = '';
-        let sources: ChatResponse['sources'] = [];
+        let sources: ChatSource[] = [];
+        let metadata: { model: string; provider: string; usage?: ChatV2Response['usage'] } = {
+          model: 'unknown',
+          provider: 'openai',
+        };
 
         while (true) {
           const { done, value } = await reader.read();
@@ -553,19 +640,32 @@ export const chatApi = {
             if (line.startsWith('data: ')) {
               const data = line.slice(6);
               if (data === '[DONE]') {
-                onComplete(sources);
+                onComplete(metadata);
                 return;
               }
               try {
                 const parsed = JSON.parse(data);
-                // Handle both 'token' (streaming format) and 'content' (legacy format)
+                
+                // Handle token events
                 if (parsed.token) {
                   onChunk(parsed.token);
                 } else if (parsed.content) {
                   onChunk(parsed.content);
                 }
+                
+                // Handle sources event
                 if (parsed.sources) {
                   sources = parsed.sources;
+                  onSources(sources);
+                }
+                
+                // Handle done event with metadata
+                if (parsed.model || parsed.provider || parsed.usage) {
+                  metadata = {
+                    model: parsed.model || metadata.model,
+                    provider: parsed.provider || metadata.provider,
+                    usage: parsed.usage || metadata.usage,
+                  };
                 }
               } catch {
                 // Ignore parse errors for partial data
@@ -574,7 +674,7 @@ export const chatApi = {
           }
         }
 
-        onComplete(sources);
+        onComplete(metadata);
       })
       .catch((error) => {
         if (error.name !== 'AbortError') {
@@ -585,9 +685,6 @@ export const chatApi = {
     return controller;
   },
 };
-
-// Helper to use in chatApi (avoid naming conflict with 'request')
-const requestFn = request;
 
 // ============================================================================
 // Jobs API

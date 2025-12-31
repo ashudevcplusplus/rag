@@ -29,10 +29,27 @@ export const CONFIG = {
 
   // LLM Configuration for Chat API
   LLM_PROVIDER: (process.env.LLM_PROVIDER || 'openai') as 'openai' | 'gemini',
-  OPENAI_CHAT_MODEL: process.env.OPENAI_CHAT_MODEL || 'gpt-4o-mini',
-  GEMINI_CHAT_MODEL: process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash',
+
+  // OpenAI Models - Task-specific configuration
+  // Main answer generation - use most capable model for best quality responses
+  OPENAI_CHAT_MODEL: process.env.OPENAI_CHAT_MODEL || 'gpt-4o',
+
+  // Query analysis/planning - requires good reasoning for intent detection
+  OPENAI_QUERY_ANALYSIS_MODEL: process.env.OPENAI_QUERY_ANALYSIS_MODEL || 'gpt-4o',
+
+  // Reranking - critical for search quality, needs strong comprehension
+  OPENAI_RERANK_MODEL: process.env.OPENAI_RERANK_MODEL || 'gpt-4o',
+
+  // Context analysis - simpler task, can use mini
+  OPENAI_CONTEXT_ANALYSIS_MODEL: process.env.OPENAI_CONTEXT_ANALYSIS_MODEL || 'gpt-4o-mini',
+
+  // Follow-up generation - creative task benefits from capable model
+  OPENAI_FOLLOWUP_MODEL: process.env.OPENAI_FOLLOWUP_MODEL || 'gpt-4o',
+
+  // Gemini Models
+  GEMINI_CHAT_MODEL: process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-pro',
 
   // Chat settings
-  CHAT_MAX_TOKENS: parseInt(process.env.CHAT_MAX_TOKENS || '1024', 10),
+  CHAT_MAX_TOKENS: parseInt(process.env.CHAT_MAX_TOKENS || '2048', 10),
   CHAT_TEMPERATURE: parseFloat(process.env.CHAT_TEMPERATURE || '0.7'),
 };

@@ -113,3 +113,6 @@ docs/EVOLUTION_*.txt
 docs/BEFORE_*.txt
 docs/PHASE_*.txt
 
+# Archive (large document files)
+archive/
+

@@ -68,6 +68,7 @@ describe('FileMetadataRepository', () => {
   describe('create', () => {
     it('should create file metadata', async () => {
       const mockData = {
+        companyId: 'company-123',
         projectId: 'project-123',
         uploadedBy: 'user-123',
         filename: 'test.txt',
@@ -115,23 +116,23 @@ describe('FileMetadataRepository', () => {
         filename: 'test.txt',
       };
 
-      (FileMetadataModel.findById as jest.Mock) = jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(mockFile),
-        }),
+      (FileMetadataModel.findOne as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockFile),
       });
 
       const result = await fileMetadataRepository.findById('file-123');
 
-      expect(FileMetadataModel.findById).toHaveBeenCalledWith('file-123');
+      expect(FileMetadataModel.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deletedAt: null,
+        })
+      );
       expect(result).toBeDefined();
     });
 
     it('should return null if file not found', async () => {
-      (FileMetadataModel.findById as jest.Mock) = jest.fn().mockReturnValue({
-        where: jest.fn().mockReturnValue({
-          lean: jest.fn().mockResolvedValue(null),
-        }),
+      (FileMetadataModel.findOne as jest.Mock) = jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
       });
 
       const result = await fileMetadataRepository.findById('non-existent');
@@ -423,8 +424,12 @@ describe('FileMetadataRepository', () => {
         { _id: { toString: () => 'file-2' }, filename: 'test2.txt' },
       ];
 
+      const mockQuery = {
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockFiles),
+      };
       (FileMetadataModel.find as jest.Mock) = jest.fn().mockReturnValue({
-        lean: jest.fn().mockResolvedValue(mockFiles),
+        lean: jest.fn().mockReturnValue(mockQuery),
       });
 
       const result = await fileMetadataRepository.findByIds(['file-1', 'file-2']);

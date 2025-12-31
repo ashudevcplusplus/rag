@@ -4,6 +4,7 @@ import { ProcessingStatus, UploadStatus } from '@rag/types';
 // TypeScript Interface
 export interface IFileMetadata {
   _id: string;
+  companyId: string;
   projectId: string;
   uploadedBy: string;
 
@@ -74,6 +75,7 @@ export const fileMetadataDetailsSchema = z
 
 // Zod Validation Schemas
 export const createFileMetadataSchema = z.object({
+  companyId: z.string().min(1),
   projectId: z.string().min(1),
   uploadedBy: z.string().min(1),
   filename: z.string().min(1).max(255),

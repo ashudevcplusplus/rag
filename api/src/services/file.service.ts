@@ -9,6 +9,7 @@ import { companyRepository } from '../repositories/company.repository';
 import { ProcessingStatus, FileCleanupReason, EventSource } from '@rag/types';
 import { ValidationError } from '../types/error.types';
 import { logger } from '../utils/logger';
+import { CacheService } from './cache.service';
 
 // Minimum text length to consider a file valid (in characters)
 const MIN_TEXT_LENGTH = 10;
@@ -155,6 +156,7 @@ export class FileService {
 
     // Store file metadata in database (include embedding config for reindexing consistency)
     const fileMetadata = await fileMetadataRepository.create({
+      companyId,
       projectId,
       uploadedBy,
       filename: file.filename,
@@ -205,6 +207,10 @@ export class FileService {
       fileId: fileMetadata._id,
       jobId: job.id,
     });
+
+    // OPTIMIZATION: Invalidate project files cache so new file is immediately searchable
+    const projectFilesCacheKey = `project-files:${projectId}`;
+    await CacheService.del(projectFilesCacheKey);
 
     return {
       fileId: fileMetadata._id,

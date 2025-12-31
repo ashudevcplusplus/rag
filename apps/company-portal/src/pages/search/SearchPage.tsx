@@ -86,11 +86,14 @@ export function SearchPage() {
   const searchMutation = useMutation({
     mutationFn: (searchQuery?: string) => {
       const queryToUse = searchQuery ?? query;
+      if (!selectedProjectId) {
+        throw new Error('Project ID is required');
+      }
       return searchApi.search(companyId!, {
         query: queryToUse,
         limit,
         rerank: useRerank,
-        projectId: selectedProjectId || undefined,
+        projectId: selectedProjectId,
       });
     },
     onSuccess: (response: SearchResponse, searchQuery?: string) => {
@@ -115,6 +118,10 @@ export function SearchPage() {
     e.preventDefault();
     if (!query.trim()) {
       toast.error('Please enter a search query');
+      return;
+    }
+    if (!selectedProjectId) {
+      toast.error('Please select a project first');
       return;
     }
     searchMutation.mutate(undefined);
@@ -180,6 +187,13 @@ export function SearchPage() {
         <p className="text-gray-600 mt-1">
           Search across all your documents using AI-powered semantic search
         </p>
+        {!selectedProjectId && (
+          <div className="mt-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800 font-medium">
+              ⚠️ Please select a project to enable search
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Search Form */}
@@ -197,15 +211,18 @@ export function SearchPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-4">
-                {/* Project Filter */}
+                {/* Project Filter - REQUIRED */}
                 <div className="flex items-center gap-2">
                   <FolderOpen className="w-4 h-4 text-gray-400" />
                   <select
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm bg-white"
+                    className={`px-3 py-1.5 rounded-lg border ${
+                      !selectedProjectId ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+                    } text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none`}
+                    required
                   >
-                    <option value="">All Projects</option>
+                    <option value="" disabled>Select a project *</option>
                     {projects.map((project) => (
                       <option key={project._id} value={project._id}>
                         {project.name}
@@ -245,6 +262,7 @@ export function SearchPage() {
               <Button
                 type="submit"
                 isLoading={searchMutation.isPending}
+                disabled={!selectedProjectId || !query.trim()}
                 leftIcon={<Search className="w-4 h-4" />}
               >
                 Search

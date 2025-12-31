@@ -43,6 +43,28 @@ const conversationMessageSchema = new Schema(
   { _id: false }
 );
 
+const cachedContextSchema = new Schema(
+  {
+    sources: [
+      {
+        fileId: String,
+        fileName: String,
+        projectId: String,
+        projectName: String,
+        chunkIndex: Number,
+        content: String,
+        score: Number,
+      },
+    ],
+    query: String,
+    contextString: String,
+    retrievedAt: Date,
+    expiresAt: Date,
+    fileIds: [String],
+  },
+  { _id: false }
+);
+
 const conversationSchema = new Schema<IConversationDocument>(
   {
     companyId: {
@@ -83,6 +105,16 @@ const conversationSchema = new Schema<IConversationDocument>(
     lastMessageAt: {
       type: Date,
       default: Date.now,
+    },
+
+    // Context Caching (for optimization)
+    cachedContext: {
+      type: cachedContextSchema,
+      required: false,
+    },
+    lastQueryEmbedding: {
+      type: [Number],
+      required: false,
     },
 
     // Audit

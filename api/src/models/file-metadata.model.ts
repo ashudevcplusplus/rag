@@ -3,13 +3,19 @@ import { IFileMetadata } from '../schemas/file-metadata.schema';
 import { ProcessingStatus, UploadStatus } from '@rag/types';
 
 export interface IFileMetadataDocument
-  extends Omit<IFileMetadata, '_id' | 'projectId' | 'uploadedBy'>, Document {
+  extends Omit<IFileMetadata, '_id' | 'companyId' | 'projectId' | 'uploadedBy'>, Document {
+  companyId: Types.ObjectId;
   projectId: Types.ObjectId;
   uploadedBy: Types.ObjectId;
 }
 
 const fileMetadataSchema = new Schema<IFileMetadataDocument>(
   {
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
+      required: true,
+    },
     projectId: {
       type: Schema.Types.ObjectId,
       ref: 'Project',
@@ -145,6 +151,7 @@ const fileMetadataSchema = new Schema<IFileMetadataDocument>(
 );
 
 // Indexes
+fileMetadataSchema.index({ companyId: 1 });
 fileMetadataSchema.index({ projectId: 1 });
 fileMetadataSchema.index({ uploadedBy: 1 });
 fileMetadataSchema.index({ processingStatus: 1 });
@@ -152,6 +159,7 @@ fileMetadataSchema.index({ hash: 1 });
 fileMetadataSchema.index({ uploadedAt: -1 });
 fileMetadataSchema.index({ deletedAt: 1 });
 fileMetadataSchema.index({ tags: 1 });
+fileMetadataSchema.index({ companyId: 1, projectId: 1 });
 fileMetadataSchema.index({ projectId: 1, processingStatus: 1 });
 fileMetadataSchema.index({ projectId: 1, uploadedAt: -1 });
 

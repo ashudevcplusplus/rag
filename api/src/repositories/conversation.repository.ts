@@ -4,6 +4,7 @@ import {
   CreateConversationDTO,
   UpdateConversationDTO,
   ConversationMessage,
+  CachedContext,
 } from '../schemas/conversation.schema';
 import { FilterQuery, Model } from 'mongoose';
 import { toStringId, toStringIds, calculateSkip, calculateTotalPages } from './helpers';
@@ -240,6 +241,69 @@ export class ConversationRepository {
       }
     );
     return !!result;
+  }
+
+  /**
+   * Update cached context for a conversation
+   */
+  async updateCachedContext(
+    id: string,
+    companyId: string,
+    cachedContext: CachedContext,
+    queryEmbedding: number[]
+  ): Promise<IConversation | null> {
+    const conversation = await ConversationModel.findOneAndUpdate(
+      {
+        _id: id,
+        companyId,
+        deletedAt: null,
+      },
+      {
+        $set: {
+          cachedContext,
+          lastQueryEmbedding: queryEmbedding,
+        },
+      },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!conversation) return null;
+    return toStringId(conversation) as unknown as IConversation;
+  }
+
+  /**
+   * Clear cached context for a conversation
+   */
+  async clearCachedContext(id: string, companyId: string): Promise<boolean> {
+    const result = await ConversationModel.findOneAndUpdate(
+      {
+        _id: id,
+        companyId,
+        deletedAt: null,
+      },
+      {
+        $unset: {
+          cachedContext: '',
+          lastQueryEmbedding: '',
+        },
+      }
+    );
+    return !!result;
+  }
+
+  /**
+   * Get conversation with cached context included
+   * (Regular findById excludes large fields for performance)
+   */
+  async findByIdWithCache(id: string, companyId: string): Promise<IConversation | null> {
+    const conversation = await ConversationModel.findOne({
+      _id: id,
+      companyId,
+      deletedAt: null,
+    }).lean();
+
+    if (!conversation) return null;
+    return toStringId(conversation) as unknown as IConversation;
   }
 }
 

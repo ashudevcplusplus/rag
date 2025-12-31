@@ -9,11 +9,12 @@ import {
   LogOut,
   Menu,
   X,
-  FileText,
   ChevronDown,
   MessageSquare,
   Command,
   RefreshCw,
+  Sparkles,
+  Bell,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { Button, Avatar, Modal } from '@rag/ui';
@@ -97,113 +98,154 @@ export function DashboardLayout() {
   }, [handleKeyDown]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-mesh">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-surface-900/30 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
           onClick={toggleSidebar}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white/80 backdrop-blur-xl border-r border-surface-100 transform transition-transform duration-300 ease-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between h-20 px-6 border-b border-surface-100">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-semibold text-gray-900">RAG Portal</span>
+              <div>
+                <span className="text-lg font-bold text-surface-900 font-display">RAG Portal</span>
+                <span className="block text-xs text-surface-500 -mt-0.5">Enterprise AI</span>
+              </div>
             </div>
             <button
               onClick={toggleSidebar}
-              className="lg:hidden p-1 rounded-lg hover:bg-gray-100"
+              className="lg:hidden p-2 rounded-xl hover:bg-surface-100 transition-colors"
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className="w-5 h-5 text-surface-500" />
             </button>
           </div>
 
           {/* Company info */}
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Company</p>
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {company?.name || 'Unknown Company'}
-            </p>
+          <div className="px-6 py-4 border-b border-surface-100">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary-50 to-accent-50 border border-primary-100">
+              <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                <span className="text-lg font-bold text-gradient">
+                  {company?.name?.charAt(0) || 'C'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-surface-500 uppercase tracking-wide font-medium">Workspace</p>
+                <p className="text-sm font-semibold text-surface-800 truncate">
+                  {company?.name || 'Unknown Company'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navigation.map((item) => (
+          <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+            {navigation.map((item, index) => (
               <NavLink
                 key={item.name}
                 to={item.href}
+                style={{ animationDelay: `${index * 0.05}s` }}
                 className={({ isActive }) =>
-                  `group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  `group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 animate-fade-up ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-gradient-to-r from-primary-100 to-primary-50 text-primary-700 shadow-sm'
+                      : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                   }`
                 }
               >
-                <div className="flex items-center gap-3">
-                  <item.icon className="w-5 h-5" />
-                  {item.name}
-                </div>
-                {item.shortcut && (
-                  <span className="hidden group-hover:inline-flex items-center gap-0.5 text-xs text-gray-400">
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">Alt</kbd>
-                    <span>+</span>
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">{item.shortcut}</kbd>
-                  </span>
+                {({ isActive }) => (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-1.5 rounded-lg transition-colors ${
+                        isActive ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30' : 'bg-surface-100 text-surface-500 group-hover:bg-surface-200'
+                      }`}>
+                        <item.icon className="w-4 h-4" />
+                      </div>
+                      {item.name}
+                    </div>
+                    {item.shortcut && (
+                      <span className="hidden group-hover:inline-flex items-center gap-0.5 text-xs text-surface-400">
+                        <kbd className="px-1.5 py-0.5 bg-surface-100 rounded text-surface-500 font-mono text-[10px]">Alt</kbd>
+                        <span className="text-surface-300">+</span>
+                        <kbd className="px-1.5 py-0.5 bg-surface-100 rounded text-surface-500 font-mono text-[10px]">{item.shortcut}</kbd>
+                      </span>
+                    )}
+                  </>
                 )}
               </NavLink>
             ))}
           </nav>
 
           {/* User menu */}
-          <div className="p-3 border-t border-gray-200">
+          <div className="p-4 border-t border-surface-100 bg-surface-50/50">
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white transition-all duration-200 group shadow-sm bg-white/50 border border-surface-100"
               >
-                <Avatar
-                  name={user ? `${user.firstName} ${user.lastName}` : 'User'}
-                  size="sm"
-                />
+                <div className="relative">
+                  <Avatar
+                    name={user ? `${user.firstName} ${user.lastName}` : 'User'}
+                    size="sm"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
+                </div>
                 <div className="flex-1 text-left min-w-0">
                   <p 
-                    className="text-sm font-medium text-gray-900 truncate"
+                    className="text-sm font-semibold text-surface-800 truncate"
                     title={user ? `${user.firstName} ${user.lastName}` : 'User'}
                   >
                     {user ? `${user.firstName} ${user.lastName}` : 'User'}
                   </p>
                   <p 
-                    className="text-xs text-gray-500 truncate"
+                    className="text-xs text-surface-500 truncate"
                     title={user?.email}
                   >
                     {user?.email}
                   </p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+                <ChevronDown className={`w-4 h-4 text-surface-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {userMenuOpen && (
-                <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign out
-                  </button>
-                </div>
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setUserMenuOpen(false)}
+                  />
+                  <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-surface-200 py-2 z-20 animate-scale-in">
+                    <button
+                      onClick={() => {
+                        navigate('/settings');
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-surface-700 hover:bg-surface-50 transition-colors"
+                    >
+                      <Settings className="w-4 h-4 text-surface-400" />
+                      Account Settings
+                    </button>
+                    <div className="my-1 h-px bg-surface-100" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -211,15 +253,15 @@ export function DashboardLayout() {
       </aside>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-72 min-h-screen flex flex-col">
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-surface-100">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <button
               onClick={toggleSidebar}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="lg:hidden p-2.5 rounded-xl hover:bg-surface-100 transition-colors"
             >
-              <Menu className="w-5 h-5 text-gray-500" />
+              <Menu className="w-5 h-5 text-surface-600" />
             </button>
 
             <div className="flex-1" />
@@ -228,28 +270,45 @@ export function DashboardLayout() {
               {/* Quick Search */}
               <button
                 onClick={() => navigate('/search')}
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="hidden sm:flex items-center gap-3 px-4 py-2 text-sm text-surface-500 bg-surface-100/80 hover:bg-surface-100 rounded-xl transition-all duration-200 border border-surface-200/50"
               >
                 <Search className="w-4 h-4" />
-                <span>Search...</span>
-                <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-white rounded border border-gray-200">
+                <span className="text-surface-400">Quick search...</span>
+                <kbd className="ml-4 px-2 py-0.5 text-xs bg-white rounded-md border border-surface-200 font-mono text-surface-400">
                   ⌘K
                 </kbd>
               </button>
 
-              <Button variant="outline" size="sm" onClick={() => navigate('/chat')}>
+              {/* Notifications */}
+              <button className="relative p-2.5 text-surface-500 hover:text-surface-700 hover:bg-surface-100 rounded-xl transition-colors">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-accent-500 rounded-full" />
+              </button>
+
+              {/* Chat Button */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/chat')}
+                className="hidden md:flex items-center gap-2 border-primary-200 text-primary-700 hover:bg-primary-50"
+              >
                 <MessageSquare className="w-4 h-4" />
                 Chat
               </Button>
 
-              <Button variant="outline" size="sm" onClick={() => navigate('/upload')}>
+              {/* Upload Button */}
+              <Button 
+                size="sm" 
+                onClick={() => navigate('/upload')}
+                className="hidden md:flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 shadow-md shadow-primary-500/25"
+              >
                 <Upload className="w-4 h-4" />
                 Upload
               </Button>
 
               <button
                 onClick={() => setShowShortcuts(true)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2.5 text-surface-400 hover:text-surface-600 hover:bg-surface-100 rounded-xl transition-colors"
                 title="Keyboard shortcuts (⌘/)"
               >
                 <Command className="w-4 h-4" />
@@ -259,9 +318,16 @@ export function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
+
+        {/* Footer */}
+        <footer className="py-4 px-8 border-t border-surface-100 bg-white/50">
+          <p className="text-center text-xs text-surface-400">
+            © 2024 RAG Portal. Built with AI-powered document intelligence.
+          </p>
+        </footer>
       </div>
 
       {/* Keyboard Shortcuts Modal */}
@@ -271,24 +337,30 @@ export function DashboardLayout() {
         title="Keyboard Shortcuts"
         size="md"
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Navigation</h4>
-            <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-surface-900 mb-3 flex items-center gap-2">
+              <LayoutDashboard className="w-4 h-4 text-primary-500" />
+              Navigation
+            </h4>
+            <div className="space-y-2 bg-surface-50 rounded-xl p-3">
               {navigation
                 .filter((item) => item.shortcut)
                 .map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between py-1"
+                    className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-white transition-colors"
                   >
-                    <span className="text-sm text-gray-600">{item.name}</span>
+                    <div className="flex items-center gap-2">
+                      <item.icon className="w-4 h-4 text-surface-400" />
+                      <span className="text-sm text-surface-700">{item.name}</span>
+                    </div>
                     <div className="flex items-center gap-1">
-                      <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+                      <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                         Alt
                       </kbd>
-                      <span className="text-gray-400">+</span>
-                      <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+                      <span className="text-surface-300">+</span>
+                      <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                         {item.shortcut}
                       </kbd>
                     </div>
@@ -297,44 +369,47 @@ export function DashboardLayout() {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Global</h4>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm text-gray-600">Quick Search</span>
+          <div>
+            <h4 className="text-sm font-semibold text-surface-900 mb-3 flex items-center gap-2">
+              <Command className="w-4 h-4 text-primary-500" />
+              Global
+            </h4>
+            <div className="space-y-2 bg-surface-50 rounded-xl p-3">
+              <div className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-white transition-colors">
+                <span className="text-sm text-surface-700">Quick Search</span>
                 <div className="flex items-center gap-1">
-                  <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+                  <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                     ⌘
                   </kbd>
-                  <span className="text-gray-400">+</span>
-                  <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+                  <span className="text-surface-300">+</span>
+                  <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                     K
                   </kbd>
                 </div>
               </div>
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm text-gray-600">Show Shortcuts</span>
+              <div className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-white transition-colors">
+                <span className="text-sm text-surface-700">Show Shortcuts</span>
                 <div className="flex items-center gap-1">
-                  <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+                  <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                     ⌘
                   </kbd>
-                  <span className="text-gray-400">+</span>
-                  <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+                  <span className="text-surface-300">+</span>
+                  <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                     /
                   </kbd>
                 </div>
               </div>
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm text-gray-600">Close Modal</span>
-                <kbd className="px-2 py-1 text-xs font-medium bg-gray-100 rounded border border-gray-200">
+              <div className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-white transition-colors">
+                <span className="text-sm text-surface-700">Close Modal</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-white rounded-md border border-surface-200 text-surface-600">
                   Esc
                 </kbd>
               </div>
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">
-            On Windows/Linux, use Ctrl instead of ⌘
+          <p className="text-xs text-surface-400 pt-2 text-center">
+            On Windows/Linux, use <kbd className="px-1 py-0.5 text-[10px] bg-surface-100 rounded">Ctrl</kbd> instead of <kbd className="px-1 py-0.5 text-[10px] bg-surface-100 rounded">⌘</kbd>
           </p>
         </div>
       </Modal>

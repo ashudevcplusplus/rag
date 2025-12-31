@@ -303,7 +303,7 @@ export function ProjectDetailPage() {
                 <div
                   key={file._id}
                   className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-6 px-6 transition-colors group cursor-pointer"
-                  onClick={() => handlePreviewFile(file)}
+                  onClick={() => navigate(`/projects/${projectId}/files/${file._id}`)}
                 >
                   <div className="flex items-center gap-4 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
@@ -368,8 +368,8 @@ export function ProjectDetailPage() {
                           >
                             <button
                               onClick={() => {
-                                handlePreviewFile(file);
                                 setActiveMenu(null);
+                                navigate(`/projects/${projectId}/files/${file._id}`);
                               }}
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                             >

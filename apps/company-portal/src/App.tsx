@@ -12,6 +12,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { ProjectsPage } from './pages/projects/ProjectsPage';
 import { ProjectDetailPage } from './pages/projects/ProjectDetailPage';
+import { FilePreviewPage } from './pages/files/FilePreviewPage';
 import { UploadPage } from './pages/upload/UploadPage';
 import { SearchPage } from './pages/search/SearchPage';
 import { ChatPage } from './pages/chat/ChatPage';
@@ -84,6 +85,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+        <Route path="/projects/:projectId/files/:fileId" element={<FilePreviewPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/chat" element={<ChatPage />} />

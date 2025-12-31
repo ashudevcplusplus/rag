@@ -85,6 +85,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=8000
+      - UPLOAD_DIR=/app/data/uploads
       - QDRANT_URL=http://qdrant:6333
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -94,11 +95,16 @@ services:
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL:-gpt-4o-mini}
+      # OpenAI Models - Task-specific (using best models per task)
+      - OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL:-gpt-4o}
+      - OPENAI_QUERY_ANALYSIS_MODEL=${OPENAI_QUERY_ANALYSIS_MODEL:-gpt-4o}
+      - OPENAI_RERANK_MODEL=${OPENAI_RERANK_MODEL:-gpt-4o}
+      - OPENAI_CONTEXT_ANALYSIS_MODEL=${OPENAI_CONTEXT_ANALYSIS_MODEL:-gpt-4o-mini}
+      - OPENAI_FOLLOWUP_MODEL=${OPENAI_FOLLOWUP_MODEL:-gpt-4o}
       # Gemini Configuration (optional, from .env file)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-text-embedding-004}
-      - GEMINI_CHAT_MODEL=${GEMINI_CHAT_MODEL:-gemini-1.5-flash}
+      - GEMINI_CHAT_MODEL=${GEMINI_CHAT_MODEL:-gemini-1.5-pro}
       # Hot-reload for macOS Docker
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true

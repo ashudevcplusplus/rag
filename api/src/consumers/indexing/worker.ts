@@ -3,7 +3,7 @@ import { createWorker } from '../../utils/worker-factory';
 import { processIndexingJob } from './processor';
 
 const worker = createWorker<IndexingJobData, JobResult>('indexing-queue', processIndexingJob, {
-  concurrency: 2,
+  concurrency: 5,
   logPrefix: 'Indexing',
 });
 
