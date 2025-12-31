@@ -1176,11 +1176,36 @@ ${numberedContext}
 
   /**
    * Calculate confidence score
+   *
+   * Normalizes scores from different search modes to a 0-1 range:
+   * - Fast mode: Raw Qdrant cosine similarity (0.0-1.0) - no normalization needed
+   * - Smart/Deep mode with RRF: Scores multiplied by 100 (~1.6-7 range)
+   * - After LLM reranking: Scores are 0-100
+   *
+   * Detection heuristic:
+   * - Scores <= 1.0: Already normalized (fast mode cosine similarity)
+   * - Scores > 1.0 and <= 10: RRF scores (divide by 10 for ~0.16-0.7)
+   * - Scores > 10: Reranked scores 0-100 (divide by 100)
    */
   private static calculateConfidence(sources: ChatV2Source[]): number {
     if (sources.length === 0) return 0;
     const avgScore = sources.reduce((acc, s) => acc + s.score, 0) / sources.length;
-    return Math.min(avgScore / 100, 1);
+
+    // Normalize based on score range
+    let normalizedScore: number;
+    if (avgScore <= 1.0) {
+      // Fast mode: cosine similarity already in 0-1 range
+      normalizedScore = avgScore;
+    } else if (avgScore <= 10) {
+      // RRF mode without reranking: scores typically 1.6-7 after *100 multiplication
+      // Normalize to 0-1 by dividing by 10 (max practical RRF score)
+      normalizedScore = avgScore / 10;
+    } else {
+      // Reranked scores: 0-100 range
+      normalizedScore = avgScore / 100;
+    }
+
+    return Math.min(normalizedScore, 1);
   }
 
   // ========================================
@@ -1440,20 +1465,20 @@ ${numberedContext}
       // Step 4: Calculate confidence
       const confidence = this.calculateConfidence(contextResult.sources);
 
-      // Step 5: Generate follow-ups (non-blocking, don't wait)
+      // Step 5: Generate follow-ups and await before sending done event
+      // This ensures the documented SSE event order is maintained: followups before done
       if (request.includeMetadata && confidence > 0.6 && searchMode !== 'fast') {
-        this.generateFollowUps(request.query, fullAnswer)
-          .then((followups) => {
-            if (followups.length > 0) {
-              onEvent({ type: this.StreamEventType.FOLLOWUPS, data: { followups } });
-            }
-          })
-          .catch((err) => {
-            logger.warn('Follow-up generation failed during streaming', { error: err });
-          });
+        try {
+          const followups = await this.generateFollowUps(request.query, fullAnswer);
+          if (followups.length > 0) {
+            onEvent({ type: this.StreamEventType.FOLLOWUPS, data: { followups } });
+          }
+        } catch (err) {
+          logger.warn('Follow-up generation failed during streaming', { error: err });
+        }
       }
 
-      // Send done event
+      // Send done event (always last)
       onEvent({
         type: this.StreamEventType.DONE,
         data: {

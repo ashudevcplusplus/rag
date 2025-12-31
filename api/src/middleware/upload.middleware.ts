@@ -7,7 +7,9 @@ import { logger } from '../utils/logger';
 // Use environment variable or calculate from project root
 // In Docker: /app/data/uploads
 // In development: <project-root>/data/uploads
-const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), '../data/uploads');
+// Using __dirname ensures stable path resolution regardless of
+// the current working directory when the process starts
+const uploadDir = process.env.UPLOAD_DIR || path.resolve(__dirname, '../../../data/uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
   logger.info('Upload directory created', { path: uploadDir });
