@@ -8,6 +8,18 @@ import { AnalyticsEventType, EventSource } from '@rag/types';
 import { asyncHandler } from '../middleware/error.middleware';
 
 /**
+ * Type for streaming DONE event data
+ */
+interface StreamingDoneData {
+  usage?: unknown;
+  model?: string;
+  provider?: string;
+  confidence?: number;
+  searchMode?: string;
+  processingTime?: number;
+}
+
+/**
  * ChatV2 - Enhanced RAG-powered Q&A endpoint
  * POST /v1/companies/:companyId/chat/v2
  *
@@ -95,6 +107,15 @@ async function handleStreamingV2(
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
 
+  // Track streaming metadata for analytics
+  let streamingMetadata: {
+    usage?: unknown;
+    confidence?: number;
+    processingTime?: number;
+    sourcesCount?: number;
+    answerLength?: number;
+  } = {};
+
   try {
     // Use true OpenAI streaming via SmartAgentV2Service.chatStream
     await SmartAgentV2Service.chatStream(
@@ -106,8 +127,39 @@ async function handleStreamingV2(
       (event) => {
         // Forward each event to the client
         sendEvent(event.type, event.data);
+
+        // Capture metadata from DONE event for analytics
+        if (event.type === 'done' && event.data) {
+          const doneData = event.data as StreamingDoneData;
+          streamingMetadata = {
+            usage: doneData.usage,
+            confidence: doneData.confidence,
+            processingTime: doneData.processingTime,
+            sourcesCount: 0, // Will be captured from sources event if available
+            answerLength: 0, // Streaming doesn't provide full answer length
+          };
+        }
       }
     );
+
+    // Publish analytics for streaming request
+    void publishAnalytics({
+      source: EventSource.CHAT_CONTROLLER_CHAT,
+      eventType: AnalyticsEventType.SEARCH,
+      companyId,
+      metadata: {
+        type: 'chat_v2_stream',
+        projectId: request.projectId,
+        searchMode: request.searchMode,
+        responseFormat: request.responseFormat,
+        queryLength: request.query.length,
+        sourcesCount: streamingMetadata.sourcesCount || 0,
+        answerLength: streamingMetadata.answerLength || 0,
+        confidence: streamingMetadata.confidence,
+        processingTime: streamingMetadata.processingTime,
+        usage: streamingMetadata.usage,
+      },
+    });
 
     res.end();
   } catch (error) {

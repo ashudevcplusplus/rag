@@ -1434,6 +1434,7 @@ ${numberedContext}
           max_tokens: request.maxTokens || CONFIG.CHAT_MAX_TOKENS,
           temperature: request.temperature ?? CONFIG.CHAT_TEMPERATURE,
           stream: true,
+          stream_options: { include_usage: true },
         }),
         LLM_TIMEOUT.CHAT_RESPONSE,
         'OpenAI streaming timed out'

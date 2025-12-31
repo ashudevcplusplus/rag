@@ -9,6 +9,13 @@ import { FilterQuery, UpdateQuery, Types, Model } from 'mongoose';
 import { toStringId, toStringIds } from './helpers';
 import { projectRepository } from './project.repository';
 
+/**
+ * Escape special regex characters to prevent regex injection
+ */
+function escapeRegex(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export class FileMetadataRepository {
   public model: Model<IFileMetadataDocument>;
 
@@ -497,12 +504,14 @@ export class FileMetadataRepository {
 
     if (projectIds.length === 0) return [];
 
+    const escapedSearchTerm = escapeRegex(searchTerm);
+
     const files = await FileMetadataModel.find({
       projectId: { $in: projectIds },
       deletedAt: null,
       $or: [
-        { originalFilename: { $regex: searchTerm, $options: 'i' } },
-        { filename: { $regex: searchTerm, $options: 'i' } },
+        { originalFilename: { $regex: escapedSearchTerm, $options: 'i' } },
+        { filename: { $regex: escapedSearchTerm, $options: 'i' } },
       ],
     })
       .limit(limit)
